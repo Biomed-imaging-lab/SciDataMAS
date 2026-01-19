@@ -1,4 +1,4 @@
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 
 
 def read_txt_file(path: str) -> str:

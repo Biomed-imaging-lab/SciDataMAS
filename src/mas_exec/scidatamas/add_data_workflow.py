@@ -1,5 +1,5 @@
-from time import sleep
-from typing import Any, Callable, Dict, List, TypedDict, Union
+import os
+from typing import Any, Dict, List, TypedDict, Union
 from typing_extensions import Annotated
 
 from langchain.chat_models import init_chat_model
@@ -7,7 +7,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.tools import InjectedToolCallId
 from langgraph.graph import END, START, StateGraph
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from langgraph.types import interrupt, Command
 from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel, Field
@@ -16,7 +16,8 @@ from langgraph.prebuilt import InjectedState
 
 from .utils.datalake_info_retrieval import DatasetSelectionRAG
 from .utils.adding_data_tools import BASIC_TOOLS
-from data_management.local_datalake_management import LocalDataLake
+from data_model.datalake import Datalake
+
 from utils import invoke
 
 ###
@@ -83,12 +84,16 @@ class AddDataWorkflowState(TypedDict):
         description="User's feedback on generated metadata schema", default=""
     )
 
+    current_status: str = (
+        "idle"  # Can be 'running', 'idle', 'await_add_info', 'await_table_validation'
+    )
+
 
 class AddDataToDatasetFlow:
     def __init__(
         self,
         system_prompt: str,
-        datalake: LocalDataLake,
+        datalake: Datalake,
         observation_tools: List[StructuredTool] = BASIC_TOOLS,
         model: str = "mistral-large-latest",
         provider: str = "mistralai",
@@ -213,12 +218,15 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
     #####
 
     def __init_state(self, state: AddDataWorkflowState) -> AddDataWorkflowState:
+        state["current_status"] = "running"
+
         state["messages"] = []
         state["choosen_dataset"] = None
         state["origin_dataset_meta_schema"] = None
         state["currently_filled_schema"] = {}
         state["data_to_add"] = None
         state["user_feedback"] = None
+        state["generation_user_feedback"] = None
         return state
 
     def __get_dataset(self, state: AddDataWorkflowState) -> AddDataWorkflowState:
@@ -226,10 +234,9 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
         state["choosen_dataset"] = dataset_name
 
         if dataset_name != None:
-            state["origin_dataset_meta_schema"] = self.__datalake_inst[
+            state["origin_dataset_meta_schema"] = self.__datalake_inst.get_dataset_md(
                 dataset_name
-            ].get_metadata_schema_rich_info()
-
+            )
             state["messages"] += [
                 (
                     "user",
@@ -240,7 +247,7 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
                     + "Please, don't use examples as a field values, they are given for deonstration, not filling values:"
                     + "".join(
                         [
-                            f"\n - \"{k}\": {item['descr']}, type: {item['type']};"
+                            f'\n - "{k}": {item};'
                             for k, item in state["origin_dataset_meta_schema"].items()
                         ]
                     ),
@@ -260,12 +267,21 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
     def __tools_calling(self, state: AddDataWorkflowState) -> AddDataWorkflowState:
         new_state = self.__tool_node.invoke(state)
 
-        if isinstance(new_state, List) == True and isinstance(new_state[0], Command):
+        # ToolNode может вернуть Command (через StructuredTool), либо обычный dict со списком messages.
+        if (
+            isinstance(new_state, list)
+            and new_state
+            and isinstance(new_state[0], Command)
+        ):
             new_comm = new_state[0]
             state["messages"] = new_comm.update["messages"]
-            state["currently_filled_schema"] = new_comm.update[
-                "currently_filled_schema"
-            ]
+            if "currently_filled_schema" in new_comm.update.keys():
+                state["currently_filled_schema"] = new_comm.update[
+                    "currently_filled_schema"
+                ]
+        elif isinstance(new_state, List) == True and isinstance(new_state[0], Dict):
+            state["messages"] += new_state[0]["messages"]
+
         else:
             state["messages"] += new_state["messages"]
 
@@ -276,17 +292,24 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
         feedback = ""
         if self._is_auto == True:
             feedback = "I think it's alright. You can add the data and finish the job."
-        else:
+        elif state["generation_user_feedback"] == None:
             total_new_vals = state["currently_filled_schema"]
+
             feedback = interrupt(
-                "I filled your data with next values:"
+                "await_table_validation:I filled your data with next values:"
                 + "".join([f"\n - {k}: {str(v)}" for k, v in total_new_vals.items()])
                 + "\n\nAre everything alright? "
                 + "Say, should I continue generation with some info, changing maybe something, "
                 + "or should I complete the session with adding data or denying whole session?"
             )
+            if "currently_filled_schema" in feedback.keys():
+                state["currently_filled_schema"] = feedback["currently_filled_schema"]
 
-        state["generation_user_feedback"] = feedback
+            if "generation_user_feedback" in feedback.keys():
+                state["generation_user_feedback"] = feedback["generation_user_feedback"]
+        else:
+            return state
+
         return state
 
     def __add_data(self, state: AddDataWorkflowState) -> AddDataWorkflowState:
@@ -296,10 +319,28 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
 
         dataset_name = state["choosen_dataset"]
         datas_metadata = state["currently_filled_schema"]
-        self.__datalake_inst[dataset_name].add_data(
-            datas_metadata, data_to_add, allow_none_values=True
-        )
 
+        files_to_add = []
+        if os.path.isfile(data_to_add):
+            files_to_add.append(data_to_add)
+        elif os.path.isdir(data_to_add):
+            files_to_add += [
+                os.path.join(data_to_add, fn) for fn in os.listdir(data_to_add)
+            ]
+
+        for fn in files_to_add:
+            if os.path.isfile(fn):
+                with open(fn, "rb") as fileIO:
+                    file_bytearray = bytearray(fileIO.read())
+                    self.__datalake_inst.add_file(
+                        dataset_name,
+                        file_bytearray,
+                        datas_metadata,
+                        fn.split("/")[-1],
+                        skip_values=True,
+                    )
+
+        state["current_status"] = "idle"
         return state
 
     def __should_continue(self, state: AddDataWorkflowState) -> str:
@@ -326,7 +367,12 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
     ### Additional tools block
     #####
 
-    def ask_user(self, question: str, state: Annotated[dict, InjectedState]) -> str:
+    def ask_user(
+        self,
+        question: str,
+        state: Annotated[dict, InjectedState],
+        tool_call_id: Annotated[str, InjectedToolCallId],
+    ) -> str:
         """
         Function for asking user for advices
 
@@ -338,14 +384,21 @@ For that, your answer is splitted on two parts: thinking, where are you reflex, 
         """
 
         answer = ""
+
         if self._is_auto == True:
             answer = "I can't help with your question. Just use only what you have."
         else:
-            human_answer = interrupt(question)
-            answer = str(human_answer)
+            human_answer = interrupt("await_add_info:" + question)
+            answer = human_answer["user_answer"]
 
-        msgs = state["messages"] + [("user", answer)]
-        return Command({"messages": msgs})
+        msgs = state["messages"] + [
+            ToolMessage(
+                content=f"I recive this message from user: '{answer}'",
+                tool_call_id=tool_call_id,
+            )
+        ]
+
+        return Command(update={"messages": msgs})
 
     def fill_values(
         self,

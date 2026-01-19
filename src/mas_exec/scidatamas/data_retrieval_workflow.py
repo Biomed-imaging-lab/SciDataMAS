@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
 from .utils.datalake_info_retrieval import DatasetSelectionRAG
-from data_management.local_datalake_management import LocalDataLake
+from data_model.datalake import Datalake
+
 from utils import invoke
 
 
@@ -55,7 +56,7 @@ class DataRetrievingFlow:
     def __init__(
         self,
         system_prompt: str,
-        datalake: LocalDataLake,
+        datalake: Datalake,
         model: str = "mistral-large-latest",
         provider: str = "mistralai",
         temperature: float = 0.30,
@@ -147,9 +148,7 @@ class DataRetrievingFlow:
         state["dataset_source_name"] = dataset_name
 
         if dataset_name != None:
-            meta_schema = self.__datalake_inst[
-                dataset_name
-            ].get_metadata_schema_rich_info()
+            meta_schema = self.__datalake_inst.get_dataset_md(dataset_name)
 
             state["messages"] += [
                 (
@@ -159,8 +158,7 @@ class DataRetrievingFlow:
                     + "Here what metadata fields you must use for sql query generation:"
                     + "".join(
                         [
-                            f"\n - \"{k}\": {item['descr']}, type: {item['type']};"
-                            for k, item in meta_schema.items()
+                            f'\n - "{k}": {item};' for k, item in meta_schema.items()
                         ]
                     ),
                 )
@@ -215,11 +213,17 @@ class DataRetrievingFlow:
 
         dataset_name = state["dataset_source_name"]
         sql_request = state["sql_generation"]
-        dataset = self.__datalake_inst[dataset_name]
 
         try:
-            res_df = dataset.get_elements_by_sql_request(sql_request)
-            state["data_retrieving_result"] = res_df
+            res_df = self.__datalake_inst.get_data_table_sql(dataset_name, sql_request)
+            state["data_retrieving_result"] = res_df.to_dict()
+            state["messages"] += [
+                (
+                    "assistant",
+                    "Extracted data: \n\n" + str(state["data_retrieving_result"]),
+                )
+            ]
+
             return state
         except Exception as exp:
             state["was_error"] = True

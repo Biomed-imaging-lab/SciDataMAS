@@ -8,6 +8,8 @@ from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
+from data_model.datalake import Datalake
+
 
 class MetadataStructure(BaseModel):
     """Generated metadata structure"""
@@ -69,10 +71,11 @@ class MDGenerationFlow:
     def __init__(
         self,
         system_prompt: str,
+        datalake: Datalake,
         model: str = "mistral-large-latest",
         provider: str = "mistralai",
         temperature: float = 0.30,
-        is_auto: bool = True,
+        is_auto: bool = False,
         additional_examples: Optional[List[Tuple[str, str]]] = None,
         relevant_docs_with_instructions: Optional[List[str]] = None,
     ):
@@ -117,6 +120,8 @@ Answer 'True', if user wants changings and reflexions. Answer 'False' - if metad
         # building workflow
         self._workflow = self._build_workflow()
 
+        self.__datalake = datalake
+
         return
 
     def __riching_sp(
@@ -153,21 +158,10 @@ Also there are important docs for your current generation. They contains differe
         workflow = StateGraph(MDGenerationState)
 
         # define the nodes
-        workflow.add_node(
-            "starting", self._starting
-        )  # init short-term state for metadata generation
-
-        workflow.add_node(
-            "generate", self._generate
-        )  # generate make generation & reflextions
-
-        workflow.add_node(
-            "human_validation", self._human_validation
-        )  # reflect on user feedback
-
-        workflow.add_node(
-            "create_dataset", self._create_dataset
-        )  # create new dataset with new metadata schema
+        workflow.add_node("starting", self._starting)
+        workflow.add_node("generate", self._generate)
+        workflow.add_node("human_validation", self._human_validation)
+        workflow.add_node("create_dataset", self._create_dataset)
 
         # Build graph
         workflow.add_edge(START, "starting")
@@ -178,6 +172,8 @@ Also there are important docs for your current generation. They contains differe
             self._decide_to_regenerate,
             {"create_dataset": "create_dataset", "generate": "generate"},
         )
+        workflow.add_edge("create_dataset", END)
+
         return workflow
 
     def get_workflow(self):
@@ -196,10 +192,23 @@ Also there are important docs for your current generation. They contains differe
 
         # if not first generation try
         if state["generation_user_feedback"] != "":
+            # during feedback user could provide any remarks in generation - we will show them
+            users_md_params = (
+                "\n\nAlso, after analyzing your results, I think whis params would be great:\n"
+                + f"1) dataset name: '{state['generation'].short_name}'"
+                + f"2) dataset description: '{state['generation'].description}'"
+                + f"3) dataset md:\n"
+                + "\n".join(
+                    f" - '{fn}': {str(fd)}"
+                    for fn, fd in state["generation"].schema.items()
+                )
+            )
+
             messages += [
                 (
                     "user",
                     state["generation_user_feedback"]
+                    + users_md_params
                     + "\nSo please regenerate the metadata schema according to the given feedback.",
                 )
             ]
@@ -212,8 +221,37 @@ Also there are important docs for your current generation. They contains differe
         llm_output = self._llm_chain.invoke({"messages": messages}).content
         messages += [("assistant", llm_output)]
 
+        # now ask to structurize
+        struct_msg = [
+            (
+                "user",
+                "Okay, now, can you structure the answer in the following format:"
+                "\n - short name of metadata schema (without spaces, with underlines '_');"
+                "\n - description of schema (for which experiment and so on);"
+                '\n - metadata schema like a dict with specific format {"field_name": {"descr": "Description of field (with values)", "type": "data_type"}}?'
+                "\n\n"
+                "Your generation should looks like that:\n"
+                "{\n"
+                '"short_name": "dataset_name",\n'
+                '"description": "Some description of dataset",\n'
+                '"schema":{\n'
+                '    "field_name": {\n'
+                '        "descr": "Description of field (with values)",\n'
+                '        "type": "data_type"\n'
+                "    }\n"
+                "}\n"
+                "}"
+                ""
+                "\n\nUSE ONLY THIS FRAMEWORK FOR OUTPUT. DON'T USE ANY OTHER KEYWORDS FOR STRUCTURIZING LIKE 'properties' AND SO ON!",
+            )
+        ]
+
+        full_generated_schema = self._chain_with_parsing.invoke(
+            {"messages": messages + struct_msg}
+        )
         # update state
         state_update = state
+        state_update["generation"] = full_generated_schema
         state_update["messages"] = messages
 
         return state_update
@@ -223,12 +261,26 @@ Also there are important docs for your current generation. They contains differe
         if self._is_auto == True:
             return state
 
-        feedback = interrupt("Please provide feedback:")
-        state["generation_user_feedback"] = feedback
+        feedback = interrupt("create_valid:Please provide feedback:")
+
+        users_feedback = ""
+        if "generation_user_feedback" in feedback.keys():
+            users_feedback = feedback["generation_user_feedback"]
+
+        name = feedback["short_name"]
+        descr = feedback["description"]
+        md_schema = feedback["md_schema"]
+
+        # save users feedback for future...
+        # maybe it would be important during regeneration
+        state["generation"].short_name = name
+        state["generation"].description = descr
+        state["generation"].schema = md_schema
+
+        state["generation_user_feedback"] = users_feedback
         return state
 
     def _decide_to_regenerate(self, state: MDGenerationState) -> str:
-        sleep(1)
         if self._is_auto == True:
             return "create_dataset"
 
@@ -242,18 +294,9 @@ Also there are important docs for your current generation. They contains differe
             return "create_dataset"
 
     def _create_dataset(self, state: MDGenerationState) -> MDGenerationState:
-        messages = state["messages"]
+        dataset_name = state["generation"].short_name
+        dataset_descr = state["generation"].description
+        dataset_schema = state["generation"].schema
 
-        messages += [
-            (
-                "user",
-                "Good, now, can you structure the answer in the following format:"
-                "\n - short name of metadata schema (without spaces, with underlines '_');"
-                "\n - description of schema (for which experiment and so on);"
-                '\n - metadata schema like a dict with specific format {"field_name": {"descr": "Description of field (with values)", "type": "data_type"}}?',
-            )
-        ]
-
-        full_generated_schema = self._chain_with_parsing.invoke({"messages": messages})
-        state["generation"] = full_generated_schema
+        self.__datalake.create_dataset(dataset_name, dataset_descr, dataset_schema)
         return state
