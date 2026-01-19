@@ -94,14 +94,6 @@ The mean and standart deviation was calculated on 16 runs of different experimen
 | GPT-5-mini| 10.3±2    | 2.1±2    | 17±3    | 139±111   |
 | Mistral   | 8.8±1.8   | 3.5±1.8  | 23±7.8  | **30±3.8**    |
 
-### 3. Automatic metadata filling during data insertion
-
-| Model | Fields generated | Non-string fields |  Tokens (10^{3}) | Time (sec) |
-|-------------|-------------|-------------|-------------|-------------|
-| GPT-4o    | **10.9±1.9**  | **1.1±1.9**  | **11.7±2**  | 34±7.8    |
-| GPT-5-mini| 10.3±2    | 2.1±2    | 17±3    | 139±111   |
-| Mistral   | 8.8±1.8   | 3.5±1.8  | 23±7.8  | **30±3.8**    |
-
 
 ## Key points of such project:
 -   [x] (Through trial and error) Implement the most suitable MAS structure for working with data through tools;
@@ -109,4 +101,5 @@ The mean and standart deviation was calculated on 16 runs of different experimen
 -   [x] Testing MAS on various scenarios;
 -   [x] Make demos and guides for other users;
 -   [x] Make GUI for working with Scientific Datalake;
--   [x] 
+-   [ ] Make more fine-grained UI with Datalake info monitoring;
+-   [ ] Implement data collection sharing.
