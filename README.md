@@ -12,7 +12,6 @@
     -   When adding new data, the required metadata fields are filled in either (by the system or user).
 2)  Search for required data using natural language queries;
 
-
 ## Instalation and guides
 
 #### 1. Cloning repo.
@@ -46,18 +45,28 @@ MISTRAL_API_KEY=*some_key*
 OPENAI_API_KEY=*some_key*
 ```
 
+If you need to use ClearML services as a storage backend, also provide keys, which are available
+
 Also, it is useful to have keys for langsmith because it's provides free opporunities to monitor MAS workflow's execution traces.
 
 Now, you are ready to use the SciDataMAS. But, firstly, check out next demos.
 
-#### 4. Checking demos for understanding use cases.
+#### 4. Run your streamlit chat for data moderation testing...
+
+For running streamlit chat for MAS, use this commands:
+```
+cd ./src
+streamlit run main.py
+```
+
+#### 4. ...or check out our demos for working with MAS as an API.
 
 Here are all demos:
-1)  Working with local data lake: [click](./mas_demonstration/local_science_datalake_demo.ipynb);
-2)  Creating metadata tables: [click](./mas_demonstration/creating_dataset_demo.ipynb);
-3)  Adding data to data lake: [click](./mas_demonstration/adding_data_demo.ipynb);
-4)  Getting data from data lake: [click](./mas_demonstration/getting_data_demo.ipynb);
-5)  Working with MAS (and adding tools to MAS for working with data): [click](./mas_demonstration/whole_mas_working_demo.ipynb).
+1)  Working with local data lake: [click](./mas_and_datalake_demos/local_demos/local_science_datalake_demo.ipynb);
+2)  Creating metadata tables: [click](./mas_and_datalake_demos/creating_dataset_demo.ipynb);
+3)  Adding data to data lake: [click](./mas_and_datalake_demos/adding_data_demo.ipynb);
+4)  Getting data from data lake: [click](./mas_and_datalake_demos/getting_data_demo.ipynb);
+5)  Working with MAS (and adding tools to MAS for working with data): [click](./mas_and_datalake_demos/orch_deciding_check.ipynb).
 
 
 ## Testing
@@ -85,9 +94,12 @@ The mean and standart deviation was calculated on 16 runs of different experimen
 | GPT-5-mini| 10.3±2    | 2.1±2    | 17±3    | 139±111   |
 | Mistral   | 8.8±1.8   | 3.5±1.8  | 23±7.8  | **30±3.8**    |
 
+
 ## Key points of such project:
 -   [x] (Through trial and error) Implement the most suitable MAS structure for working with data through tools;
 -   [x] Illustrate the architecture of the MAS element for data processing (for the article) in drawio, upload to the docs;
 -   [x] Testing MAS on various scenarios;
--   [x] Prepare repo and text for AAAI-26 student abstract track;
--   [x] Make demos and guides for other users.
+-   [x] Make demos and guides for other users;
+-   [x] Make GUI for working with Scientific Datalake;
+-   [ ] Make more fine-grained UI with Datalake info monitoring;
+-   [ ] Implement data collection sharing.

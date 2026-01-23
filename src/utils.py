@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
+import httpx
 
 
 def invoke(chain, params):
@@ -13,6 +14,14 @@ def invoke(chain, params):
             response = chain.invoke(params)
             return response
         except Exception as e:
+            #не ретраим 4xx ошибки.
+            if isinstance(e, httpx.HTTPStatusError):
+                status = getattr(getattr(e, "response", None), "status_code", None)
+                if status is not None:
+                    status = int(status)
+                    error_unwanted = {400, 401, 402, 403, 404, 409, 413, 422}
+                    if status in error_unwanted:
+                        raise
             print(f"Can't invoke the chain (err: {str(e)}). Wait 5 secs...")
             sleep(5)
 

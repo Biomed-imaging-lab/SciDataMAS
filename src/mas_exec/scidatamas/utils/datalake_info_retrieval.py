@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import TypedDict
 from typing_extensions import List, Tuple
 
-from data_management.local_datalake_management import DatasetInfo
+from data_model.datalake import DatasetInfo
 from utils import invoke
 
 
@@ -33,7 +33,7 @@ class RagState(TypedDict):
 class DatasetSelectionRAG:
     def __init__(
         self,
-        datalake_info: List[DatasetInfo],
+        datalake_info: List[str],
         model: str = "mistral-large-latest",
         provider: str = "mistralai",
         temperature: float = 0.30,
@@ -84,7 +84,7 @@ Come only with relevant dataset! If no datasets are relevant - just return an em
     def __get_relevant_dataset(self, state: RagState):
         datalake_info = ""
         for i, doc in enumerate(self.__datalake_info):
-            datalake_info += f"{i+1}) {doc.full_description}\n"
+            datalake_info += f"{i+1}) {doc}\n"
 
         response = invoke(
             self.__dataset_choosing_chain,
