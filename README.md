@@ -179,6 +179,10 @@ The plugin has its own citation metadata:
 - [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/Biomed-imaging-lab/SciDataMAS)
 - [Share on Telegram](https://t.me/share/url?url=https://github.com/Biomed-imaging-lab/SciDataMAS&text=SciDataMAS%20%E2%80%94%20LLM-driven%20scientific%20data%20management)
 
+If you need to print **before** the branch is merged, use
+[`docs/assets/qr-branch.png`](docs/assets/qr-branch.png); it already points
+to the `repo-adaptation` preview.
+
 Ready-to-post blurbs (English and Russian) and a plugin-specific QR code are in
 [`docs/SHARE.md`](docs/SHARE.md).
 

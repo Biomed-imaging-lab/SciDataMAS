@@ -9,6 +9,7 @@ Requires Pillow and qrcode:
 Outputs (docs/assets/):
     qr-repo.png / qr-repo.svg       -> repository root (star / share)
     qr-plugin.png / qr-plugin.svg   -> plugin directory on main
+    qr-branch.png / qr-branch.svg   -> repo-adaptation branch (pre-merge preview)
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "docs" / "assets"
 REPO_URL = "https://github.com/Biomed-imaging-lab/SciDataMAS"
 PLUGIN_URL = f"{REPO_URL}/tree/main/plugin"
+BRANCH = "repo-adaptation"
+BRANCH_URL = f"{REPO_URL}/tree/{BRANCH}"
 
 FONT_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FONT_REG = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -92,7 +95,17 @@ def main() -> None:
     make_card(PLUGIN_URL, "DeepSeek Harness plugin", ASSETS / "qr-plugin.png")
     make_svg(PLUGIN_URL, ASSETS / "qr-plugin.svg")
 
-    for name in ("qr-repo.png", "qr-repo.svg", "qr-plugin.png", "qr-plugin.svg"):
+    make_card(BRANCH_URL, "SciDataMAS (preview)", ASSETS / "qr-branch.png")
+    make_svg(BRANCH_URL, ASSETS / "qr-branch.svg")
+
+    for name in (
+        "qr-repo.png",
+        "qr-repo.svg",
+        "qr-plugin.png",
+        "qr-plugin.svg",
+        "qr-branch.png",
+        "qr-branch.svg",
+    ):
         print(f"wrote docs/assets/{name}")
 
 

@@ -20,9 +20,12 @@ Everything needed to put the repository on a slide, a poster or a social post.
 | `docs/assets/qr-repo.svg` | repository root | print at any size |
 | `docs/assets/qr-plugin.png` | `main/plugin` | if you want to send people straight to the plugin |
 | `docs/assets/qr-plugin.svg` | `main/plugin` | print at any size |
+| `docs/assets/qr-branch.png` | `repo-adaptation` branch | use until the PR is merged |
+| `docs/assets/qr-branch.svg` | `repo-adaptation` branch | print at any size |
 
-> The QR codes point at `main`. Merge the publication branch before printing,
-> otherwise the plugin QR will open a 404 until the branch is merged.
+> The canonical QR codes point at `main`. Merge the publication branch before
+> printing; the plugin QR will otherwise open a 404. If you must print earlier,
+> use `qr-branch.png`, which already resolves to the preview branch.
 
 Regenerate after a URL change:
 
