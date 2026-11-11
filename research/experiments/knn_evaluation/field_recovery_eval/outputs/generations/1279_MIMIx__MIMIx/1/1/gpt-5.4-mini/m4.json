@@ -1,0 +1,889 @@
+{
+  "md_name": "clip_seq_rbp_embryo_development_workflow",
+  "md_description": "This workflow represents CLIP-seq data generation for RNA-binding protein interaction studies in vertebrate embryonic development. It starts from embryonic samples collected at defined developmental stages, enriches crosslinked RNA-protein complexes, sequences the bound RNA fragments, and computes binding-site calls and associated metadata tables for downstream analysis of regulatory roles during development.",
+  "fields_per_node": {
+    "vertebrate_embryo_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic sample identity and origin fields for the embryonic material itself: what vertebrate embryo/tissue it is, its developmental stage, organism context, and whether it is whole embryo or dissected tissue. I excluded any protocol, crosslinking, immunoprecipitation, sequencing, alignment, or binding-site fields because those belong to downstream Process, Capture, Signal, or Derivative nodes. I also avoided repeating any identifier-style fields that are typically generated once at the root entity level unless they are necessary to distinguish the sample type and developmental provenance; the schema focuses on biological properties needed to interpret CLIP-seq data in embryonic development.",
+      "md_schema": [
+        {
+          "field_id": "organism_class",
+          "descr": "Broad vertebrate class of the embryo or embryonic tissue used in this sample, recorded at collection time; examples include fish, amphibian, reptile, bird, or mammal. Use this to contextualize developmental-stage annotations across species.",
+          "type": "categorical",
+          "allowed_values": [
+            "fish",
+            "amphibian",
+            "reptile",
+            "bird",
+            "mammal"
+          ]
+        },
+        {
+          "field_id": "organism_scientific_name",
+          "descr": "Scientific name of the vertebrate species from which the embryo or embryonic tissue was collected; format example: Danio rerio, Xenopus laevis, Gallus gallus, Mus musculus. Record as the source organism for the sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_material_type",
+          "descr": "Physical form of the biological material collected for CLIP-seq; record whether the sample is an intact whole embryo or a dissected embryonic tissue/region. Measurement point: at collection, before any crosslinking or lysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "whole_embryo",
+            "embryonic_tissue",
+            "embryonic_region"
+          ]
+        },
+        {
+          "field_id": "developmental_stage",
+          "descr": "Developmental stage of the embryo or tissue at the time of collection, using the project’s staging system or equivalent stage label; example formats include somite stage, Hamburger-Hamilton stage, developmental day, or stage number. This is the key provenance field for embryonic analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "developmental_stage_system",
+          "descr": "Naming system or ontology used to encode the developmental stage; examples include Theiler stage, Carnegie stage, Nieuwkoop and Faber stage, Hamburger-Hamilton stage, or post-fertilization day. Record the system used for the developmental_stage field.",
+          "type": "categorical",
+          "allowed_values": [
+            "theiler_stage",
+            "carnegie_stage",
+            "nieuwkoop_and_faber",
+            "hamburger_hamilton",
+            "post_fertilization_day",
+            "post_conception_day",
+            "other"
+          ]
+        },
+        {
+          "field_id": "tissue_anatomical_region",
+          "descr": "If the sample is not a whole embryo, specify the embryonic tissue or anatomical region collected; example values include head, neural tube, somite, limb bud, heart, or tailbud. Record only the source region of the biological specimen, not any processing outcome.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_preservation_state",
+          "descr": "State of the embryo or tissue at collection, indicating whether it was freshly collected or preserved before downstream processing; measurement point: immediately after dissection/collection and before crosslinking. Typical values reflect how the biological material was obtained for the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "frozen",
+            "fixed",
+            "other"
+          ]
+        }
+      ]
+    },
+    "crosslink_rna_protein_complexes": {
+      "reasoning": "This is a Process node, so I included only the crosslinking operation parameters and quality indicators for stabilizing RNA-protein complexes in the embryo material. I focused on how the transformation was performed: crosslinking modality, wavelength or chemical agent, exposure/dose, temperature, duration, and a post-crosslink success indicator. I excluded sample provenance fields because those belong to the upstream Entity node, and I did not include downstream material properties or capture/output fields because those belong to the resulting Entity or later nodes. I also avoided repeating any already_generated sample-level fields from the embryo entity.",
+      "md_schema": [
+        {
+          "field_id": "crosslinking_method",
+          "descr": "Crosslinking mode used to stabilize in vivo RNA-protein interactions in the embryonic sample before immunoprecipitation; record the operational category used in this experiment.",
+          "type": "categorical",
+          "allowed_values": [
+            "uv",
+            "chemical",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "uv_crosslink_wavelength_nm",
+          "descr": "UV wavelength used when crosslinking_method is uv or combined; typical CLIP-compatible values are 254 nm or 365 nm, recorded at the time of irradiation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslinker_chemical_name",
+          "descr": "Chemical crosslinker name used when crosslinking_method is chemical or combined; example formats include formaldehyde or psoralen derivative name. Record the reagent identity, not supplier information.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslink_exposure_dose_mj_per_cm2",
+          "descr": "Delivered UV dose used for crosslinking, measured during irradiation of the embryonic sample; typical range is experiment-specific and should be reported as energy per area.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslink_duration_minutes",
+          "descr": "Total duration of crosslinking treatment applied to the sample, measured from start to stop of exposure; typical CLIP workflows use short irradiation periods or brief chemical incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslink_temperature_celsius",
+          "descr": "Temperature of the sample during crosslinking, measured at the sample or reaction environment during the treatment; common values are ice-cold conditions or room temperature depending on the protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslink_success_indicator",
+          "descr": "Operational indicator of whether crosslinking was considered successful prior to immunoprecipitation, based on the experiment’s internal QC readout; use this to document whether stabilized complexes were obtained.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "crosslinked_embryo_material": {
+      "reasoning": "This is an Entity node representing the post-crosslink biological material. I included intrinsic properties of the crosslinked embryo material that matter before immunoprecipitation: material form, crosslinking state, time elapsed since crosslinking, and a simple QC/handling status. I excluded crosslinking protocol parameters because those belong to the upstream Process node, and I excluded immunoprecipitation reagent, capture, signal, and derivative fields because those belong downstream. I also avoided duplicating sample provenance fields already assigned to the original embryo entity.",
+      "md_schema": [
+        {
+          "field_id": "material_state",
+          "descr": "Current biological state of the sample after crosslinking and before immunoprecipitation; use this to indicate that RNA-protein complexes are stabilized in the collected material.",
+          "type": "categorical",
+          "allowed_values": [
+            "crosslinked",
+            "non_crosslinked",
+            "partially_crosslinked"
+          ]
+        },
+        {
+          "field_id": "material_form",
+          "descr": "Physical form of the crosslinked material available for downstream processing; examples include whole tissue, homogenate, lysate, or cell suspension. Record the form immediately before immunoprecipitation setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "whole_tissue",
+            "homogenate",
+            "lysate",
+            "cell_suspension",
+            "other"
+          ]
+        },
+        {
+          "field_id": "time_since_crosslinking_minutes",
+          "descr": "Elapsed time in minutes between completion of the crosslinking step and the start of immunoprecipitation or extraction handling; typical values are short and should be reported to capture sample freshness after stabilization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Short-term storage or holding condition for the crosslinked material prior to immunoprecipitation; record the condition used after crosslinking and before enrichment. Examples include immediate processing, chilled hold, or frozen storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "immediate_processing",
+            "on_ice",
+            "refrigerated",
+            "frozen",
+            "other"
+          ]
+        },
+        {
+          "field_id": "crosslinking_qc_status",
+          "descr": "Quality-control status of the crosslinked material before immunoprecipitation, based on the lab’s internal assessment of whether stabilization and sample integrity were acceptable for downstream enrichment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "rbp_immunoprecipitation": {
+      "reasoning": "This is a Process node, so I included only immunoprecipitation operation parameters and process-level quality descriptors: the target RBP identity, antibody identity/source, bead/resin used for pull-down, wash/elution conditions, and a simple enrichment QC outcome. I excluded embryo provenance and crosslink state because those belong to upstream Entity nodes, and I excluded downstream enriched-complex properties because those belong to the resulting Entity node. I also kept software-related fields out because this is a wet-lab process, not a computational process.",
+      "md_schema": [
+        {
+          "field_id": "target_rna_binding_protein",
+          "descr": "RNA-binding protein targeted by the antibody pull-down during immunoprecipitation; record the intended RBP identity used to enrich crosslinked RNA-protein complexes. Example formats include protein gene symbols or common protein names.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_name",
+          "descr": "Antibody used for the immunoprecipitation pull-down; record the reagent identity used to capture the targeted RNA-binding protein. Example formats include commercial antibody name or in-house antibody designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_species",
+          "descr": "Host species in which the immunoprecipitating antibody was raised, recorded to document reagent provenance and binding specificity; common values include rabbit, mouse, goat, or rat.",
+          "type": "categorical",
+          "allowed_values": [
+            "rabbit",
+            "mouse",
+            "goat",
+            "rat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "antibody_amount_micrograms",
+          "descr": "Amount of antibody used for each immunoprecipitation reaction, measured at the setup stage before incubation with crosslinked material; report in micrograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bead_type",
+          "descr": "Affinity bead or resin used to capture antibody-bound complexes during immunoprecipitation; record the bead chemistry or brand class used in the pull-down workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "protein_a",
+            "protein_g",
+            "protein_a_g",
+            "magnetic_beads",
+            "agarose_beads",
+            "other"
+          ]
+        },
+        {
+          "field_id": "immunoprecipitation_buffer",
+          "descr": "Buffer system used during antibody binding, wash, and/or elution steps of the pull-down; record the operational buffer identity rather than the exact downstream product. Example formats include lysis buffer or wash buffer formulation name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_stringency_level",
+          "descr": "Relative wash stringency applied during immunoprecipitation cleanup; record the lab-defined level used to reduce nonspecific background before elution. Typical values reflect low, medium, or high salt/chaotropic conditions.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "medium",
+            "high",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "immunoprecipitation_duration_minutes",
+          "descr": "Total incubation time for antibody-mediated enrichment of the crosslinked complexes, measured from start of binding to completion of the pull-down incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "immunoprecipitation_temperature_celsius",
+          "descr": "Temperature at which the immunoprecipitation incubation and/or wash steps were performed, measured during the pull-down reaction; common values are 4°C or ice-cold conditions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "immunoprecipitation_qc_status",
+          "descr": "Operational quality-control assessment of the pull-down before library preparation, indicating whether the targeted RBP enrichment was acceptable for downstream CLIP-seq processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "enriched_rna_protein_complexes": {
+      "reasoning": "This is an Entity node representing the post-immunoprecipitation biological material. I included intrinsic attributes of the enriched complexes that matter before capture/library prep: what fraction or form of material is present, how much material was recovered, whether the target RBP enrichment is acceptable, and basic storage/preservation status. I excluded antibody, bead, buffer, and incubation parameters because those belong to the upstream immunoprecipitation Process node, and I excluded sequencing/library/capture outputs because those belong downstream.",
+      "md_schema": [
+        {
+          "field_id": "enriched_material_form",
+          "descr": "Physical form of the recovered post-immunoprecipitation material immediately before library preparation; examples include pellet, bead-bound complex, eluate, or lysate fraction. Use this to describe what was actually carried forward.",
+          "type": "categorical",
+          "allowed_values": [
+            "pellet",
+            "bead_bound_complex",
+            "eluate",
+            "lysate_fraction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "target_rbp_enrichment_status",
+          "descr": "Assessment of whether the target RNA-binding protein was successfully enriched in the recovered complexes before library preparation; use the lab’s internal evaluation from the pull-down stage.",
+          "type": "categorical",
+          "allowed_values": [
+            "enriched",
+            "not_enriched",
+            "partial_enrichment",
+            "not_assessed"
+          ]
+        },
+        {
+          "field_id": "recovered_material_amount_ng",
+          "descr": "Amount of enriched RNA-protein material recovered after immunoprecipitation and before library preparation, reported in nanograms. Measure this on the post-IP material aliquot used to enter the next step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_equivalent_sample",
+          "descr": "Description of the starting crosslinked embryo material equivalent represented in this enriched fraction, for example number of embryos, tissue mass, or input lysate volume. Record the input basis used to obtain the recovered complexes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enriched_complex_storage_condition",
+          "descr": "Storage or holding condition applied to the enriched complexes before library preparation; record the condition used between immunoprecipitation and downstream processing, such as immediate processing or chilled storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "immediate_processing",
+            "on_ice",
+            "refrigerated",
+            "frozen",
+            "other"
+          ]
+        },
+        {
+          "field_id": "complex_integrity_status",
+          "descr": "Operational assessment of the recovered RNA-protein complexes prior to library preparation, indicating whether the material remained suitable for downstream capture. This is a simple entity-level QC status, not a protocol parameter.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "clip_seq_capture": {
+      "reasoning": "This is a Capture node, so I included only instrument configuration and run-session parameters for the CLIP-seq sequencing step. I described the hardware manufacturer/model/serial details, sequencing chemistry and run setup, read configuration, output-length settings, and capture-run QC metrics that are intrinsic to how the instrument was configured and operated. I excluded sample provenance, immunoprecipitation details, file properties, and downstream read-content interpretation because those belong to the upstream Entity/Process nodes or downstream Signal node. I also avoided repeating any already_generated fields from earlier nodes such as target RBP, developmental stage, or post-IP material state.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_platform_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used to capture CLIP-seq reads; record the hardware vendor for the run that generated the raw readout. Example: Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_platform_model",
+          "descr": "Instrument model used for high-throughput sequencing of enriched RNA fragments; record the specific sequencer model configured for the capture session. Example: NovaSeq 6000, NextSeq 2000, HiSeq 2500.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_platform_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the capture session; record the device identifier exactly as configured in the run log.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Internal run identifier for the sequencing session that generated the raw CLIP-seq data; format example: run_2026_01_15_A or instrument-run UUID. Use this to tie the capture event to the raw data output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_kit_name",
+          "descr": "Library sequencing chemistry or reagent kit used on the instrument during the capture step; record the kit identity that defines the readout chemistry and flow-cell setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_layout",
+          "descr": "Read configuration used in the sequencing session, describing whether the run was single-end or paired-end. This is configured at capture time and determines how raw reads are produced.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "read_length_bases",
+          "descr": "Configured sequencing read length in bases for each read generated by the instrument; measure the planned read length at run setup. Typical CLIP-seq values are short-to-moderate read lengths.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_scheme",
+          "descr": "Barcode/index strategy used for multiplexing samples in the sequencing session; record whether the run used single, dual, or no indexing. This describes the active instrument setup, not the sample identity.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cluster_density_k_per_mm2",
+          "descr": "Observed cluster density during the sequencing run, reported in thousands of clusters per square millimeter when available from the instrument output. Record this capture-quality metric at the end of the run or from the run report.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_completion_status",
+          "descr": "Operational status of the sequencing capture session after the run completed, indicating whether the instrument produced usable raw reads for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "raw_clip_reads": {
+      "reasoning": "This is a Signal node, so I included only raw data artefact properties: file format, read count, file size, read dimensions, base-quality summaries, and storage location/technical flags. I excluded sequencing instrument settings because those belong to the Capture node, and I excluded alignment, peak calling, or biological interpretation because those belong to downstream Process and Derivative nodes. I also avoided repeating any sample- or run-level identifiers already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_format",
+          "descr": "File format of the raw CLIP-seq reads produced by the sequencing capture step; record the technical container format exactly as stored. Common examples include FASTQ or gzipped FASTQ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_size_bytes",
+          "descr": "Size of the raw read file or file bundle in bytes at the time it was archived or transferred for analysis. Record the technical file size of the raw signal artefact, not the biological sample amount.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_total_read_count",
+          "descr": "Total number of reads present in the raw CLIP-seq data file, counted after sequencing and before any trimming or filtering. Use this to describe the scale of the raw signal artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_length_bases",
+          "descr": "Observed read length in bases for the raw reads as stored in the signal file; if variable, report the modal or nominal length and note that it reflects the raw artefact, not the capture setting.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_phred_quality_summary",
+          "descr": "Summary statistic for base-call quality in the raw read file, such as mean or median PHRED score across reads. Report the quality metric used by the processing pipeline on the unprocessed signal artefact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_adapter_content_flag",
+          "descr": "Technical flag indicating whether adapter sequence content was detected in the raw reads at a level relevant for downstream trimming; this is a raw-file quality characteristic.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "moderate",
+            "high",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "raw_read_storage_path",
+          "descr": "Storage path, URI, or accession location of the raw CLIP-seq read file used for downstream analysis; format example: file system path, object-store URI, or archive accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_checksum",
+          "descr": "Checksum or digest used to verify integrity of the raw read file; format example: MD5 or SHA256 string. Record this at archival or transfer time for technical provenance.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "clip_read_alignment": {
+      "reasoning": "This is a Process node, so I included only computational alignment parameters and software provenance: aligner identity, version, repository, reference target, key mapping settings, and alignment QC outcomes. I excluded raw file properties because those belong to the upstream Signal node, and I excluded aligned-read file content/format properties because those belong to the downstream Signal node. I also avoided sample provenance and biological interpretation fields since the alignment step describes how the transformation was performed, not what the sample is or what the mapped reads mean.",
+      "md_schema": [
+        {
+          "field_id": "aligner_name",
+          "descr": "Name of the computational aligner used to map raw CLIP-seq reads; record the software package used for this step. Example: bowtie2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligner_version",
+          "descr": "Software version of the aligner used for read mapping; record the exact version employed in the alignment run. Example format: 2.5.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligner_repository",
+          "descr": "Repository or provenance source for the aligner used in the mapping step; record where the software distribution was obtained, such as a project URL or package source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_target_type",
+          "descr": "Type of reference used for mapping raw reads in this alignment step; record whether reads were aligned to a genome, transcriptome, or a combined reference.",
+          "type": "categorical",
+          "allowed_values": [
+            "genome",
+            "transcriptome",
+            "combined"
+          ]
+        },
+        {
+          "field_id": "reference_assembly_name",
+          "descr": "Reference assembly or transcriptome name used for alignment; format example: GRCh38, GRCm39, danRer11, or species-specific transcriptome build. Record the exact reference target used at alignment time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_mismatches",
+          "descr": "Maximum number of mismatches allowed per read during alignment, as configured in the mapping pipeline. Record this as a tuning parameter that controls read placement stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multimapping_policy",
+          "descr": "Policy used for reads that align to multiple genomic locations; record how multimapping reads were handled by the alignment process.",
+          "type": "categorical",
+          "allowed_values": [
+            "unique_only",
+            "report_all",
+            "random_assignment",
+            "best_match",
+            "discard"
+          ]
+        },
+        {
+          "field_id": "alignment_score_threshold",
+          "descr": "Minimum score or equivalent filter threshold required for a read to be retained as aligned, according to the aligner settings used in this step. Record the threshold in the aligner’s native score units.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_qc_status",
+          "descr": "Operational assessment of whether the alignment run produced usable mapped reads for downstream analysis, based on mapping rate and internal pipeline checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "aligned_clip_reads": {
+      "reasoning": "This is a Signal node, so I included only technical properties of the mapped-read artefact: aligned file format, file size, number of mapped reads, mapping coordinates/dimensions, mapping quality summaries, and storage location. I excluded aligner software and reference parameters because those belong to the upstream alignment Process node, and I excluded peak calls or biological meaning because those belong downstream to the Derivative node. I also avoided duplicating any raw-read file fields already generated for the preceding signal node.",
+      "md_schema": [
+        {
+          "field_id": "aligned_read_file_format",
+          "descr": "File format of the mapped CLIP-seq reads produced by the alignment step; record the technical container format as stored. Common examples include BAM, CRAM, or SAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "bam",
+            "cram",
+            "sam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "aligned_read_file_size_bytes",
+          "descr": "Size of the aligned-read file in bytes at the time it was archived or transferred. Record the technical file size of the mapped signal artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligned_read_count",
+          "descr": "Total number of reads retained in the aligned file after mapping and any alignment-level filtering, counted before downstream peak calling or deduplication. Use this to describe the mapped signal volume.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapped_genome_build",
+          "descr": "Reference genome or transcriptome build to which the reads are mapped, as encoded in the aligned signal file; format example: GRCh38, GRCm39, danRer11. Record the build represented by the mapped artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_coordinate_system",
+          "descr": "Coordinate system used in the aligned read file, indicating whether positions are reported on genomic or transcriptomic coordinates. This describes the mapped signal representation.",
+          "type": "categorical",
+          "allowed_values": [
+            "genomic",
+            "transcriptomic"
+          ]
+        },
+        {
+          "field_id": "mean_mapping_quality",
+          "descr": "Mean mapping quality for reads in the aligned file, computed from the mapped signal artefact and reported in the aligner’s score scale or Phred-like scale. Use this as a technical quality summary for the aligned reads.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_duplicate_flag",
+          "descr": "Indicator of whether duplicate reads are marked or retained in the aligned file; this is a technical property of the mapped artefact that affects downstream filtering.",
+          "type": "categorical",
+          "allowed_values": [
+            "marked",
+            "removed",
+            "retained",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "aligned_read_storage_path",
+          "descr": "Storage path, URI, or accession location of the aligned-read file used for downstream analysis; format example: file system path, object-store URI, or archive accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligned_read_checksum",
+          "descr": "Checksum or digest used to verify integrity of the aligned-read file; format example: MD5 or SHA256 string. Record this at archival or transfer time for the mapped signal artefact.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binding_site_calling": {
+      "reasoning": "This is a Process node, so I included only binding-site calling computation parameters and process-level QC/provenance: caller name, version, repository, call mode, statistical thresholds, replicate handling, and an output quality indicator. I excluded aligned-read file properties because those belong to the upstream Signal node, and I excluded the final binding-site result fields because those belong to the downstream Derivative node. I also avoided any sample or capture settings, since this node describes how candidate interaction regions were inferred from aligned reads.",
+      "md_schema": [
+        {
+          "field_id": "binding_caller_name",
+          "descr": "Name of the peak-calling or crosslink-site inference software used to identify candidate RNA-protein interaction regions from aligned CLIP-seq reads; record the tool used for this step. Example: CLIPper.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_caller_version",
+          "descr": "Software version of the binding-site caller used in this step; record the exact version that generated the candidate interaction regions. Example format: 2.0.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_caller_repository",
+          "descr": "Repository or provenance source for the binding-site caller used in the inference step; record where the software was obtained, such as a project URL or package source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "call_mode",
+          "descr": "Inference mode used to identify interaction regions from aligned reads; record whether the process was configured as peak calling, crosslink-site inference, or both.",
+          "type": "categorical",
+          "allowed_values": [
+            "peak_calling",
+            "crosslink_site_inference",
+            "combined"
+          ]
+        },
+        {
+          "field_id": "p_value_threshold",
+          "descr": "Statistical significance threshold applied during binding-site inference, measured at the candidate-site selection stage. Report the threshold used to retain candidate interaction regions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "false_discovery_rate_threshold",
+          "descr": "Maximum false discovery rate allowed for reporting candidate binding sites, measured during site-calling and filtering. Record the FDR cutoff used by the process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "replicate_handling_strategy",
+          "descr": "Strategy used to combine or compare biological/technical replicates during binding-site calling; record how evidence from multiple aligned-read inputs was handled.",
+          "type": "categorical",
+          "allowed_values": [
+            "pooled",
+            "intersected",
+            "union",
+            "consensus",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "binding_call_qc_status",
+          "descr": "Operational quality-control assessment of the binding-site calling step, indicating whether the candidate-site inference produced usable results for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "rbp_binding_sites": {
+      "reasoning": "This is a Derivative node, so I included only computed-result fields that describe the inferred binding-site set itself: the caller used, result counts and dimensions, genomic annotation/coordinate characteristics, significance summary, and result-level quality metrics. I excluded the peak-calling software version, thresholds, and replicate strategy because those belong to the upstream Process node, and I excluded the aligned-read and raw-read properties because those belong to upstream Signal nodes. I also avoided any sample provenance fields because they were already generated on the embryo entity node.",
+      "md_schema": [
+        {
+          "field_id": "binding_site_call_method",
+          "descr": "Computational method used to produce the inferred RBP binding-site set from aligned CLIP-seq reads; record the algorithmic approach that generated this derivative result. Example: peak calling or crosslink-site inference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_site_count",
+          "descr": "Total number of inferred RNA-protein interaction sites reported in this derivative result set. Count the final candidate sites retained after caller-specific filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_site_coordinate_system",
+          "descr": "Coordinate system used to report the binding-site locations in this derivative result; record whether positions are given on genomic or transcriptomic coordinates.",
+          "type": "categorical",
+          "allowed_values": [
+            "genomic",
+            "transcriptomic"
+          ]
+        },
+        {
+          "field_id": "binding_site_resolution_bases",
+          "descr": "Approximate positional resolution of the inferred binding sites in bases, reflecting how precisely the derivative result localizes the interaction site. Typical values range from single-base to broader peak intervals.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_site_genome_build",
+          "descr": "Reference genome or transcriptome build used to express the inferred binding-site coordinates; format example: GRCh38, GRCm39, danRer11. Record the reference context of the derivative result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_site_annotation_status",
+          "descr": "Indicator of whether the inferred binding sites were annotated relative to known genomic features such as exons, introns, UTRs, or intergenic regions. Use this to capture result-level annotation availability.",
+          "type": "categorical",
+          "allowed_values": [
+            "annotated",
+            "unannotated",
+            "partially_annotated",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "binding_site_significance_summary",
+          "descr": "Summary of the statistical strength of the final binding-site set, such as median p-value, median score, or other caller-reported significance summary. Report the representative value used to characterize the derivative output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_site_result_qc_status",
+          "descr": "Overall quality-control status of the final inferred binding-site result set, indicating whether the derivative output was suitable for downstream biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "metadata_table_assembly": {
+      "reasoning": "This is a Process node, so I included only the computational assembly parameters and software provenance for building the metadata table: table-building software, version, repository, input-field mapping policy, schema format, validation checks, and a process-level QC status. I excluded biological sample fields because those belong to the embryo Entity node, and I excluded the resulting table content, file format, or row-level entries because those belong to the downstream Derivative node. I also avoided duplicating fields already generated for developmental stage, RBP identity, or detection method themselves; this node only describes how those inputs were integrated.",
+      "md_schema": [
+        {
+          "field_id": "table_assembler_name",
+          "descr": "Name of the software or script used to assemble the structured CLIP metadata table from upstream data; record the tool used for integration. Example: Python/pandas.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_assembler_version",
+          "descr": "Version of the table assembly software or runtime used for metadata integration; record the exact version or environment identifier that produced the table. Example format: 2.2.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_assembler_repository",
+          "descr": "Repository or provenance source for the table assembly code; record where the script or package was obtained, such as a project URL or package source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_field_mapping_specification",
+          "descr": "Specification of how upstream fields were mapped into the metadata table during assembly; record the transformation rules or field mapping logic used to integrate developmental stage, RBP identity, and interaction detection method.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_schema_format",
+          "descr": "Structured schema format used to define the output metadata table; record the tabular representation standard or schema convention used by the assembler. Example: CSV-like table, TSV, JSON table, or relational schema.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json_table",
+            "relational",
+            "other"
+          ]
+        },
+        {
+          "field_id": "validation_checks_performed",
+          "descr": "Set of validation checks applied during metadata table assembly, such as required-field presence, type checking, and duplicate-row detection. Record the checks actually performed on the assembled table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_qc_status",
+          "descr": "Operational quality-control assessment of the table assembly process, indicating whether the resulting metadata table passed validation for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "partial",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "clip_metadata_table": {
+      "reasoning": "This is a Derivative node, so I included only properties of the final structured metadata table itself: table format, file size/row count, column schema, linkage keys, content coverage, and table-level QC/provenance. I excluded the input fields that were integrated into the table because those belong to upstream Entity/Process nodes and were already generated elsewhere. I also avoided repeating any assembly-software parameters because those belong to the metadata-table assembly Process node, not to the resulting table artifact.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_file_format",
+          "descr": "File or storage format of the final CLIP metadata table; record the technical container used to store the derivative table artifact. Common examples include CSV, TSV, JSON, or spreadsheet format.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metadata_table_file_size_bytes",
+          "descr": "Size of the final metadata table file in bytes at the time it was archived or shared. Report the technical size of the derivative table artifact, not the biological sample size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_row_count",
+          "descr": "Total number of records or rows in the final metadata table, counted after all integration and filtering steps. Use this to describe the table’s scale and coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_column_count",
+          "descr": "Total number of columns in the final metadata table. Record this as a structural property of the derivative table artifact after assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_linkage_key_fields",
+          "descr": "Names of the key columns used to link sample records, developmental stage annotations, targeted RBP identity, and interaction detection method within the table; format example: sample_id, developmental_stage, target_rna_binding_protein, detection_method.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_content_scope",
+          "descr": "Summary of the biological and technical content represented in the table, indicating which CLIP-seq entities and methods are linked for each row. Use this to document what the derivative table covers, not the upstream field values themselves.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_completeness_status",
+          "descr": "Table-level assessment of whether the assembled metadata table contains all required linkage fields and expected sample records for the dataset. This is a derivative quality indicator applied after table creation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "incomplete",
+            "partial",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "metadata_table_storage_path",
+          "descr": "Storage path, URI, or accession location of the final metadata table artifact; format example: file system path, object-store URI, or dataset accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_checksum",
+          "descr": "Checksum or digest used to verify integrity of the final metadata table file; format example: MD5 or SHA256 string. Record this for derivative artifact provenance.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1099 @@
+{
+  "md_name": "Confocal Synaptic Morphology Dataset Workflow",
+  "md_description": "This DAG models generation of a metadata-linked imaging dataset from primary rodent neuronal cultures treated with neurotransmitter receptor antagonists and imaged by confocal laser scanning microscopy. It includes biological sample preparation, pharmacological perturbation, high-resolution 3D confocal acquisition of synaptic junctions and postsynaptic density, and downstream computational reconstruction, segmentation, and morphology quantification for correlating synaptic changes with neurotransmitter pathways.",
+  "fields_per_node": {
+    "primary_rodent_neuronal_culture": {
+      "reasoning": "This node is an Entity, so I included only intrinsic biological identity and origin/preparation state of the primary neuronal culture. I excluded plating, growth, media, and any treatment or imaging parameters because those belong to the downstream Process nodes (neuronal_plating_and_growth, antagonist_treatment, confocal_laser_scanning_microscopy). I also avoided sample identifiers that may already be generated at the root and are often reused elsewhere. The fields focus on what the culture is: species/strain/origin, neuronal source, dissociation/preparation provenance, and whether the culture is primary vs immortalized, which downstream users need to contextualize synaptic morphology data.",
+      "md_schema": [
+        {
+          "field_id": "organism_common_name",
+          "descr": "Common organism name of the animal source for the primary neuronal culture, recorded once for the starting biological material; examples: rat, mouse. This describes the origin of the tissue used to derive the neurons, not the culture conditions.",
+          "type": "categorical",
+          "allowed_values": [
+            "mouse",
+            "rat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "organism_scientific_name",
+          "descr": "Scientific species name of the rodent source for the primary neurons, recorded at sample provenance level; examples: Mus musculus, Rattus norvegicus. Use the species used to derive the culture, not the treatment or imaging session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "animal_strain",
+          "descr": "Rodent strain or stock used as the tissue source for the primary culture; examples: C57BL/6J, Sprague-Dawley. Record the strain at the time the tissue was obtained.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sex_of_donor",
+          "descr": "Biological sex of the donor animal(s) from which the neuronal tissue was isolated; record as provided in the animal source metadata, not as a culture condition. If pooled donors were used, record the dominant sex or indicate mixed if applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "male",
+            "female",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "developmental_stage_or_age",
+          "descr": "Developmental stage or postnatal age of the donor animal at tissue collection, reported as a textual provenance field; examples: E18, P0-P2, 5 weeks. This is the source age of the neurons, not days in culture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "brain_region_of_origin",
+          "descr": "Anatomical brain region from which the neuronal tissue was dissociated; examples: cortex, hippocampus, striatum. Record the region used to generate the culture because it affects synaptic phenotype.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neuron_type_enrichment",
+          "descr": "Primary neuronal subtype or enrichment description for the culture, if known; examples: cortical neurons, hippocampal neurons, mixed neuronal culture. This captures the intrinsic cellular composition of the entity.",
+          "type": "categorical",
+          "allowed_values": [
+            "cortical_neurons",
+            "hippocampal_neurons",
+            "mixed_neuronal_culture",
+            "other"
+          ]
+        },
+        {
+          "field_id": "culture_derivation_method",
+          "descr": "Brief description of how the primary neuronal culture was derived from tissue prior to plating; examples: enzymatic dissociation, mechanical dissociation, combined dissociation. This refers to the origin/preparation of the entity, not the later plating and growth process.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic_dissociation",
+            "mechanical_dissociation",
+            "combined_dissociation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "primary_culture_status",
+          "descr": "Flag indicating that the sample is a primary culture derived directly from rodent tissue rather than an immortalized cell line; true for this node because the dataset begins with primary neurons.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "initial_cell_source_material",
+          "descr": "Text description of the source material used to establish the culture; examples: dissociated embryonic cortical tissue, dissociated postnatal hippocampal tissue. Record the provenance of the starting material only.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "neuronal_plating_and_growth": {
+      "reasoning": "This node is a Process, so I included only protocol and handling details for how primary neurons were plated and maintained to reach a mature culture state. I excluded organism/source identity fields because those belong to the upstream Entity node, and I excluded treatment, imaging, and downstream morphology fields because they belong to later nodes. I also avoided repeating any sample identifiers or culture provenance already captured for the root entity. Since the node’s agent is the researcher, I included actionable process parameters such as plating density, coating, media, incubation conditions, and maturity/readiness indicators needed to reproduce the culture development step.",
+      "md_schema": [
+        {
+          "field_id": "plating_density_cells_per_cm2",
+          "descr": "Density at which primary neurons were plated onto the substrate, measured at the start of the culture-plating step; typical range is about 1e3-1e5 cells per cm2 depending on assay design. Report as cells per square centimeter.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "substrate_coating_material",
+          "descr": "Surface coating used to promote neuronal attachment and growth during plating; examples: poly-D-lysine, laminin, poly-L-lysine. Record the coating applied to the culture surface before plating.",
+          "type": "categorical",
+          "allowed_values": [
+            "poly_d_lysine",
+            "poly_l_lysine",
+            "laminin",
+            "poly_d_lysine_laminin",
+            "other"
+          ]
+        },
+        {
+          "field_id": "coating_concentration_ug_per_ml",
+          "descr": "Concentration of the coating reagent used on the culture substrate before plating, typically in the range of 1-100 ug/mL depending on coating material. Record the prepared coating concentration used for this step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_medium_formulation",
+          "descr": "Basal culture medium formulation used to maintain neuronal growth after plating; examples: Neurobasal, DMEM/F-12, supplemented neuronal medium. Record the medium actually used during the growth phase.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "supplement_set",
+          "descr": "Key supplement combination added to the growth medium during the plating and maturation phase; examples: B27, GlutaMAX, fetal bovine serum, penicillin-streptomycin. Describe the supplement set used to support neuronal survival and synaptogenesis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Incubation temperature used during neuronal culture maintenance after plating, typically near physiological temperature; usual range is 35-38 Celsius. Record the setpoint used in the incubator for this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_co2_percent",
+          "descr": "Carbon dioxide percentage used in the incubator during culture maintenance; typical value is 5 percent. Record the setpoint used throughout the growth period.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "growth_duration_days_in_vitro",
+          "descr": "Number of days the neurons were maintained in culture after plating and before antagonist treatment, measured at the end of the growth phase; typical values are several days to multiple weeks depending on synaptic maturation goals.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "medium_change_frequency_days",
+          "descr": "Interval between routine culture medium changes during the growth phase, measured in days; examples: every 2 days, every 3 days. This describes maintenance frequency during maturation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "maturity_readiness_criteria",
+          "descr": "Operational criterion used to decide that the neuronal culture was ready for downstream treatment; examples: visible synaptic network formation, specified days in vitro, stable viability. Record the readiness assessment used at the end of this process.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mature_neuronal_culture": {
+      "reasoning": "This node is an Entity representing the culture state after growth and before treatment. I included only intrinsic state descriptors that define the matured culture at the handoff point: culture age, viability, confluency/density, synaptic development status, and readiness for perturbation/imaging. I excluded plating and maintenance protocol details because those belong to the upstream growth Process, and I excluded any treatment or imaging settings because those belong to downstream Process and Capture nodes. I also avoided repeating source-identifying fields already generated for the initial primary culture node. The resulting fields describe what the culture is at this stage, not what was done to it.",
+      "md_schema": [
+        {
+          "field_id": "days_in_vitro",
+          "descr": "Age of the neuronal culture in days at the moment it is declared mature and ready for downstream antagonist treatment; report the exact days in vitro value used to define the pre-treatment state.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_viability_percent",
+          "descr": "Estimated fraction of living cells in the mature culture at the readiness checkpoint, measured immediately before pharmacological perturbation; typical range is 0-100 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_confluency_percent",
+          "descr": "Approximate surface coverage or network occupancy of the mature neuronal culture at the readiness checkpoint, measured visually or by image-based estimation before treatment; typical range is 0-100 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "synaptic_maturation_status",
+          "descr": "Qualitative assessment of synaptic development in the culture prior to treatment; indicate whether synaptic junctions and postsynaptic structures are considered developed enough for imaging.",
+          "type": "categorical",
+          "allowed_values": [
+            "immature",
+            "developing",
+            "mature",
+            "fully_mature"
+          ]
+        },
+        {
+          "field_id": "pre_treatment_readiness_flag",
+          "descr": "Boolean flag indicating that this culture passed the internal readiness criteria for antagonist exposure and confocal imaging at the time of transfer to the next workflow step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "estimated_neurite_network_complexity",
+          "descr": "Text or semi-quantitative description of neurite/network elaboration in the mature culture at the pre-treatment checkpoint; examples: sparse, moderate, dense, highly interconnected. Record the assessed network state immediately before perturbation.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "antagonist_treatment": {
+      "reasoning": "This node is a Process, so I included only treatment protocol details for how the mature neuronal culture was exposed to receptor antagonists. I focused on the compound identity, receptor class, dosing, exposure timing, vehicle, and washout/recovery conditions, because those define the perturbation itself and are needed to reproduce the biological manipulation. I excluded culture-state fields that belong to the upstream mature culture entity and imaging fields that belong to downstream capture. I also avoided software or instrument fields because this is a wet-lab process, not a capture or computational step. No already_generated fields were repeated semantically; these fields specifically describe the antagonist exposure operation and its immediate protocol parameters.",
+      "md_schema": [
+        {
+          "field_id": "antagonist_name",
+          "descr": "Name of the neurotransmitter receptor antagonist applied to the neuronal culture during the perturbation step; examples: CNQX, APV, bicuculline, gabazine. Record the compound used for this treatment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_receptor_class",
+          "descr": "Receptor class targeted by the antagonist, used to interpret the synaptic pathway perturbed; examples: AMPA receptor, NMDA receptor, GABA_A receptor, glycine receptor. Record the intended pharmacological target.",
+          "type": "categorical",
+          "allowed_values": [
+            "ampa_receptor",
+            "nmda_receptor",
+            "gaba_a_receptor",
+            "glycine_receptor",
+            "other"
+          ]
+        },
+        {
+          "field_id": "antagonist_concentration_um",
+          "descr": "Final concentration of the antagonist in the culture medium during exposure, measured at the time the treatment is applied; typical range is nanomolar to micromolar depending on compound. Report in micromolar.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_duration_minutes",
+          "descr": "Duration of antagonist exposure before the sample is advanced to the next step, measured from addition of compound to the end of treatment; report in minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_temperature_celsius",
+          "descr": "Temperature at which the antagonist exposure was performed, if different from the routine culture incubation temperature; report the setpoint during treatment as a process parameter in degrees Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "vehicle_control_used",
+          "descr": "Indicates whether a vehicle-only control solvent was used alongside or instead of the antagonist during the treatment step; true if a matched vehicle condition was included.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "vehicle_solvent",
+          "descr": "Solvent or carrier used to dissolve the antagonist before addition to culture; examples: DMSO, water, ethanol. Record only when a vehicle was used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "washout_performed",
+          "descr": "Boolean flag indicating whether the culture was washed after antagonist exposure before downstream imaging or recovery; true if a washout step was performed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "washout_duration_minutes",
+          "descr": "Duration of the washout/recovery period following antagonist removal, measured in minutes if a washout was performed; use this to capture post-exposure handling before imaging.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_replicate_count",
+          "descr": "Number of independent culture replicates exposed under the same antagonist treatment condition, counted at the end of this process for experimental bookkeeping.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treated_neuronal_culture": {
+      "reasoning": "This node is an Entity, so I included only the state of the culture after antagonist exposure and before imaging. I focused on intrinsic post-treatment descriptors such as which antagonist exposure state it is in, recovery interval, immediate viability, and whether the culture is considered perturbed for downstream acquisition. I excluded compound identity, dose, and exposure timing because those belong to the upstream treatment Process, and I excluded imaging settings because those belong to the downstream Capture node. I also avoided repeating the original culture provenance or general sample identifiers already established earlier in the DAG. The fields below help downstream users understand the treated biological state being imaged without duplicating the treatment protocol itself.",
+      "md_schema": [
+        {
+          "field_id": "post_treatment_state",
+          "descr": "Qualitative designation of the culture after antagonist exposure and before imaging; use this to record the immediate biological state of the entity for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "untreated",
+            "acutely_treated",
+            "recovered_post_treatment",
+            "perturbed"
+          ]
+        },
+        {
+          "field_id": "post_treatment_recovery_minutes",
+          "descr": "Elapsed recovery time after antagonist removal and before imaging, measured in minutes from the end of treatment to the start of acquisition; use 0 if imaging was performed immediately after exposure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treated_culture_viability_percent",
+          "descr": "Estimated cell viability of the neuronal culture after antagonist exposure and before imaging; report as a percentage from 0 to 100 at the handoff to acquisition.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "synaptic_perturbation_expected",
+          "descr": "Boolean flag indicating whether the treated culture is expected to show synaptic structural or signaling changes attributable to antagonist exposure.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_response_class",
+          "descr": "High-level description of the expected or observed response state of the culture after antagonist exposure; examples: no_change, moderate_perturbation, strong_perturbation. Record the entity-level response category, not quantitative measurements.",
+          "type": "categorical",
+          "allowed_values": [
+            "no_change",
+            "moderate_perturbation",
+            "strong_perturbation",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "pre_imaging_readiness_flag",
+          "descr": "Boolean flag indicating that the treated neuronal culture met criteria for immediate transfer to confocal imaging after antagonist exposure and any recovery period.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "confocal_laser_scanning_microscopy": {
+      "reasoning": "This node is a Capture, so I included only the measurement session and instrument configuration for the confocal acquisition. I focused on actively controlled settings and hardware description: microscope manufacturer/model/serial, objective specifications, laser wavelengths, detector configuration, scan and z-step settings, pinhole, software, and acquisition parameters that define how the 3D stack was collected. I excluded sample biology because that belongs to the treated culture entity, and I excluded raw file properties because those belong to the downstream Signal node. I also avoided computational reconstruction or segmentation parameters because those belong to later Process nodes. The fields here are sufficient to reproduce the capture session and interpret the resulting raw image stacks.",
+      "md_schema": [
+        {
+          "field_id": "microscope_manufacturer",
+          "descr": "Manufacturer of the confocal laser scanning microscope used for acquisition; record the hardware vendor responsible for the instrument platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_model",
+          "descr": "Model name or number of the confocal laser scanning microscope used during imaging; example format: LSM 880, SP8, FV3000. Record the exact instrument platform used for the session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_serial_number",
+          "descr": "Serial number of the confocal microscope used for the acquisition session; use the instrument's unique hardware identifier as recorded in the facility inventory.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_software_name",
+          "descr": "Name of the acquisition software used to control the confocal microscope during imaging; examples: Zen, LAS X, FV31S-SW. Record the software used at the time of image collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_software_version",
+          "descr": "Version of the acquisition software used for the confocal session; record the exact version string to support reproducibility of hardware control settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Nominal magnification of the objective used for confocal imaging, measured as an optical property of the configured objective lens; typical values include 20x, 40x, 63x, or 100x.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_numerical_aperture",
+          "descr": "Numerical aperture of the objective lens used for acquisition, an optical property that affects resolution and light collection; typical range is about 0.5-1.4. Record the configured objective NA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_immersion_medium",
+          "descr": "Immersion medium for the objective used during acquisition; examples: air, water, oil, glycerol. Record the medium corresponding to the objective configuration at imaging time.",
+          "type": "categorical",
+          "allowed_values": [
+            "air",
+            "water",
+            "oil",
+            "glycerol",
+            "other"
+          ]
+        },
+        {
+          "field_id": "laser_wavelengths_nm",
+          "descr": "Excitation laser wavelength(s) used during confocal acquisition, reported in nanometers; typical values depend on fluorophores and may include multiple channels. Record the wavelengths actively used for imaging.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "laser_power_percent",
+          "descr": "Laser power used during acquisition, reported as the instrument percentage or equivalent control setting at the time of imaging; typical range is low single digits to tens of percent depending on fluorophore brightness and phototoxicity constraints.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pinhole_diameter_au",
+          "descr": "Confocal pinhole diameter set during acquisition, reported in Airy units; typical values are around 0.8-2.0 AU depending on sectioning needs. Record the setting used for the 3D stack.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pixel_size_nm",
+          "descr": "Lateral pixel size of the acquired image in nanometers, determined by the scan configuration at capture time; report the value used for the raw stack and note that it applies to x-y sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "z_step_size_nm",
+          "descr": "Axial spacing between optical sections in the confocal stack, reported in nanometers; record the z-interval used to acquire the 3D reconstruction data.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "scan_speed_hz",
+          "descr": "Line or frame scan speed used during acquisition, reported in hertz or the instrument-specific scan speed setting; record the setting that controlled dwell time and signal collection.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "frame_average_count",
+          "descr": "Number of repeated frame averages applied during acquisition to improve signal-to-noise; record the averaging count used for the raw confocal stack.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detector_type",
+          "descr": "Detector configuration used for confocal signal collection; examples: PMT, hybrid detector, GaAsP detector. Record the detector class used during acquisition.",
+          "type": "categorical",
+          "allowed_values": [
+            "pmt",
+            "hybrid_detector",
+            "gaasp_detector",
+            "other"
+          ]
+        },
+        {
+          "field_id": "channel_count",
+          "descr": "Number of fluorescence channels acquired in the confocal session, counted at the time of imaging; include all actively captured channels in the 3D stack.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "z_stack_acquired",
+          "descr": "Boolean flag indicating whether the imaging session acquired a volumetric z-stack rather than a single plane; true for this 3D confocal acquisition.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_confocal_stack": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties: file format, file size, image dimensions, voxel dimensions as stored in the file, channel count, bit depth, compression, storage location, and basic technical quality indicators. I excluded capture settings like laser wavelength, objective, and software because those belong to the upstream Capture node, and I excluded reconstruction or segmentation details because those belong to downstream Process and Derivative nodes. I also avoided biological sample descriptors because those belong to the treated culture entity. These fields describe the raw confocal stack itself so users can locate, load, and assess the technical characteristics of the data file before any processing.",
+      "md_schema": [
+        {
+          "field_id": "raw_file_format",
+          "descr": "File format of the raw confocal stack as stored on disk; examples: .czi, .lif, .tif, .nd2. Record the native or exported raw image container format.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_file_path",
+          "descr": "Storage location or repository path for the raw confocal stack file, recorded as a file-system path, URI, or accession string. Provide the exact location where the raw data can be retrieved.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw confocal stack file in bytes at the time of archiving or export; use this to describe the technical footprint of the raw artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Width of the raw confocal stack in pixels along the x dimension, measured from the stored file dimensions at ingestion time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Height of the raw confocal stack in pixels along the y dimension, measured from the stored file dimensions at ingestion time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_depth_slices",
+          "descr": "Number of optical sections or z-slices in the raw confocal stack, measured from the stored data file; this reflects the raw volumetric depth of the acquisition.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stored_channel_count",
+          "descr": "Number of channels encoded in the raw confocal stack file, measured from the file content at ingestion or export time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bit_depth",
+          "descr": "Bit depth of the stored image data per pixel value in the raw confocal stack; typical values are 8, 12, 16, or 32 bits depending on acquisition and export settings.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "voxel_size_x_nm",
+          "descr": "Stored voxel size in the x dimension for the raw stack, reported in nanometers as encoded in the file metadata. This is a technical property of the signal artefact, not the microscope setting itself.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "voxel_size_y_nm",
+          "descr": "Stored voxel size in the y dimension for the raw stack, reported in nanometers as encoded in the file metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "voxel_size_z_nm",
+          "descr": "Stored voxel size in the z dimension for the raw stack, reported in nanometers as encoded in the file metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_used",
+          "descr": "Indicates whether the raw confocal stack file uses compression and, if known, the compression scheme used at storage time; examples: none, lossless compression, vendor-specific compression.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "lossless_compression",
+            "vendor_specific_compression",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "raw_data_quality_flag",
+          "descr": "Technical quality flag for the raw image artefact, assessed at the file level after acquisition; examples: complete, partial, corrupted, unreadable. Use this to indicate whether the raw signal is usable for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unreadable"
+          ]
+        },
+        {
+          "field_id": "signal_to_noise_estimate",
+          "descr": "Approximate signal-to-noise ratio estimated from the raw confocal stack at the file level, if available; report the value used for technical assessment of the signal artefact.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "volume_reconstruction": {
+      "reasoning": "This node is a Process, so I included only computational reconstruction details that describe how the raw confocal stack was converted into a coherent 3D volume. I focused on the reconstruction software, version, algorithm/method, interpolation or resampling choices, filtering, registration/alignment, output voxel sizing, and quality indicators of the reconstructed volume. I excluded raw file properties because those belong to the input Signal node, and I excluded segmentation or morphology metrics because those belong to downstream nodes. I also avoided capture settings and biological sample descriptors. These fields are the minimum needed for a downstream user to reproduce the reconstruction and understand its effect on the resulting 3D volume.",
+      "md_schema": [
+        {
+          "field_id": "reconstruction_software_name",
+          "descr": "Name of the software or computational package used to reconstruct the raw confocal sections into a 3D volume; examples: FIJI, Imaris, Arivis, custom pipeline. Record the software used for this processing step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_software_version",
+          "descr": "Version of the reconstruction software used to generate the 3D volume; record the exact version string to support reproducibility of the computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_repository_or_commit",
+          "descr": "Repository, package identifier, or commit hash for the reconstruction pipeline when a scripted or custom method was used; example formats include GitHub URL, package DOI, or commit SHA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_method",
+          "descr": "Primary method used to assemble the raw optical sections into a 3D volume; examples: direct stack assembly, deconvolution, registration-based reconstruction, resampling. Record the method applied to the raw signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_stack_assembly",
+            "deconvolution",
+            "registration_based_reconstruction",
+            "resampling",
+            "other"
+          ]
+        },
+        {
+          "field_id": "deconvolution_applied",
+          "descr": "Boolean flag indicating whether a deconvolution step was applied during reconstruction to improve axial or lateral resolution of the confocal volume.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "deconvolution_iterations",
+          "descr": "Number of iterations used in the deconvolution procedure, if deconvolution was applied, measured at processing time. Report the integer iteration count used by the reconstruction pipeline.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registration_performed",
+          "descr": "Boolean flag indicating whether slice or channel registration/alignment was applied during reconstruction before the 3D volume was finalized.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interpolation_method",
+          "descr": "Interpolation scheme used when resampling the raw stack into the reconstructed 3D volume; examples: nearest neighbor, linear, cubic, spline. Record the method chosen for voxel resampling.",
+          "type": "categorical",
+          "allowed_values": [
+            "nearest_neighbor",
+            "linear",
+            "cubic",
+            "spline",
+            "other"
+          ]
+        },
+        {
+          "field_id": "output_voxel_size_nm",
+          "descr": "Voxel size of the reconstructed 3D volume in nanometers after any resampling or reconstruction adjustments; report the final x-y-z voxel sampling used in the processed volume.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_volume_dimensions",
+          "descr": "Dimensions of the reconstructed 3D volume after processing, typically recorded as a text representation of x by y by z size or a tuple-like string. Use this to capture the final array shape of the processed output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_quality_score",
+          "descr": "Quality indicator for the reconstructed 3D volume produced by the processing step; examples: pass/fail, low/medium/high, or a numeric score used internally to judge reconstruction fidelity.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "medium",
+            "high",
+            "pass",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "reconstructed_3d_volume": {
+      "reasoning": "This node is a Signal, so I included only processed data artefact properties of the reconstructed 3D volume itself. I focused on the file format, storage location, file size, final dimensions, voxel size, channel count, bit depth, and technical completeness/quality of the reconstructed volume. I excluded reconstruction algorithm and software details because those belong to the upstream Process node, and I excluded segmentation or morphology results because those belong to downstream Derivative nodes. I also avoided capture settings and biological sample descriptors. These fields let users locate and load the reconstructed volume and understand its technical properties without duplicating processing metadata.",
+      "md_schema": [
+        {
+          "field_id": "reconstructed_file_format",
+          "descr": "File format of the reconstructed 3D volume as stored on disk; examples: .ome.tif, .n5, .h5, .ims. Record the exported or native processed volume format.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_file_path",
+          "descr": "Storage location or repository path for the reconstructed 3D volume file, recorded as a file-system path, URI, or accession string. Provide the exact location of the processed signal artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_file_size_bytes",
+          "descr": "Size of the reconstructed 3D volume file in bytes at the time of export or archiving; use this technical measure to compare processed artefact footprint.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_width_pixels",
+          "descr": "Width of the reconstructed 3D volume in pixels along the x dimension, measured from the processed data file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_height_pixels",
+          "descr": "Height of the reconstructed 3D volume in pixels along the y dimension, measured from the processed data file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_depth_slices",
+          "descr": "Number of z-slices in the reconstructed 3D volume, measured from the processed data file after reconstruction and any resampling.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_channel_count",
+          "descr": "Number of channels present in the reconstructed 3D volume file, measured from the processed output content.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_bit_depth",
+          "descr": "Bit depth of the reconstructed volume data per pixel value; typical values are 8, 12, 16, or 32 bits depending on the processing output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_voxel_size_x_nm",
+          "descr": "Voxel size in the x dimension for the reconstructed 3D volume, reported in nanometers as encoded in the processed file or output metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_voxel_size_y_nm",
+          "descr": "Voxel size in the y dimension for the reconstructed 3D volume, reported in nanometers as encoded in the processed file or output metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_voxel_size_z_nm",
+          "descr": "Voxel size in the z dimension for the reconstructed 3D volume, reported in nanometers as encoded in the processed file or output metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_applied_flag",
+          "descr": "Boolean flag indicating that the signal is the reconstructed output of the raw confocal stack rather than the original acquisition file.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstructed_volume_quality_flag",
+          "descr": "Technical quality flag for the reconstructed 3D volume; examples: complete, partial, corrupted, unreadable. Use this to indicate whether the processed signal is usable for downstream segmentation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unreadable"
+          ]
+        },
+        {
+          "field_id": "reconstructed_signal_to_noise_estimate",
+          "descr": "Approximate signal-to-noise estimate for the reconstructed 3D volume, if available; report the value used for post-processing quality assessment of the signal artefact.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "synapse_segmentation": {
+      "reasoning": "This node is a Process, so I included only segmentation workflow details describing how the reconstructed volume was transformed into synaptic and postsynaptic density masks. I focused on the segmentation software, version, repository, method, thresholds, model/algorithm settings, manual correction status, and validation metrics because those define the computation. I excluded properties of the reconstructed input signal and the final mask output itself, since those belong to the upstream Signal node and downstream Derivative node respectively. I also avoided treatment, capture, and biological source metadata. These fields are sufficient for a downstream user to reproduce the segmentation and interpret the resulting morphology mask.",
+      "md_schema": [
+        {
+          "field_id": "segmentation_software_name",
+          "descr": "Name of the software or computational package used to segment synaptic junctions and postsynaptic density from the reconstructed volume; examples: ilastik, Cellpose, FIJI, custom Python pipeline. Record the tool used for this processing step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_software_version",
+          "descr": "Version of the segmentation software used to generate the masks; record the exact version string for reproducibility of the segmentation procedure.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_repository_or_commit",
+          "descr": "Repository, package identifier, or commit hash for the segmentation pipeline when a scripted or custom method was used; example formats include GitHub URL, package DOI, or commit SHA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_method",
+          "descr": "Primary segmentation approach used to delineate synaptic structures from the reconstructed volume; examples: thresholding, machine learning, watershed, edge-based segmentation. Record the method applied to the input volume.",
+          "type": "categorical",
+          "allowed_values": [
+            "thresholding",
+            "machine_learning",
+            "watershed",
+            "edge_based",
+            "manual",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "segmentation_model_name",
+          "descr": "Name of the trained model or algorithm variant used for segmentation if a model-based approach was applied; examples: U-Net, random forest classifier, custom CNN.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_model_version",
+          "descr": "Version or checkpoint identifier of the segmentation model used, if applicable; use this to specify the exact model state employed for mask generation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "threshold_value",
+          "descr": "Decision threshold used during segmentation when threshold-based or probability-based classification was applied; report the numeric value used to define synaptic regions in the reconstructed volume.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_object_size_pixels",
+          "descr": "Minimum connected component size retained during segmentation, measured in pixels; use this filter to describe removal of small objects or noise from the mask output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "manual_correction_applied",
+          "descr": "Boolean flag indicating whether automated segmentation results were manually corrected before finalizing the masks.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_validation_metric",
+          "descr": "Quantitative validation metric used to assess segmentation performance on the reconstructed volume; examples: Dice score, IoU, precision, recall. Record the metric chosen for this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_class_labels",
+          "descr": "Labels assigned during segmentation to distinguish synaptic substructures in the reconstructed volume; examples: synapse, postsynaptic_density, background. Record the label set used by the segmentation pipeline.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "synaptic_morphology_mask": {
+      "reasoning": "This node is a Derivative, so I included only computed result properties of the segmentation mask itself. I focused on output file format, storage location, size, dimensions, label schema, mask encoding, and quality/completeness indicators that characterize the derived artefact. I excluded segmentation method, software, threshold, and model details because those belong to the upstream Process node, and I excluded raw/reconstructed image properties because those belong to the input Signal nodes. I also avoided morphology quantification metrics because those belong to the next downstream Derivative node. These fields let users locate, inspect, and reuse the synaptic morphology mask without duplicating process metadata.",
+      "md_schema": [
+        {
+          "field_id": "mask_file_format",
+          "descr": "File format of the segmentation mask as stored on disk; examples: .nii, .tif, .ome.tif, .h5. Record the exported derivative format used for the mask output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_file_path",
+          "descr": "Storage location or repository path for the segmentation mask file, recorded as a file-system path, URI, or accession string. Provide the exact location of the derived mask artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_file_size_bytes",
+          "descr": "Size of the segmentation mask file in bytes at the time of export or archiving; use this technical property to describe the derivative artefact footprint.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_width_pixels",
+          "descr": "Width of the segmentation mask in pixels along the x dimension, measured from the derived mask file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_height_pixels",
+          "descr": "Height of the segmentation mask in pixels along the y dimension, measured from the derived mask file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_depth_slices",
+          "descr": "Number of z-slices in the segmentation mask, measured from the derived 3D mask file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_channel_count",
+          "descr": "Number of channels encoded in the segmentation mask output, measured from the derived file content; use this if masks are stored in multi-channel format.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_encoding_scheme",
+          "descr": "Encoding scheme used for the segmentation mask values; examples: binary, integer label map, probabilistic mask. Record how object classes are represented in the derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "binary",
+            "integer_label_map",
+            "probabilistic_mask",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mask_label_set",
+          "descr": "Set of labels present in the segmentation mask, describing the object classes represented in the derived output; examples: background, synapse, postsynaptic_density.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_bit_depth",
+          "descr": "Bit depth of the stored mask values per pixel; typical values are 8, 16, or 32 bits depending on whether the mask is binary, label-based, or probabilistic.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_completeness_flag",
+          "descr": "Boolean flag indicating whether the segmentation mask is complete for the full reconstructed volume and ready for downstream quantification.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_quality_flag",
+          "descr": "Technical quality flag for the derived mask; examples: complete, partial, corrupted, unreadable. Use this to indicate whether the output is usable for morphology analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unreadable"
+          ]
+        },
+        {
+          "field_id": "mask_confidence_score",
+          "descr": "Optional confidence or support score for the derived segmentation mask, if provided by the pipeline; report the summary score used to judge mask reliability.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "morphology_quantification": {
+      "reasoning": "This node is a Process, so I included only the computation parameters and software details for quantifying morphology from the segmentation mask. I focused on the analysis software, version, repository, metric definitions, region-of-interest handling, normalization choices, and statistical summary settings because those define the quantification procedure. I excluded the mask input properties because those belong to the upstream Derivative node, and I excluded the final numeric outputs because those belong to the downstream metrics Derivative node. I also avoided capture and sample provenance fields. These fields are sufficient for a downstream user to reproduce the quantification step and understand how the metrics were computed.",
+      "md_schema": [
+        {
+          "field_id": "quantification_software_name",
+          "descr": "Name of the software or computational package used to quantify synaptic morphology from the segmentation mask; examples: Python, MATLAB, FIJI, CellProfiler, custom pipeline. Record the tool used for this analysis step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_software_version",
+          "descr": "Version of the quantification software used to compute morphology metrics; record the exact version string for reproducibility of the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_repository_or_commit",
+          "descr": "Repository, package identifier, or commit hash for the quantification pipeline when a scripted or custom method was used; example formats include GitHub URL, package DOI, or commit SHA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_metric_set",
+          "descr": "Set of morphology metrics computed from the segmentation output; examples: area, volume, perimeter, circularity, density, spine size, PSD size. Record the metric family used in this analysis step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_definition_method",
+          "descr": "Method used to define regions of interest for morphology quantification; examples: whole volume, manual ROI, channel-based ROI, synapse-centered ROI. Record how the analysis region was selected from the mask output.",
+          "type": "categorical",
+          "allowed_values": [
+            "whole_volume",
+            "manual_roi",
+            "channel_based_roi",
+            "synapse_centered_roi",
+            "other"
+          ]
+        },
+        {
+          "field_id": "background_subtraction_applied",
+          "descr": "Boolean flag indicating whether background subtraction or baseline correction was applied before morphology metrics were calculated from the mask.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_strategy",
+          "descr": "Normalization strategy used when comparing synaptic morphology across samples or treatments; examples: none, per cell, per volume, to control condition. Record the scaling approach applied before summarization.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "per_cell",
+            "per_volume",
+            "to_control_condition",
+            "other"
+          ]
+        },
+        {
+          "field_id": "outlier_filtering_method",
+          "descr": "Method used to exclude or dampen outlier objects or measurements prior to summarization; examples: none, IQR filter, z-score filter, manual curation. Record the filtering rule used for quantified metrics.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "iqr_filter",
+            "z_score_filter",
+            "manual_curation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "summary_statistic",
+          "descr": "Summary statistic used to aggregate object-level morphology measurements into reported results; examples: mean, median, sum, percentile. Record the statistic used by the quantification process.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "sum",
+            "percentile",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quantification_output_units",
+          "descr": "Units produced by the morphology quantification workflow for the reported measurements; examples: micrometer, cubic micrometer, count per volume, arbitrary units. Record the units attached to the computed analysis outputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_quality_flag",
+          "descr": "Quality flag assigned to the quantification step based on the analysis pipeline output; examples: pass, caution, fail. Use this to indicate whether the computed morphology estimates are suitable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "caution",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "synaptic_morphology_metrics": {
+      "reasoning": "This node is a Derivative, so I included only the computed metric outputs themselves and their result-level descriptors. I focused on the metric names and values for synaptic size, shape, density, and treatment-associated change, along with units, normalization basis, comparison group, significance indicators, and summary level. I excluded the quantification software and metric computation settings because those belong to the upstream Process node, and I excluded the mask or reconstructed image properties because those belong to upstream Signal/Derivative nodes. I also avoided repeating any sample or treatment identifiers already generated elsewhere by using result-oriented fields that describe the computed output table. These fields are enough for downstream users to interpret, filter, and reuse the morphological measurements.",
+      "md_schema": [
+        {
+          "field_id": "metric_name",
+          "descr": "Name of the computed synaptic morphology metric reported in the derivative table; examples: synapse_volume, psd_area, synapse_density, circularity. Use one row or entry per metric name as appropriate for the result set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_value",
+          "descr": "Numeric value of the synaptic morphology metric computed for the treated culture or summarized group, measured in the units defined for that metric. Record the value as reported by the analysis pipeline.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_units",
+          "descr": "Units associated with the reported morphology metric; examples: um2, um3, count_per_um3, arbitrary_units. Record the units attached to the computed value.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_basis",
+          "descr": "Basis used to normalize the reported metric across samples or conditions; examples: per_cell, per_volume, relative_to_control, none. Record the normalization context for the computed value.",
+          "type": "categorical",
+          "allowed_values": [
+            "per_cell",
+            "per_volume",
+            "relative_to_control",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparison_condition",
+          "descr": "Experimental condition used as the comparator when the derivative metric represents a change relative to another group; examples: vehicle_control, baseline, untreated. Record the reference condition for treatment-associated comparisons.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_direction",
+          "descr": "Direction of the observed treatment-associated change for the reported metric relative to the comparison condition; examples: increase, decrease, no_change. Record the qualitative direction when applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "increase",
+            "decrease",
+            "no_change",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "effect_size",
+          "descr": "Magnitude of the treatment-associated change for the reported metric, if computed; report the effect size value used by the analysis, such as fold change or percent change.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "Statistical p-value associated with the reported morphology metric or treatment effect, if statistical testing was performed; report the value as computed by the analysis workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval",
+          "descr": "Confidence interval for the reported morphology metric or treatment effect, if provided by the analysis workflow; record as a text representation such as lower-upper bounds.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_level",
+          "descr": "Level at which the metric was summarized before reporting; examples: synapse, cell, field_of_view, culture, experiment. Record the aggregation level for the derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "synapse",
+            "cell",
+            "field_of_view",
+            "culture",
+            "experiment",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metric_quality_flag",
+          "descr": "Quality flag for the computed morphology metric; examples: pass, caution, fail. Use this to indicate whether the reported value is suitable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "caution",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

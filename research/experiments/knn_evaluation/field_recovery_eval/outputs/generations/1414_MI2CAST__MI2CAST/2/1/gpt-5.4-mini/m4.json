@@ -1,0 +1,1281 @@
+{
+  "md_name": "Arabidopsis stress hormone multi-omics DAG",
+  "md_description": "This DAG represents the generation and processing of transcriptomic and metabolomic data from Arabidopsis thaliana under defined environmental stress and hormone perturbation conditions. It includes plant treatment, RNA-seq and LC-MS data capture, computational derivation of expression and metabolite matrices, and joint causal analysis integrating experimental results with reference evidence from prior studies. The resulting dataset supports investigation of hormone-stress signaling interactions and produces a metadata-linked multi-omics resource.",
+  "fields_per_node": {
+    "arabidopsis_thaliana_plants": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the starting biological material: organism identity/taxonomy, plant material provenance, genotype/ecotype, developmental state, and baseline growth/source context. I excluded any treatment, capture, processing, signal-file, or derivative-analysis fields because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided repeating experiment-wide identifiers that are not unique to this entity layer unless they directly describe the plants themselves. No already_generated fields were provided, so there were no duplication constraints beyond avoiding overlap with downstream treatment and omics nodes.",
+      "md_schema": [
+        {
+          "field_id": "organism_scientific_name",
+          "descr": "Scientific name of the living plant material used as the biological starting material. Use the canonical binomial for this DAG, typically Arabidopsis thaliana.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plant_taxon_id",
+          "descr": "Taxonomic identifier for the plant organism, recorded for unambiguous species mapping. Example format: NCBI Taxonomy ID 3702 for Arabidopsis thaliana.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "arabidopsis_ecotype",
+          "descr": "Arabidopsis thaliana ecotype or accession of the starting plants, describing intrinsic genetic background before any stress or hormone perturbation. Example values: Col-0, Ler-0, Ws-2.",
+          "type": "categorical",
+          "allowed_values": [
+            "Col-0",
+            "Ler-0",
+            "Ws-2",
+            "other"
+          ]
+        },
+        {
+          "field_id": "plant_genotype",
+          "descr": "Genetic background or genotype of the starting plants if different from wild type. Record the pre-treatment genotype only, such as wild type or a specific mutant/overexpression line.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "developmental_stage",
+          "descr": "Developmental stage of the Arabidopsis plants at the time they entered the experiment, before stress or hormone treatment. Use a standardized stage description when available, such as seedling, rosette, bolting, flowering, or a growth-stage code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plant_age_days",
+          "descr": "Age of the plants in days at the point immediately before treatment begins. Record as an integer number of days after germination or transplanting, depending on the study convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "starting_material_source",
+          "descr": "Origin of the biological starting material, such as in-house grown plants, seed stock source, or stock center accession. This captures provenance of the untreated plants, not treatment history.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_growth_condition",
+          "descr": "Pre-treatment growth environment used to establish the plants before stress/hormone perturbation. Include the growth regime or facility context only insofar as it describes the starting plants, e.g. controlled chamber or greenhouse.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_growth_duration_days",
+          "descr": "Duration in days that plants were grown under baseline conditions before entering the perturbation step. Measure this at the boundary between plant establishment and the treatment process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biological_material_state",
+          "descr": "General state of the material used in the experiment at the root entity layer. Use this to distinguish living whole plants from other possible starting material forms.",
+          "type": "categorical",
+          "allowed_values": [
+            "living_whole_plant",
+            "seedling",
+            "rosette",
+            "other"
+          ]
+        }
+      ]
+    },
+    "stress_and_hormone_treatment": {
+      "reasoning": "This is a Process node, so I included only how the plant perturbation was performed: stress modality, hormone identity and dosing, exposure duration, treatment timing, delivery route, and process-level quality/readout of treatment success. I also included the responsible agent property only as process context, but because the node.agent is already the researcher and no software/hardware applies here, there are no instrument fields. I excluded plant intrinsic properties (ecotype, age, source) because those belong to the Entity node, and I excluded downstream treated-sample properties, RNA-seq/LC-MS capture settings, raw files, and derived omics outputs because they belong to later nodes. No already_generated fields were provided, so no deduplication constraints affected field choice.",
+      "md_schema": [
+        {
+          "field_id": "stress_condition_type",
+          "descr": "Environmental stress applied to the plants during this process step. Record the primary stress modality introduced at treatment time, such as drought, salt, cold, heat, osmotic, or combined stress.",
+          "type": "categorical",
+          "allowed_values": [
+            "drought",
+            "salt",
+            "cold",
+            "heat",
+            "osmotic",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "stress_intensity_value",
+          "descr": "Numeric intensity of the applied environmental stress at the treatment boundary. Use the experiment-specific unit implied by the stress type, for example mM for salt, degrees Celsius for cold/heat, or percent field capacity for drought.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stress_intensity_unit",
+          "descr": "Unit used for stress intensity_value so the applied perturbation can be interpreted unambiguously. Example units include mM, degrees_celsius, percent_field_capacity, or peg_percent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hormone_name",
+          "descr": "Name of the plant hormone whose level was altered during treatment. Record the specific signaling molecule targeted by the perturbation, such as abscisic acid, auxin, salicylic acid, jasmonic acid, gibberellin, or ethylene precursor application.",
+          "type": "categorical",
+          "allowed_values": [
+            "abscisic_acid",
+            "auxin",
+            "salicylic_acid",
+            "jasmonic_acid",
+            "gibberellin",
+            "ethylene_precursor",
+            "cytokinin",
+            "brassinosteroid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "hormone_level_direction",
+          "descr": "Direction of hormone perturbation relative to the untreated baseline at the time of exposure. Use this to indicate whether the selected hormone was increased, decreased, or held as a vehicle/control condition.",
+          "type": "categorical",
+          "allowed_values": [
+            "increased",
+            "decreased",
+            "control",
+            "other"
+          ]
+        },
+        {
+          "field_id": "hormone_concentration_value",
+          "descr": "Applied hormone concentration at the treatment point. Report the numeric dose used for the perturbation, typically measured in micromolar or millimolar depending on the hormone and delivery route.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hormone_concentration_unit",
+          "descr": "Unit for hormone_concentration_value. Typical units in this experiment are uM or mM, depending on the selected hormone and application protocol.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_delivery_route",
+          "descr": "How the stress and/or hormone perturbation was delivered to the plants. Record the application mode used during the process, such as root drench, foliar spray, medium supplementation, vapor exposure, or hydroponic adjustment.",
+          "type": "categorical",
+          "allowed_values": [
+            "root_drench",
+            "foliar_spray",
+            "medium_supplementation",
+            "vapor_exposure",
+            "hydroponic_adjustment",
+            "other"
+          ]
+        },
+        {
+          "field_id": "treatment_duration_minutes",
+          "descr": "Total duration of exposure for the stress/hormone treatment step, measured from the start of perturbation until treatment termination or sampling boundary. Use minutes when the exposure is short or hours-long durations converted to minutes if needed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_timepoint_hours_post_application",
+          "descr": "Sampling or end-of-treatment timepoint relative to hormone/stress application, recorded in hours post application. Use this to mark the process timing before capture begins downstream.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_replicate_count",
+          "descr": "Number of biological replicate plant groups or batches subjected to this exact treatment condition within the process step. Record the count used for downstream omics capture and statistical comparison.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_effect_indicator",
+          "descr": "Process-level indication of whether the intended perturbation was achieved, based on any immediate validation used in the experiment. Use only a high-level status here, not detailed omics results.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partially_successful",
+            "failed",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "treated_arabidopsis_plants": {
+      "reasoning": "This is an Entity node representing the post-treatment biological material, so I included only intrinsic state descriptors of the treated plants as they enter omics profiling: treatment status, collection state, condition-specific phenotype, and any immediate pre-capture preservation state. I excluded the actual stress/hormone protocol details because those belong to the upstream Process node, and I excluded RNA-seq/LC-MS settings, raw files, and derived matrices because those belong to downstream Capture/Signal/Derivative nodes. No already_generated fields were provided, so there was no direct duplication constraint; I also avoided repeating root-level organism identity fields already owned by the Arabidopsis plant entity node.",
+      "md_schema": [
+        {
+          "field_id": "post_treatment_state",
+          "descr": "State of the plants immediately after completion of the stress and hormone treatment step, before any omics capture begins. Use this to indicate that the material is treated and ready for profiling rather than untreated starting material.",
+          "type": "categorical",
+          "allowed_values": [
+            "treated",
+            "recovered",
+            "stressed",
+            "vehicle_control",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sampling_stage",
+          "descr": "Biological stage or handling state at the time the treated plants were transferred to downstream omics profiling. Examples include whole plant, harvested rosette tissue, detached leaf, root tissue, or pooled tissue fraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_treatment_phenotype",
+          "descr": "Visible or immediate phenotype observed in the treated plants before capture, if recorded as part of sample metadata. Examples include wilting, chlorosis, growth arrest, no visible phenotype, or other short-term response.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_preservation_state",
+          "descr": "Preservation or handling state of the treated plant material at the handoff to capture, describing whether it was fresh, flash-frozen, kept on ice, or otherwise stabilized for downstream omics profiling.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "flash_frozen",
+            "on_ice",
+            "stabilized",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_to_capture_interval_minutes",
+          "descr": "Time in minutes between completion of the treatment process and initiation of downstream omics capture. Record this for treated material because it affects biological state at profiling time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treated_sample_identifier",
+          "descr": "Unique identifier assigned to the treated plant sample or batch at the moment it enters downstream profiling. Example format: sample_001_treated.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biological_material_integrity",
+          "descr": "High-level integrity assessment of the treated plant material before capture, such as intact, partially damaged, or degraded. This describes the physical condition of the entity, not the quality of measurement files.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_damaged",
+            "degraded",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "rna_seq_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement-session and instrument-configuration fields for RNA-seq acquisition: platform identity, manufacturer/model/serial context, read configuration, run chemistry, sequencing depth targets, lane/run identifiers, and capture-level quality indicators. I excluded biological sample properties (those belong to treated_arabidopsis_plants), raw file properties (those belong to rna_seq_raw_reads), and downstream computational settings/output matrices (those belong to the quantification Process and Derivative nodes). Because the agent property is the instrument description for Capture nodes, I used it to frame hardware identity fields. No already_generated fields were provided, so no deduplication constraint applied beyond avoiding overlap with downstream signal metadata.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for RNA-seq capture. Record the hardware vendor for the active acquisition system, e.g. Illumina for a NovaSeq platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the sequencing instrument used during the RNA-seq capture session. Example: NovaSeq 6000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number or unique hardware identifier of the sequencing instrument used for the capture session. Use the device-provided identifier when available; example format: SN12345678.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_platform",
+          "descr": "Sequencing platform used to generate raw transcriptomic reads during capture. Record the platform family or architecture associated with the instrument and chemistry.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina_short_read",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library preparation type being sequenced during this capture session. Record the transcript-derived library design used for the treated Arabidopsis samples, such as polyA-selected or total RNA library.",
+          "type": "categorical",
+          "allowed_values": [
+            "polya_selected",
+            "total_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_layout",
+          "descr": "Read layout configured for the sequencing run, describing how reads were collected from each library fragment. Common values are single-end or paired-end.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "read_length_bases",
+          "descr": "Configured read length in bases for the RNA-seq capture session, measured at the instrument setting stage before sequencing begins. Typical values are 50 to 150 bases depending on the run design.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Identifier for the sequencing run or lane set used to generate the RNA-seq raw reads. Example format: run_2024_01_A or lane_3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flowcell_id",
+          "descr": "Flowcell identifier used for the RNA-seq capture session, if tracked. This identifies the physical sequencing consumable associated with the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_depth_target_million_reads",
+          "descr": "Target number of millions of reads intended for this RNA-seq capture session, recorded as a planning or instrument configuration value before output files are generated. Typical range is 10 to 100+ million reads per sample depending on study design.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_quality_pass",
+          "descr": "High-level indicator of whether the RNA-seq capture session met run-level quality expectations before downstream file handling. This should reflect capture success, not per-file QC metrics.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_completion_status",
+          "descr": "Status of the sequencing session at the time capture ended. Use this to indicate whether the run completed normally, was partial, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "completed",
+            "partial",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "rna_seq_raw_reads": {
+      "reasoning": "This is a Signal node, so I included only raw-data artefact properties: file format, file size, read count, base count, read quality summaries, dimensionality, and storage location. I excluded capture settings and sequencing-instrument details because those belong to the RNA-seq Capture node, and I excluded alignment/counting parameters and expression results because those belong to the quantification Process and gene-expression Derivative nodes. I also avoided biological sample descriptors because those are owned by the treated plant Entity node. No already_generated fields were provided, so there was no overlap constraint beyond the node-boundary rule.",
+      "md_schema": [
+        {
+          "field_id": "raw_file_format",
+          "descr": "File format of the RNA-seq raw read artefact as stored immediately after sequencing. Use the technical container format for the signal file, such as FASTQ, potentially compressed with gzip if applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_file_size_bytes",
+          "descr": "Total size in bytes of the raw RNA-seq read file or file bundle, measured after acquisition and before downstream processing. This is a storage-property field, not a biological measurement.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of sequencing reads contained in the raw RNA-seq signal file, counted at the file level after capture. Typical values are in the millions to hundreds of millions depending on run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count",
+          "descr": "Total number of bases represented in the raw RNA-seq read file, computed from the stored reads before alignment or trimming. Report as an integer count of sequenced bases.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Mean Phred quality score across the raw RNA-seq reads, calculated from the file as a technical quality metric after sequencing and before quantification. Typical values depend on run quality and are often above 30 for high-quality reads.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_passed",
+          "descr": "Whether the raw RNA-seq signal file passed the project’s file-level technical quality check before downstream processing. This is a data artefact quality flag, not a biological result.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_adapter_content_percent",
+          "descr": "Estimated percentage of adapter sequence content in the raw read file, measured as a file-level technical quality statistic. Typical values should be low for good libraries and are used to assess signal cleanliness before trimming.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Primary storage location or URI where the raw RNA-seq file is archived after capture. Example formats include local path, object-store URI, or accession-linked repository path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_checksum",
+          "descr": "Checksum or hash used to verify integrity of the raw RNA-seq file after transfer or archival. Example formats include MD5 or SHA256 hash strings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_layout_observed",
+          "descr": "Observed read layout encoded in the file contents, such as single-end or paired-end, as represented by the raw signal artefact rather than the instrument configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        }
+      ]
+    },
+    "rna_seq_quantification": {
+      "reasoning": "This is a Process node, so I included only computational processing parameters and software identity for the RNA-seq quantification step: alignment/counting tools, reference genome version, annotation version, key algorithm settings, and process output quality indicators. I excluded capture/instrument settings because those belong to the RNA-seq Capture node, raw file properties because those belong to the RNA-seq Signal node, and the resulting matrix dimensions or values because those belong to the gene_expression_matrix Derivative node. No already_generated fields were provided, so there was no duplication constraint beyond staying within the process territory.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Primary software used for RNA-seq alignment and feature counting in this process step. Record the workflow tool identity used to convert raw reads into expression estimates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the RNA-seq quantification software used at the time of processing. Example format: 2.7 for STAR or 2.0 for featureCounts when those tools are part of the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository or distribution source for the RNA-seq quantification workflow software, used to disambiguate the exact implementation. Examples include GitHub, Bioconductor, or a packaged release source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_genome_assembly",
+          "descr": "Reference genome assembly used for read alignment during quantification. Record the exact Arabidopsis assembly version, such as TAIR10 or a later standardized assembly.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_annotation_release",
+          "descr": "Gene annotation release or transcript annotation version used to count features from aligned RNA-seq reads. Record the exact annotation source and version used in this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_mode",
+          "descr": "Alignment strategy used during quantification, describing how reads were mapped to the reference. Examples include genome-based alignment, transcriptome-based alignment, or pseudoalignment if applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "genome_alignment",
+            "transcriptome_alignment",
+            "pseudoalignment",
+            "other"
+          ]
+        },
+        {
+          "field_id": "strandedness",
+          "descr": "Library strandedness setting assumed during feature counting. Use the library orientation configured for the quantification process, such as unstranded, stranded_forward, or stranded_reverse.",
+          "type": "categorical",
+          "allowed_values": [
+            "unstranded",
+            "stranded_forward",
+            "stranded_reverse",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mismatch_tolerance",
+          "descr": "Allowed mismatch or edit tolerance used by the aligner or counting workflow during RNA-seq quantification. Report the numeric setting applied to mapping of reads to the Arabidopsis reference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multimapping_handling",
+          "descr": "How reads that map to multiple genomic locations were handled during quantification. Use this to capture the counting policy applied by the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "discarded",
+            "assigned_fractionally",
+            "assigned_best_hit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_counting_mode",
+          "descr": "Counting mode used to convert aligned reads into gene-level or feature-level expression estimates. Typical modes include exon_union or gene_level summarization, depending on the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "gene_level",
+            "exon_union",
+            "transcript_level",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quantification_quality_pass",
+          "descr": "High-level indicator of whether the RNA-seq quantification step produced acceptable alignment/counting output for downstream use. This is a process-level success flag, not a matrix quality metric.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_rate_percent",
+          "descr": "Percent of raw reads successfully aligned or assigned by the quantification workflow, measured after processing and used as a process-level quality indicator. Typical values depend on library quality and reference compatibility.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "gene_expression_matrix": {
+      "reasoning": "This is a Derivative node, so I included only computed-result fields describing the expression matrix itself: matrix identity, assay level, dimensions, summarization level, value scale, normalization status, sparsity, and output quality indicators. I excluded raw read and capture properties because those belong to upstream Signal/Capture nodes, and I excluded alignment/counting parameters because those belong to the RNA-seq quantification Process node. I also avoided biological plant descriptors because those are owned by the Entity nodes. No already_generated fields were provided, so the only constraint was to remain within the derivative territory and not repeat upstream process details.",
+      "md_schema": [
+        {
+          "field_id": "matrix_format",
+          "descr": "Storage or serialization format of the derived gene-expression matrix artifact. Examples include CSV, TSV, HDF5, AnnData, or similar tabular matrix containers used for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "hdf5",
+            "anndata",
+            "other"
+          ]
+        },
+        {
+          "field_id": "matrix_row_count",
+          "descr": "Number of gene rows or feature rows in the derived expression matrix, measured after quantification and before downstream statistical analysis. This is the biological feature count dimension of the output table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_column_count",
+          "descr": "Number of sample columns in the derived expression matrix. This reflects how many treated Arabidopsis samples or replicate samples are represented in the output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expression_unit",
+          "descr": "Numerical scale used to represent transcript abundance values in the derived matrix. Record the unit or transformed scale applied after quantification, such as raw counts, counts per million, TPM, or log-transformed values.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_counts",
+            "cpm",
+            "tpm",
+            "fpkm",
+            "log2_normalized",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization approach applied to the expression matrix after counting and before downstream analysis. Examples include none, size-factor normalization, TMM, or other experiment-specific scaling.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "size_factor",
+            "tmm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "summarization_level",
+          "descr": "Biological summarization level represented by the matrix, describing whether values are at gene, transcript, exon, or pathway level. For this node, the default expected level is gene-by-sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "gene",
+            "transcript",
+            "exon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sparsity_percent",
+          "descr": "Percentage of matrix entries that are zero or missing after derivation, computed as a derived data-shape metric for the expression table. Typical values vary by preprocessing and gene filtering.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_missing_value_policy",
+          "descr": "How missing or non-assigned values are represented in the derived expression matrix. Record the policy used in the output table, such as NA, zero-fill, or omitted entries.",
+          "type": "categorical",
+          "allowed_values": [
+            "na",
+            "zero_fill",
+            "omitted",
+            "other"
+          ]
+        },
+        {
+          "field_id": "expression_matrix_qc_pass",
+          "descr": "High-level indication that the derived expression matrix passed post-derivation quality checks for completeness and usability in downstream transcriptomic analysis. This is a derivative-level quality flag.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_labeling_scheme",
+          "descr": "Naming convention used for sample columns in the derived matrix, useful for linking matrix columns back to treated samples without describing the upstream sample metadata itself. Example format: condition_replicate_timepoint.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_identifier_namespace",
+          "descr": "Identifier namespace used for matrix row labels, such as Arabidopsis gene IDs or transcript IDs. Example format: TAIR locus identifiers like AT1G01010.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "lcms_capture": {
+      "reasoning": "I corrected the LC-MS Capture schema to avoid collisions with already_generated fields from previous DAG steps by removing the repeated generic instrument identity fields (instrument_manufacturer, instrument_model, instrument_serial_number). I kept the rest of the capture-layer fields that still belong to this node: ionization/acquisition settings, scan range, resolution, chromatography configuration, and capture-level QC/status. This preserves the node’s semantic territory while respecting DAG-wide uniqueness constraints.",
+      "md_schema": [
+        {
+          "field_id": "ionization_mode",
+          "descr": "Ionization polarity/configuration used during LC-MS capture. Record the active source mode configured for metabolite detection, such as positive or negative ion mode.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "dual",
+            "other"
+          ]
+        },
+        {
+          "field_id": "acquisition_mode",
+          "descr": "MS acquisition mode configured for the LC-MS run, describing how spectra were collected across the mass range. Examples include full scan, data-dependent acquisition, or targeted acquisition.",
+          "type": "categorical",
+          "allowed_values": [
+            "full_scan",
+            "data_dependent",
+            "targeted",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mass_to_charge_range_min",
+          "descr": "Lower bound of the m/z range configured for the LC-MS acquisition session. Record the minimum mass-to-charge value scanned by the instrument.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mass_to_charge_range_max",
+          "descr": "Upper bound of the m/z range configured for the LC-MS acquisition session. Record the maximum mass-to-charge value scanned by the instrument.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "resolution_setting",
+          "descr": "Mass spectrometer resolving power setting used during acquisition, measured at the configured m/z point according to the instrument documentation. Typical values are instrument-specific and can range from tens of thousands to several hundred thousand.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "scan_rate_hz",
+          "descr": "Scan acquisition rate for the LC-MS session, measured as scans per second or equivalent instrument-reported rate at the configured method. This describes the active capture configuration, not file throughput.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chromatography_column_type",
+          "descr": "LC column type used during the capture session, such as reversed-phase or HILIC chemistry, as part of the instrument configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_length_mm",
+          "descr": "Length of the LC column used in the capture session, measured in millimeters. Typical values are method-specific and should reflect the configured chromatographic setup.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gradient_duration_minutes",
+          "descr": "Duration of the LC solvent gradient used during the LC-MS acquisition method, measured from start to end of the chromatographic run. Typical values depend on the metabolomics method and are often in the 5 to 60+ minute range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_qc_pass",
+          "descr": "High-level indication that the LC-MS acquisition session met instrument/run-level quality expectations before raw spectra are handed off to downstream file handling. This is a capture-level flag, not a spectral file metric.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_status",
+          "descr": "Status of the LC-MS acquisition session at completion. Use this to record whether the run completed normally, was partial, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "completed",
+            "partial",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "lcms_raw_spectra": {
+      "reasoning": "This is a Signal node, so I retained only raw LC-MS artefact properties, but I renamed all colliding generic file fields to node-specific names to avoid DAG-wide field-id reuse. I kept format, size, integrity, storage, and technical data-shape/QC descriptors, and excluded capture settings, processing parameters, and biological sample properties because those belong to upstream or downstream nodes. The revised field names remain within signal territory while avoiding previously generated ids such as raw_file_format, raw_file_size_bytes, qc_passed, storage_location, and file_checksum.",
+      "md_schema": [
+        {
+          "field_id": "lcms_file_format",
+          "descr": "File format of the LC-MS raw spectral artefact as stored immediately after acquisition. Examples include mzML, mzXML, vendor raw files, or compressed equivalents.",
+          "type": "categorical",
+          "allowed_values": [
+            "mzml",
+            "mzxml",
+            "vendor_raw",
+            "other"
+          ]
+        },
+        {
+          "field_id": "lcms_file_size_bytes",
+          "descr": "Total size in bytes of the raw LC-MS spectral file or file bundle, measured after acquisition and before downstream processing. This is a storage-property field, not a biological measurement.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_scan_count",
+          "descr": "Total number of MS scans contained in the raw spectral file, counted at the artefact level after acquisition. This reflects the number of recorded spectra in the LC-MS run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_spectral_point_count",
+          "descr": "Total number of data points or centroided peaks represented in the raw spectral file, depending on the acquisition and export format used. Report as a file-level technical size metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_mz_range_min",
+          "descr": "Minimum m/z value present in the raw spectral file, recorded as a file-level technical property after export from the LC-MS acquisition session.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_mz_range_max",
+          "descr": "Maximum m/z value present in the raw spectral file, recorded as a file-level technical property after export from the LC-MS acquisition session.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_retention_time_min_minutes",
+          "descr": "Minimum chromatographic retention time represented in the raw spectral file, measured in minutes from the start of the LC-MS run. This is a file-level data-range property.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_retention_time_max_minutes",
+          "descr": "Maximum chromatographic retention time represented in the raw spectral file, measured in minutes from the start of the LC-MS run. This is a file-level data-range property.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_mean_signal_to_noise_ratio",
+          "descr": "Mean signal-to-noise ratio across the raw LC-MS spectra, computed as a technical quality metric after acquisition and before peak processing. Typical values depend on method quality and export settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_file_qc_status",
+          "descr": "Whether the raw LC-MS spectral file passed the project’s file-level technical quality check before downstream processing. This is a data artefact quality flag, not a biological result.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_storage_uri",
+          "descr": "Primary storage location or URI where the raw LC-MS file is archived after capture. Example formats include local path, object-store URI, or repository accession path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_file_hash",
+          "descr": "Checksum or hash used to verify integrity of the raw LC-MS file after transfer or archival. Example formats include MD5 or SHA256 hash strings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lcms_data_centroiding_state",
+          "descr": "Whether the raw LC-MS file contains centroided or profile-mode spectra as exported from the instrument pipeline. This describes the file artefact state, not downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "profile",
+            "centroided",
+            "mixed",
+            "other"
+          ]
+        }
+      ]
+    },
+    "metabolite_processing": {
+      "reasoning": "This is a Process node, so I kept only LC-MS computational processing fields that are specific to this step and avoided all previously colliding generic software and normalization field names. I included peak detection, retention-time alignment, feature grouping/deconvolution, missing-value handling, filtering thresholds, and process-level quality indicators. I excluded capture and signal properties because they belong upstream, and excluded the metabolite feature table dimensions/values because they belong downstream on the derivative node. I also ensured no reuse of the already reported colliding fields: software_name, software_version, software_repository, and normalization_method.",
+      "md_schema": [
+        {
+          "field_id": "peak_detection_algorithm",
+          "descr": "Peak detection method used to identify metabolite-related ion features from the raw LC-MS spectra. Record the algorithm or method family applied during processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retention_time_alignment_method",
+          "descr": "Method used to align chromatographic retention times across LC-MS samples during metabolomics processing. This describes the computational alignment strategy, not the capture settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "obiwarp",
+            "loess",
+            "linear",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_deconvolution_method",
+          "descr": "Method used to deconvolute overlapping LC-MS signals into distinct metabolite features during processing. Record the computational strategy used before the final feature table is emitted.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_filtering_threshold",
+          "descr": "Threshold used to retain or remove metabolite features during processing. Record the numeric cutoff applied to intensity, prevalence, or quality-based filtering at the process stage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_sample_presence_count",
+          "descr": "Minimum number of samples in which a metabolite feature must be observed to be retained after processing. This is a feature-selection criterion applied during derivation of the metabolite table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intensity_scaling_strategy",
+          "descr": "Scaling strategy applied to metabolite intensities after peak detection and alignment. Use this to capture the type of abundance scaling used in the processing workflow, such as total-ion scaling, median scaling, or no scaling.",
+          "type": "categorical",
+          "allowed_values": [
+            "tic",
+            "median",
+            "quantile",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "missing_value_imputation_method",
+          "descr": "Method used to fill missing metabolite feature values during processing, if applied. Record the imputation strategy used before the derivative table is finalized.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "knn",
+            "half_minimum",
+            "other"
+          ]
+        },
+        {
+          "field_id": "processing_quality_pass",
+          "descr": "High-level indication that the LC-MS processing step produced acceptable peak and alignment output for downstream use. This is a process-level success flag, not a feature-table quality metric.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_alignment_quality_score",
+          "descr": "Aggregate score summarizing the quality of retention-time alignment or peak matching across samples after processing. Use the project’s chosen process-level metric if available.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_feature_count",
+          "descr": "Number of metabolite features retained after all LC-MS processing filters and alignment steps, immediately before the derivative metabolite table is emitted.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metabolite_feature_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-output fields describing the metabolite feature table itself: serialization format, dimensions, summarization level, value scale, sparsity, missing-value policy, and output quality indicators. I excluded LC-MS capture settings and raw spectral file properties because those belong to upstream Capture and Signal nodes. I also excluded peak detection, alignment, normalization, and imputation parameters because those belong to the metabolite-processing Process node. To avoid the reported cross-DAG collisions, I did not reuse generic software or normalization field names and I also avoided the previously flagged identifier-label fields feature_identifier_namespace and sample_labeling_scheme.",
+      "md_schema": [
+        {
+          "field_id": "table_format",
+          "descr": "Storage or serialization format of the derived metabolite feature table. Examples include CSV, TSV, HDF5, or an analysis-specific matrix container used for downstream metabolomics.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "hdf5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of metabolite feature rows in the derived table, measured after peak detection and alignment and before downstream statistical analysis. This is the feature dimension of the output table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_column_count",
+          "descr": "Number of sample columns in the derived metabolite table. This reflects how many treated Arabidopsis samples or replicate samples are represented in the output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_unit",
+          "descr": "Numerical scale used to represent metabolite abundance values in the derived table. Record the output scale, such as raw intensity, normalized intensity, log-transformed intensity, or relative abundance.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_intensity",
+            "normalized_intensity",
+            "log_transformed",
+            "relative_abundance",
+            "other"
+          ]
+        },
+        {
+          "field_id": "missing_value_fraction",
+          "descr": "Fraction of table entries that are missing after derivation, computed as a data-shape metric for the metabolite feature matrix. This captures sparsity introduced by detection limits and filtering.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_policy",
+          "descr": "How missing values are represented in the derived metabolite table. Record the output policy used in the table, such as NA, zero-fill, or omitted entries.",
+          "type": "categorical",
+          "allowed_values": [
+            "na",
+            "zero_fill",
+            "omitted",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_table_qc_pass",
+          "descr": "High-level indication that the derived metabolite feature table passed post-derivation quality checks for completeness and usability in downstream analysis. This is a derivative-level quality flag.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_coverage_percent",
+          "descr": "Percentage of metabolite features in the table that received any annotation, measured after derivation and before downstream interpretation. Typical values vary widely by platform and library coverage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_matrix_density_percent",
+          "descr": "Percentage of non-missing entries in the metabolite feature table, computed as 100 minus sparsity. This is a structural summary of the derived output matrix.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_count_after_filtering",
+          "descr": "Number of metabolite features retained after peak filtering and QC in the final derived table. This is a post-derivation summary of how many features remained for downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count_after_filtering",
+          "descr": "Number of samples retained in the final derived metabolite table after any sample-level filtering during table construction. This reflects the output table population after derivation.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "literature_evidence_dataset": {
+      "reasoning": "This is an external Derivative node, so I included only fields that describe the curated reference-evidence dataset itself: evidence source scope, search/provenance metadata, citation identifiers, evidence direction, confidence, curation method, and dataset-level counts/quality. I excluded experimental sample properties, capture settings, raw file properties, and omics-derived matrix details because those belong to other nodes. I also avoided repeating any previously generated generic fields such as feature or sample labeling identifiers. Since this node is external and supports causal integration, I emphasized literature provenance and evidence semantics rather than computational processing parameters.",
+      "md_schema": [
+        {
+          "field_id": "evidence_curation_protocol",
+          "descr": "Description of the literature search and curation protocol used to assemble the evidence set. Include the review strategy, inclusion/exclusion criteria, and whether the dataset was manually curated, semi-automated, or fully automated.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "literature_search_scope",
+          "descr": "Scope of the literature search used to collect evidence for hormone-stress causal links. Record the organism, pathway, and topic boundaries, such as Arabidopsis thaliana hormone signaling and environmental stress response studies.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_date",
+          "descr": "Date on which the literature search or curation pass was last performed for this evidence dataset. Use a calendar date to indicate recency of the reference set.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_source_database",
+          "descr": "Database or repository used to retrieve supporting studies or evidence records. Examples include PubMed, Web of Science, Scopus, or domain-specific curated knowledge bases.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_count",
+          "descr": "Total number of literature references included in the curated evidence dataset. Count each unique study or source record contributing causal-supporting or causal-refuting evidence.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "supporting_evidence_count",
+          "descr": "Number of references or evidence records that support a causal interaction between hormone signaling and stress response pathways.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "refuting_evidence_count",
+          "descr": "Number of references or evidence records that refute or weaken a proposed causal interaction between hormone signaling and stress response pathways.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_direction",
+          "descr": "Overall direction of the evidence represented by each curated record or by the dataset-level summary. Use this to indicate whether the source supports, refutes, or is neutral toward a causal link.",
+          "type": "categorical",
+          "allowed_values": [
+            "supports",
+            "refutes",
+            "neutral",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "evidence_strength",
+          "descr": "Curated strength rating of the evidence supporting a causal link, based on study design and consistency. Use the project-defined ordinal scale if available, such as weak, moderate, or strong.",
+          "type": "categorical",
+          "allowed_values": [
+            "weak",
+            "moderate",
+            "strong",
+            "uncertain"
+          ]
+        },
+        {
+          "field_id": "curation_confidence_score",
+          "descr": "Numeric confidence score assigned to the curated evidence record or dataset, reflecting curator confidence in the extracted causal relevance. Record the project-specific scale used during curation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "citation_identifier",
+          "descr": "Primary citation identifier for each evidence record, such as a DOI, PMID, or accession-style literature identifier. Example format: DOI 10.xxxx/xxxxx or PMID 12345678.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "study_system",
+          "descr": "Biological system studied in the cited work, describing whether the evidence pertains to Arabidopsis thaliana, another species, or a cross-species inference used in support of the causal link.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_notes",
+          "descr": "Free-text curator notes describing special considerations for the extracted evidence, such as contradictory findings, indirect inference, or pathway-context caveats.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_version",
+          "descr": "Version label for the curated literature evidence dataset, used to distinguish update cycles of the reference set. Example format: v1.0 or 2026-08-release.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "multiomics_causal_integration": {
+      "reasoning": "This is a Process node, so I included only the joint computational-analysis parameters and workflow identity for causal integration: integrative method, software environment, model family, priors/evidence handling, key thresholds, and process-level output quality. I excluded the upstream gene-expression and metabolite-table characteristics because those belong to the derivative nodes feeding this step, and I excluded the literature evidence table details because those belong to the external evidence dataset node. I also excluded the final causal interaction table contents because those belong to the downstream derivative node. To avoid previously reported collisions, I did not reuse generic software, normalization, sample-label, or feature-namespace field names that were already generated elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "integration_method",
+          "descr": "Primary method used to combine gene expression, metabolite abundance, and literature evidence into causal inferences. Record the integrative analysis approach used at the process stage, such as Bayesian integration, correlation-guided causal modeling, or rule-based causal scoring.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_family",
+          "descr": "Statistical or machine-learning model family used for causal integration, if applicable. Examples include Bayesian network, structural equation model, graphical model, or scoring-based causal framework.",
+          "type": "categorical",
+          "allowed_values": [
+            "bayesian_network",
+            "structural_equation_model",
+            "graphical_model",
+            "score_based",
+            "rule_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "causal_inference_software",
+          "descr": "Software or package used to perform the multi-omics causal integration workflow. Record the tool name used at the process stage, distinct from the upstream omics processing software.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "causal_inference_version",
+          "descr": "Version of the causal integration software used for the joint analysis. Example format: 4.4 for an R-based workflow or a package release version.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prior_evidence_weighting_scheme",
+          "descr": "Scheme used to weight literature evidence relative to omics-derived associations during causal inference. Describe how prior evidence contributes to the integration step, such as equal weighting or evidence-prioritized scoring.",
+          "type": "categorical",
+          "allowed_values": [
+            "equal_weight",
+            "evidence_weighted",
+            "omics_weighted",
+            "other"
+          ]
+        },
+        {
+          "field_id": "significance_threshold",
+          "descr": "Statistical or scoring threshold used to retain causal interaction candidates from the integration workflow. Report the process-level cutoff applied before the final causal table is produced.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction_method",
+          "descr": "Method used to control false discovery or multiplicity in the causal integration step, if applicable. Examples include FDR, Bonferroni, or no correction depending on the workflow design.",
+          "type": "categorical",
+          "allowed_values": [
+            "fdr",
+            "bonferroni",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "minimum_evidence_support_count",
+          "descr": "Minimum number of independent evidence lines required for a causal interaction to be retained by the integration workflow. This is a process parameter governing inclusion of candidate links.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_directionality_rule",
+          "descr": "Rule used to assign directionality to inferred causal interactions, describing whether the workflow requires explicit upstream-downstream ordering or allows undirected intermediate scores.",
+          "type": "categorical",
+          "allowed_values": [
+            "directed",
+            "undirected",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "integration_qc_pass",
+          "descr": "High-level indication that the multi-omics causal integration workflow completed successfully and produced acceptable candidates for downstream export. This is a process-level success flag, not a result table metric.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "convergence_status",
+          "descr": "Whether the causal integration algorithm converged or reached a stable solution under the configured settings. Use this for iterative or optimization-based workflows.",
+          "type": "categorical",
+          "allowed_values": [
+            "converged",
+            "not_converged",
+            "not_applicable"
+          ]
+        },
+        {
+          "field_id": "output_candidate_count",
+          "descr": "Number of causal interaction candidates retained by the workflow prior to final export, recorded as a process output summary metric. This is used to summarize process yield rather than the final derivative contents.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "causal_interactions_table": {
+      "reasoning": "This is the final Derivative node, so I included only properties of the computed causal interaction table itself: output format, row/column dimensions, interaction identifiers, summary structure, score/statistical fields, evidence linkage, and table-level quality indicators. I excluded upstream process parameters from stress/hormone treatment, omics capture, quantification, metabolite processing, literature curation, and causal integration because those belong to their respective Process/Capture/Signal/Derivative nodes. I also avoided repeating root-level entity identifiers or sample labels already generated elsewhere. Because earlier steps already consumed generic sample/feature labeling names, I used table-specific identifiers and linkage fields rather than reusing those terms.",
+      "md_schema": [
+        {
+          "field_id": "causal_table_format",
+          "descr": "Storage or serialization format of the final causal interaction table. Examples include CSV, TSV, HDF5, or a metadata-aware tabular format used for downstream sharing.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "hdf5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "causal_table_row_count",
+          "descr": "Number of causal interaction records in the final table, measured after integration and filtering. Each row typically represents a hormone-stress interaction candidate or evidence-supported link.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "causal_table_column_count",
+          "descr": "Number of columns in the final causal interaction table. This reflects the number of recorded attributes per interaction, including evidence and score fields.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_id",
+          "descr": "Unique identifier assigned to each inferred causal interaction record in the final table. Example format: ci_0001 or interaction_AT1G01010_ABA_stress_01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_type",
+          "descr": "Type of causal relationship represented in the final table. Use this to distinguish direct, indirect, activating, repressing, or uncertain interactions.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct",
+            "indirect",
+            "activating",
+            "repressing",
+            "uncertain",
+            "other"
+          ]
+        },
+        {
+          "field_id": "hormone_name_recorded",
+          "descr": "Hormone associated with the interaction record in the final causal table. Record the hormone label as represented in the integrated output, not the treatment protocol details.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stress_condition_recorded",
+          "descr": "Stress condition associated with the interaction record in the final causal table. Record the stress label as represented in the integrated output, not the original treatment settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "causal_score",
+          "descr": "Numeric score summarizing the strength of the inferred causal interaction in the final table. Record the project-specific causal ranking or probability score produced by integration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "causal_p_value",
+          "descr": "Statistical significance value associated with the inferred causal interaction, if reported in the final output table. Use the p-value or equivalent significance metric generated by the integration workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "false_discovery_rate",
+          "descr": "Multiple-testing corrected significance measure for each interaction in the final causal table, if applicable. This should reflect post-integration correction rather than process-level thresholds.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "supporting_reference_count",
+          "descr": "Number of supporting literature references linked to each causal interaction record in the final table. This captures the evidence backing the output row.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_identifier_list",
+          "descr": "List or delimited set of citation identifiers linked to the interaction record, such as DOIs or PMIDs. Example format: DOI and PMID references associated with that causal link.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "omics_support_flag",
+          "descr": "Whether the causal interaction record is supported by transcriptomic, metabolomic, or combined omics evidence in addition to literature evidence. Use this as a table-level support annotation.",
+          "type": "categorical",
+          "allowed_values": [
+            "transcriptomic",
+            "metabolomic",
+            "multiomics",
+            "literature_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_qc_pass",
+          "descr": "High-level indication that the final causal interaction table passed post-export quality checks for completeness, consistency, and linkage integrity. This is a derivative-level quality flag.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_traceability_status",
+          "descr": "Whether each final interaction record can be traced back to its supporting omics and literature evidence through stable links or identifiers. This describes the output table's metadata linkage quality.",
+          "type": "categorical",
+          "allowed_values": [
+            "fully_traced",
+            "partially_traced",
+            "not_traced"
+          ]
+        }
+      ]
+    }
+  }
+}

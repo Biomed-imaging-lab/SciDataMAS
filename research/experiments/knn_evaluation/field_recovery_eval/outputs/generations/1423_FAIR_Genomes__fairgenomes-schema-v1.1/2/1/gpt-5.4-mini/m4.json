@@ -1,0 +1,705 @@
+{
+  "md_name": "population_genomic_disease_susceptibility_workflow",
+  "md_description": "Workflow for saliva collection, DNA extraction, sequencing library preparation, genome sequencing, and downstream computational analysis of common variants associated with disease susceptibility across diverse populations. The DAG includes only physical and computational data-generation steps, not consent documents, demographic metadata entry, storage, or administrative dataset organization.",
+  "fields_per_node": {
+    "saliva_samples": {
+      "reasoning": "The saliva_samples node is an Entity, so I included only intrinsic sample-origin and specimen-composition fields needed to identify and characterize the collected biological material itself. I excluded collection protocol details, consent/demographic information, and downstream extraction or sequencing attributes because those belong to the DNA extraction Process or later nodes. No already_generated fields were provided, so there were no explicit naming conflicts to avoid. Because the description emphasizes saliva specimens containing genomic DNA from cohort participants, the fields focus on specimen source, biological material type, and collection state, which are the minimum needed to understand what the sample is before processing.",
+      "md_schema": [
+        {
+          "field_id": "specimen_type",
+          "descr": "Biological specimen class for this Entity node; use to record that the collected material is saliva from a participant. Typical value in this workflow is 'saliva'.",
+          "type": "categorical",
+          "allowed_values": [
+            "saliva"
+          ]
+        },
+        {
+          "field_id": "participant_origin",
+          "descr": "Origin of the specimen at the entity level, indicating whether the saliva was collected from a human cohort participant; record as a general biological source rather than consent or demographic metadata. Typical value is 'human_participant'.",
+          "type": "categorical",
+          "allowed_values": [
+            "human_participant"
+          ]
+        },
+        {
+          "field_id": "genomic_dna_present",
+          "descr": "Whether the saliva specimen is expected to contain endogenous genomic DNA suitable for downstream extraction; record based on specimen identity at the time of collection, before any processing. Use true/false.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_material_state",
+          "descr": "Physical state of the collected specimen immediately after acquisition and before extraction or stabilization steps; use this to indicate that the entity is an unfractionated saliva specimen rather than purified extract. Typical value is 'unprocessed_saliva'.",
+          "type": "categorical",
+          "allowed_values": [
+            "unprocessed_saliva"
+          ]
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "The dna_extraction node is a Process, so I included fields that describe how saliva was transformed into extracted DNA: protocol identity, key extraction chemistry, input/output amounts, and process quality indicators. I excluded sample-origin fields because those belong to the upstream saliva_samples Entity, and I excluded properties of the purified DNA product that would be better represented on the downstream dna_extracts Entity. I also avoided any consent, demographic, storage, or administrative metadata since the DAG explicitly excludes those. No already_generated fields were provided here, so there were no duplicate-field constraints beyond staying within process territory.",
+      "md_schema": [
+        {
+          "field_id": "extraction_method",
+          "descr": "DNA isolation workflow used for this process step, recorded at the time saliva was processed into genomic DNA; use a controlled categorical value describing the core method, such as silica-column or magnetic-bead extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "silica_column",
+            "magnetic_bead",
+            "phenol_chloroform",
+            "salting_out",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_saliva_volume_microliters",
+          "descr": "Volume of saliva input to the extraction process, measured at the start of dna_extraction before lysis or binding steps; typical range is tens to hundreds of microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_elution_volume_microliters",
+          "descr": "Final elution volume used to recover purified DNA at the end of the extraction process; measured after the last wash and elution step and before transfer to the downstream DNA entity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total elapsed time for the DNA extraction process from sample lysis initiation to DNA recovery, measured per extraction batch or per specimen; typical range is tens of minutes to several hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_ng",
+          "descr": "Mass of genomic DNA recovered from the saliva specimen at the completion of extraction, measured as the process output quality indicator before downstream library preparation; typical range depends on sample quality and input volume.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_a260_a280",
+          "descr": "Spectrophotometric purity metric for the extracted DNA obtained after purification and before library construction; recorded as the A260/A280 absorbance ratio, typically near 1.8 for clean DNA.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extracts": {
+      "reasoning": "The dna_extracts node is an Entity, so I generated fields that describe the intrinsic properties of the purified DNA product itself, not how it was made. I included identity/composition, quantity, integrity, and concentration measures because these are the key attributes downstream users need before library preparation. I excluded extraction protocol parameters because those belong to the upstream dna_extraction Process, and I avoided sequencing or library-related properties because those belong downstream. Since no already_generated list was provided, there were no preexisting field-name conflicts to resolve.",
+      "md_schema": [
+        {
+          "field_id": "dna_material_type",
+          "descr": "Material identity of this Entity node, indicating that the product is purified genomic DNA derived from saliva; record as the biological material present after extraction and before library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "genomic_dna"
+          ]
+        },
+        {
+          "field_id": "dna_concentration_ng_per_microliter",
+          "descr": "Measured concentration of the extracted DNA solution at the point of release from extraction and before any downstream normalization or library preparation; typical values are assay-dependent and reported in ng per microliter.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total mass of purified genomic DNA recovered for this sample after extraction, measured at the entity stage prior to library construction; reported in nanograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_score",
+          "descr": "Integrity or fragmentation quality metric for the extracted DNA entity, measured after purification and before library preparation; use the assay-specific score reported by the laboratory instrument or QC method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "volume_available_microliters",
+          "descr": "Usable liquid volume of the extracted DNA preparation available for downstream processing, measured after the final elution and before aliquoting or normalization; reported in microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_buffer",
+          "descr": "Buffer or solution in which the extracted DNA is suspended at the entity stage, if applicable, such as water or Tris-EDTA; record the final storage medium before library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "water",
+            "te_buffer",
+            "tris_hcl",
+            "other"
+          ]
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "The library_preparation node is a Process, so I included fields describing how extracted DNA was converted into sequencing-ready libraries: preparation chemistry, fragment input, indexing/adaptor strategy, size-selection settings, amplification, and a process-level QC outcome. I excluded intrinsic properties of the DNA input because those belong to the upstream dna_extracts Entity, and I excluded attributes of the resulting libraries because those belong to the downstream sequencing_libraries Entity. No already_generated list was provided, so there were no conflicts to avoid beyond staying within process territory.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_protocol",
+          "descr": "Library construction workflow used for this process step, recorded as the core preparation approach applied to extracted DNA before sequencing; examples include shotgun, PCR-free, or low-input library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun",
+            "pcr_free",
+            "low_input",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_dna_mass_ng",
+          "descr": "Mass of extracted DNA entering the library preparation process, measured at the start of the workflow before fragmentation or end repair; typical range is in nanograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_size_selection_bp",
+          "descr": "Target insert or fragment-size window applied during library preparation, measured as the selected base-pair range after cleanup and before sequencing; report the intended library insert size window.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_indexing_strategy",
+          "descr": "Indexing or adaptor strategy used during library preparation to make the sequencing libraries compatible with multiplexed sequencing; record the strategy applied at the preparation stage, such as single-index or dual-index.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "inline_barcode",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "pcr_amplification_cycles",
+          "descr": "Number of PCR amplification cycles used during library preparation, measured during or immediately after amplification of adaptor-ligated material; zero is allowed for PCR-free libraries.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_yield_ng",
+          "descr": "Mass of library DNA recovered at the end of the preparation process, measured as a process output quality indicator before transfer to the downstream sequencing_libraries Entity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_passed",
+          "descr": "Whether the prepared library met the laboratory's quality-control criteria after cleanup and before sequencing, based on fragment profile, concentration, and/or amplifiability.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_libraries": {
+      "reasoning": "The sequencing_libraries node is an Entity, so I included only intrinsic properties of the prepared library material itself: library identity/type, concentration, fragment-size profile, adaptors/indexing status, and whether the library is sequence-ready. I excluded preparation protocol details because those belong to the upstream library_preparation Process, and I excluded instrument/run settings and file properties because those belong to downstream sequencing_run and raw_reads nodes. No already_generated fields were provided, so there were no duplicate-field constraints to resolve.",
+      "md_schema": [
+        {
+          "field_id": "library_material_type",
+          "descr": "Material identity for this Entity node, indicating that the product is a prepared sequencing library derived from extracted genomic DNA; record the library as it exists immediately before loading onto the sequencing instrument.",
+          "type": "categorical",
+          "allowed_values": [
+            "dna_sequencing_library"
+          ]
+        },
+        {
+          "field_id": "library_concentration_ng_per_microliter",
+          "descr": "Measured concentration of the prepared library solution at the time it is released from library preparation and before instrument loading or normalization; reported in ng per microliter.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Observed or target average fragment size of the prepared library entity after size selection and cleanup, measured before sequencing run setup; report in base pairs.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_index_status",
+          "descr": "Whether the prepared library carries sequencing index/adaptor sequences required for multiplexed sequencing; assess at the entity stage before loading onto the sequencer.",
+          "type": "categorical",
+          "allowed_values": [
+            "indexed",
+            "unindexed",
+            "dual_indexed",
+            "single_indexed"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_sequencing",
+          "descr": "Indicator that the library met the acceptance criteria for sequencing loading, based on concentration, fragment profile, and clean-up status at the time the entity was released for sequencing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_volume_available_microliters",
+          "descr": "Usable liquid volume of the prepared library available for sequencing setup, measured after final cleanup and before dilution or pooling.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_run": {
+      "reasoning": "The sequencing_run node is a Capture, so I included instrument and run-configuration fields that describe the measurement session itself: platform identity, model, serial number, run chemistry, read layout, output mode, and core acquisition settings. I excluded properties of the loaded libraries because those belong to the upstream sequencing_libraries Entity, and I excluded file-format and read-quality metrics because those belong to the downstream raw_reads Signal. I also omitted computational pipeline details, since this is an instrument capture node rather than a process node. No already_generated fields were provided, so I did not need to avoid any existing field names.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture session, recorded for the active hardware actually configured to generate the raw reads; example: Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Instrument model used for the sequencing run, recorded at the time the capture session was configured; example: NovaSeq 6000 or MiSeq.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Unique serial number of the sequencing instrument used for this run, recorded to identify the exact hardware performing the capture; format is the vendor-assigned instrument serial identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing reagent chemistry configured on the instrument for this run, recorded as the active chemistry used during data capture; examples include SBS chemistry versions used by the platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length per sequencing cycle for each read in this capture session, measured as base pairs and set before the run begins; typical values are platform-dependent (for example, 75, 100, or 150 bp).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end",
+          "descr": "Whether the sequencing run was configured to produce paired-end reads, determined at run setup before data acquisition begins.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "index_read_present",
+          "descr": "Whether index reads were acquired during the sequencing capture session for multiplex identification, configured before the run starts.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flowcell_type",
+          "descr": "Flow cell or cartridge type used for this sequencing capture session, recorded as the instrument consumable loaded for data acquisition; examples are platform-specific flow cell classes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_duration_hours",
+          "descr": "Total duration of the sequencing capture session from run start to completion, measured in hours for the configured instrument run.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "The raw_reads node is a Signal, so I included only technical properties of the raw data artefact itself: file format, file size, read counts, base counts, lane/sample layout, and basic file-level quality metrics. I excluded instrument settings because those belong to the upstream sequencing_run Capture, and I excluded alignment, variant, or biological interpretation because those belong to downstream Process or Derivative nodes. No already_generated fields were provided, so there were no duplicate-field constraints to resolve.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw sequencing reads produced by the instrument capture session, recorded for the raw data artefact as stored or exported; examples include FASTQ or BCL-derived output.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bcl",
+            "ubam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file set at the time of storage or handoff, measured for the Signal node in bytes; report the aggregate size of all raw read files associated with the run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of individual reads contained in the raw sequencing data artefact, counted after instrument output and before any trimming or alignment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count",
+          "descr": "Total number of bases present in the raw sequencing reads, measured across all reads in the file set before any downstream processing; report as base count rather than derived coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_quality_mean_phred",
+          "descr": "Mean raw base-call quality score across the unprocessed reads, computed from the Signal file only and used as a file-level quality indicator; reported as an average Phred score.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_lane_count",
+          "descr": "Number of lanes or equivalent instrument partitions represented in the raw read artefact, measured from the raw output structure and used to describe the file set organization.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_alignment": {
+      "reasoning": "The read_alignment node is a Process, so I included fields describing the computational transformation from raw reads to aligned reads: alignment software identity, version, repository, reference genome build, key mapping parameters, and process-level output QC. I excluded raw file properties because those belong to the upstream raw_reads Signal, and I excluded properties of the resulting aligned-read file because those belong to the downstream aligned_reads Signal. No already_generated fields were provided, so I did not need to avoid duplicate or semantically equivalent field names across prior nodes.",
+      "md_schema": [
+        {
+          "field_id": "alignment_software_name",
+          "descr": "Name of the software or pipeline used to map raw reads to the reference genome for this process step; record the tool actually executed during alignment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_software_version",
+          "descr": "Version of the alignment software used for this process step, recorded at runtime to support reproducibility of the read mapping workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_software_repository",
+          "descr": "Source repository or distribution location for the alignment software used in this process, recorded as a URL or package identifier for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_genome_build",
+          "descr": "Reference genome assembly used as the mapping target during alignment, recorded at the time reads were aligned; examples include GRCh38 or hg19.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_algorithm",
+          "descr": "Primary alignment algorithm or mapping mode applied in this process step, such as seed-and-extend or splice-unaware short-read mapping; use a controlled label describing the core approach.",
+          "type": "categorical",
+          "allowed_values": [
+            "seed_and_extend",
+            "burrows_wheeler",
+            "hash_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "max_mismatch_rate",
+          "descr": "Maximum allowed mismatch rate configured for read alignment, measured as the fraction of bases permitted to differ from the reference during mapping; record the threshold used in this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_mapping_quality",
+          "descr": "Minimum mapping-quality threshold applied during alignment or during generation of the mapped-read output, recorded as the active cutoff used in this process step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligned_read_fraction",
+          "descr": "Fraction of input reads successfully mapped to the reference genome, measured as a process output quality indicator after alignment completion.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "aligned_reads": {
+      "reasoning": "I corrected the aligned_reads Signal schema to avoid the already_generated collision on file_size_bytes by renaming the file-size field to a node-specific equivalent. I kept the rest of the fields in Signal territory: technical properties of the mapped-read artefact such as file format, sorting, duplicate marking, mapping counts, and mapping quality. I still excluded process-level alignment parameters and downstream variant-analysis fields because they belong to upstream read_alignment or downstream nodes, not the aligned_reads Signal.",
+      "md_schema": [
+        {
+          "field_id": "alignment_file_format",
+          "descr": "Digital file format of the aligned-read artefact produced by the read_alignment process, recorded for the stored Signal file; examples include BAM, CRAM, or SAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "bam",
+            "cram",
+            "sam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "aligned_reads_file_size_bytes",
+          "descr": "Total size of the aligned-read file or file set at the time of storage or handoff, measured for the Signal node in bytes; report the aggregate size of all alignment files associated with the sample.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sorted_by_coordinate",
+          "descr": "Whether the aligned reads were coordinate-sorted in the stored file representation, recorded as a file-level property of the Signal output.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_marked",
+          "descr": "Whether duplicate reads were marked in the aligned-read file, recorded as a technical property of the stored signal output after computational alignment.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapped_read_count",
+          "descr": "Number of reads retained as mapped in the alignment artefact, measured after the read_alignment process and before downstream variant calling.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_rate",
+          "descr": "Proportion of input raw reads that are represented as mapped reads in the aligned-read Signal, calculated from the stored artefact as a technical quality metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_alignment_quality",
+          "descr": "Mean mapping quality score across aligned reads in the stored Signal file, reported as a file-level quality indicator after computational alignment.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "variant_calling": {
+      "reasoning": "The variant_calling node is a Process, so I included computational parameters and process-level output quality for inferring variants from aligned reads: variant caller identity, version, repository, variant type scope, ploidy, frequency thresholds, and pass-rate metrics. I excluded aligned-read file properties because those belong to the upstream aligned_reads Signal, and I excluded the resulting variant table or dataset properties because those belong to the downstream variant_dataset Derivative. I also avoided the previously generated file_size_bytes field and any semantically equivalent storage-size field to prevent cross-DAG collisions. No other already_generated fields were provided here, so no additional conflicts constrained the schema.",
+      "md_schema": [
+        {
+          "field_id": "variant_caller_name",
+          "descr": "Name of the software or pipeline used to infer genetic variants from aligned reads in this process step; record the tool actually executed during variant calling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_caller_version",
+          "descr": "Version of the variant-calling software used for this process step, recorded at runtime for reproducibility of the inferred variant calls.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_caller_repository",
+          "descr": "Source repository, distribution, or package identifier for the variant-calling software used in this process, recorded as a URL or package reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_type_scope",
+          "descr": "Classes of variants targeted by this calling process, recorded as the analytical scope of the inference step; common cohort workflows typically include single-nucleotide variants and small indels.",
+          "type": "categorical",
+          "allowed_values": [
+            "snv",
+            "indel",
+            "snv_and_indel",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assumed_ploidy",
+          "descr": "Ploidy setting used by the variant caller during inference, recorded for the process because it affects genotype likelihoods and call interpretation; for human cohort data this is typically 2.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_variant_allele_frequency",
+          "descr": "Minimum allele-frequency threshold configured for reporting or retaining variants in this process step, measured as a fraction between 0 and 1; used to focus on common variants in the cohort.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_variant_quality",
+          "descr": "Minimum quality threshold applied to called variants during this process, recorded as the active cutoff used to accept or filter variant calls.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_call_pass_rate",
+          "descr": "Fraction of candidate variant calls that passed the configured filters at the end of the variant-calling process; recorded as a process output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "variant_dataset": {
+      "reasoning": "The variant_dataset node is a Derivative, so I included fields that describe the computed result itself: derivation method, contained variant/genotype content, sample and variant dimensions, filtering/normalization status, and derived data quality indicators. I excluded the variant-calling software and thresholds because those belong to the upstream variant_calling Process, and I excluded the downstream association-analysis parameters because those belong to the next Process. I also avoided any previously generated fields, including file_size_bytes, to prevent cross-DAG collisions. The resulting schema focuses on what a downstream analyst needs to understand and reuse the derived cohort-level variant table without repeating process or raw-signal metadata.",
+      "md_schema": [
+        {
+          "field_id": "derivation_method",
+          "descr": "Computational method used to construct this derivative dataset from aligned reads and variant calls, recorded as the result-producing workflow rather than the upstream software configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_representation",
+          "descr": "Representation format of the derived genotype and variant content in this dataset, describing how calls are organized for analysis; examples include VCF-like variant tables or genotype matrices.",
+          "type": "categorical",
+          "allowed_values": [
+            "vcf_like",
+            "genotype_matrix",
+            "compressed_variant_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of individual samples represented in the derived variant dataset at the point it is released for association analysis; report the cohort size encoded in this derivative.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_count",
+          "descr": "Total number of variant loci retained in the derived dataset after calling and filtering, measured as the count of unique variant sites available for downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "genotype_missing_rate",
+          "descr": "Fraction of genotype entries missing in the derived dataset after variant calling and cohort harmonization, measured as a dataset-level quality indicator for this derivative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_for_common_variants",
+          "descr": "Whether this derived dataset has been filtered to retain common variants for population-level disease association analysis, recorded as a dataset property rather than a process parameter.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_status",
+          "descr": "Whether variant representations in the derived dataset have been normalized or harmonized across samples before association analysis, recorded as a property of the computed result.",
+          "type": "categorical",
+          "allowed_values": [
+            "normalized",
+            "not_normalized",
+            "partially_normalized"
+          ]
+        }
+      ]
+    },
+    "association_analysis": {
+      "reasoning": "The association_analysis node is a Process, so I included fields that describe how the variant dataset was statistically analyzed: analysis software, version, repository, model type, covariates, multiple-testing correction, and process-level output quality/statistics. I excluded properties of the input variant_dataset because those belong upstream, and I excluded the results table or summary file properties because those belong to the downstream risk_results Derivative. I also avoided reusing any previously generated fields, including file_size_bytes, to prevent cross-DAG collisions. The schema is limited to operational settings and quality indicators needed to reproduce the statistical association workflow.",
+      "md_schema": [
+        {
+          "field_id": "association_analysis_software_name",
+          "descr": "Name of the software or statistical genetics pipeline used to perform the association analysis on the variant dataset; record the tool actually executed during this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_analysis_software_version",
+          "descr": "Version of the association-analysis software used for this process step, recorded at runtime to support reproducibility of the statistical analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_analysis_software_repository",
+          "descr": "Source repository, package, or distribution identifier for the association-analysis software used in this process, recorded as a URL or package reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_model_type",
+          "descr": "Statistical model used to test for disease-susceptibility association in this process step, recorded as the core analysis model applied to the variant dataset.",
+          "type": "categorical",
+          "allowed_values": [
+            "logistic_regression",
+            "linear_regression",
+            "mixed_model",
+            "cox_model",
+            "other"
+          ]
+        },
+        {
+          "field_id": "covariates_included",
+          "descr": "Major covariate classes included in the association model at analysis time, recorded as the adjustment terms used to control for confounding in the cohort; examples include age, sex, and ancestry principal components.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction_method",
+          "descr": "Multiple-testing correction procedure applied to association test results in this process, recorded as the active statistical correction method used before generating final outputs.",
+          "type": "categorical",
+          "allowed_values": [
+            "bonferroni",
+            "fdr_bh",
+            "permutation",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "genomic_control_lambda",
+          "descr": "Genomic inflation factor or equivalent calibration statistic calculated during association analysis, used as a process-level quality indicator for population stratification and test calibration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_significance_threshold",
+          "descr": "Significance threshold used to declare association findings in this process step, typically expressed as a p-value cutoff or equivalent criterion applied to the statistical tests.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "risk_results": {
+      "reasoning": "The risk_results node is a Derivative, so I included only computed result properties describing the summary association outputs themselves: result format, number of reported associations, significance and effect-size summaries, population stratification of the findings, and a result-level quality indicator. I excluded association-analysis software and model settings because those belong to the upstream association_analysis Process, and I excluded any raw or intermediate dataset properties because those belong upstream to the variant_dataset and earlier nodes. I also avoided any previously generated field names, including file_size_bytes, to prevent cross-DAG collisions. The schema is intended to make the derived result table understandable and reusable without repeating process configuration.",
+      "md_schema": [
+        {
+          "field_id": "result_format",
+          "descr": "Format of the derived risk-association output produced by the association-analysis process, recorded for the final result artefact; examples include summary table, CSV, TSV, or report object.",
+          "type": "categorical",
+          "allowed_values": [
+            "summary_table",
+            "csv",
+            "tsv",
+            "report",
+            "other"
+          ]
+        },
+        {
+          "field_id": "significant_association_count",
+          "descr": "Number of variant–trait or variant–disease associations that met the predefined significance threshold in the derived result set, counted in the final output summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "top_association_p_value",
+          "descr": "Smallest p-value observed among the reported associations in the derived result set, recorded as a summary statistic for the strongest association signal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "top_association_effect_size",
+          "descr": "Effect-size estimate for the strongest or most significant association reported in the derived result set, recorded using the model's native scale such as odds ratio or beta coefficient.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size_metric",
+          "descr": "Type of effect-size measure reported in the derived results, recorded to interpret the numeric effect-size values; examples include odds ratio or beta coefficient.",
+          "type": "categorical",
+          "allowed_values": [
+            "odds_ratio",
+            "beta",
+            "hazard_ratio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "populations_represented",
+          "descr": "Population groups or ancestry clusters represented in the derived association results, recorded as a result-level descriptor of which cohort strata are summarized in the output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "heterogeneity_present",
+          "descr": "Whether the derived association results indicate between-population heterogeneity in effect estimates or association strength, based on the summary output generated by the analysis.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_quality_flag",
+          "descr": "Overall quality assessment of the derived association result set, recorded after statistical analysis and before dissemination; use this to indicate whether the output passed internal review or calibration checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "partial"
+          ]
+        }
+      ]
+    }
+  }
+}

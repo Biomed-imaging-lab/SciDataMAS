@@ -1,0 +1,1111 @@
+{
+  "md_name": "forest_soil_fungal_its_sequencing_workflow",
+  "md_description": "This DAG represents collection and processing of forest soil samples for fungal ITS amplicon sequencing across temperate and tropical forests and multiple seasonal time points. It includes physical sample preparation, environmental measurements, sequencing, read processing, taxonomic profiling, and downstream ecological analysis linking fungal community composition to soil chemistry and geographic gradients.",
+  "fields_per_node": {
+    "forest_soil_samples": {
+      "reasoning": "This Entity node should describe what the forest soil samples intrinsically are and where/when they originated, not any downstream processing or measurements. I included sample identity/origin fields that are specific to the root biological material and its collection context: site identity, forest type, geographic provenance, and temporal collection context. I excluded soil chemistry and moisture/pH because those are captured by the downstream Capture node, and I excluded homogenization, extraction, sequencing, and data-file properties because those belong to later Process/Capture/Signal/Derivative nodes. No prior generated fields were provided here, so there was no need to suppress overlaps beyond keeping the scope strictly to sample provenance and intrinsic collection descriptors.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for each bulk forest soil sample in the dataset; use a stable string format such as FS_0001 or site-season-replicate codes. Assigned at collection and used to link all downstream measurements and sequence data to the same physical sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "site_id",
+          "descr": "Identifier for the forest sampling site where the soil was collected; use a consistent string code such as site_T01 or forestA_plot3. This is an intrinsic provenance field for the sample and should be recorded at collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "forest_type",
+          "descr": "Forest ecosystem category from which the soil sample was collected. Record the vegetation/biome class at the sampling site, not any laboratory condition. Typical values in this study distinguish temperate versus tropical forests.",
+          "type": "categorical",
+          "allowed_values": [
+            "temperate",
+            "tropical"
+          ]
+        },
+        {
+          "field_id": "sampling_timepoint",
+          "descr": "Collection time point for the soil sample within the seasonal or longitudinal sampling design. Record the sampling occasion at collection time, using the study's predefined label or date-based code (for example, spring_2025 or T1).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the bulk soil sample was collected in the field, recorded at the point of sampling in ISO format YYYY-MM-DD. Typical range spans the full study year across multiple seasonal time points.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "latitude_decimal_degrees",
+          "descr": "Latitude of the soil sampling location in decimal degrees, recorded at collection or from site metadata linked to the sample. Typical range is -90.0 to 90.0; use positive values for the Northern Hemisphere and negative values for the Southern Hemisphere.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elevation_meters",
+          "descr": "Elevation of the sampling site above sea level in meters, associated with the soil sample provenance at collection. Typical range depends on the forest site and should be recorded as the site's field-measured or mapped elevation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_depth_cm",
+          "descr": "Soil depth interval from which the bulk sample was taken, measured in centimeters at the time of field collection. Report as a single depth or depth range, such as 0 to 10 cm, consistent with the sampling protocol.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_material_description",
+          "descr": "Brief intrinsic description of the collected soil material before any homogenization or extraction, such as bulk mineral soil, litter-influenced soil, or organic horizon soil. Use this to capture what the sample physically represents at collection.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_homogenization": {
+      "reasoning": "This Process node should describe how the soil material was transformed for downstream use, not the intrinsic properties of the sample or any measurement outputs. I included protocol-level fields for subsampling and homogenization because they define the operation performed on the soil. I also included operator/equipment handling details only insofar as they belong to the process execution. I excluded soil chemistry, moisture, and other environmental descriptors because those belong to the Capture node, and I excluded properties of the resulting homogenized soil material because those belong to the downstream Entity node. No already_generated list was supplied, so no additional duplicate suppression was needed beyond staying within process territory.",
+      "md_schema": [
+        {
+          "field_id": "subsample_mass_grams",
+          "descr": "Mass of soil taken from the original bulk sample for the homogenization step, measured at the start of processing. Record in grams; typical values in this workflow are sample-specific and should be sufficient for downstream extraction and replicate handling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_method",
+          "descr": "Method used to physically homogenize the soil prior to DNA extraction, recorded during the process execution. Examples include manual mixing, vortexing, sieving, or bead-assisted mixing if used as part of the homogenization workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_duration_minutes",
+          "descr": "Total time spent homogenizing the soil subsample during the process, measured in minutes from the start to the end of the mixing/sieving step. Use a numeric value to document reproducibility of the preparation procedure.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_temperature_celsius",
+          "descr": "Temperature of the soil material or processing environment during homogenization, measured during the process if controlled or monitored. Record in degrees Celsius; typical values are ambient laboratory temperatures unless cooling is used.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "equipment_used",
+          "descr": "Primary equipment or workstation used to subsample and homogenize the soil, recorded as part of process execution. Examples include sterile spatula, sieve set, bead mill, or laboratory mixer when directly used in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_homogenization_quality_status",
+          "descr": "Qualitative indicator of whether the homogenized soil material met preparation expectations for downstream extraction and profiling at the end of the process. Use this only as a process outcome check, not as a property of the material itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "acceptable",
+            "rework_required",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "homogenized_soil": {
+      "reasoning": "This Entity node should describe the prepared homogenized soil material itself: what form it exists in after processing and what intrinsic preparation state it has before downstream extraction and measurements. I included fields for the aliquot identity, physical state, and preparation completeness because these are properties of the material as an entity. I excluded protocol settings such as mixing duration or equipment because those belong to the upstream homogenization process, and I excluded extraction, sequencing, and environmental measurement details because those belong to downstream nodes. No already_generated fields were provided, so there was no need to remove overlaps beyond staying within entity-level preparation characteristics.",
+      "md_schema": [
+        {
+          "field_id": "homogenized_soil_id",
+          "descr": "Unique identifier for the homogenized soil aliquot derived from a bulk sample; use a stable string such as HS_0001 or sample_id_aliquot1. Assigned after homogenization and used to track the prepared material into DNA extraction or additional analyses.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_count",
+          "descr": "Number of homogenized soil aliquots produced from the original sample during preparation. Record as an integer at the point the prepared material is split for downstream use; typical values depend on extraction and measurement needs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "material_state",
+          "descr": "Physical state of the prepared soil material after homogenization and before DNA extraction. This describes how the entity exists for downstream use, for example loose soil, sieved soil, or mixed aliquot.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "uniformity_status",
+          "descr": "Qualitative assessment of whether the homogenized soil material is sufficiently uniform for downstream DNA extraction and environmental measurements. Record at the end of preparation; use a categorical label that reflects readiness for the next workflow step.",
+          "type": "categorical",
+          "allowed_values": [
+            "uniform",
+            "partially_uniform",
+            "non_uniform"
+          ]
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition under which the homogenized soil aliquot is held before downstream use, such as refrigerated, frozen, or temporary ambient holding. Record as an entity property reflecting preservation state after preparation and before transfer to the next step.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_environment_capture": {
+      "reasoning": "This Capture node should describe the measurement session and instrument configuration used to record soil environmental descriptors. I included fields for the actively captured measurements that are controlled or recorded during this step: pH, moisture, organic matter, and associated capture conditions such as instrument identity and calibration state. I also included measurement timestamp because it is part of the session, not the sample itself. I excluded forest type, latitude, elevation, and sampling time as sample provenance because those already belong to the root Entity and should not be duplicated here; I also excluded the resulting metadata table/file properties because those belong to the downstream Signal node. No already_generated list was supplied, so overlap removal was handled by keeping the scope strictly to capture-session details.",
+      "md_schema": [
+        {
+          "field_id": "capture_session_id",
+          "descr": "Unique identifier for the soil environmental measurement session linked to a specific homogenized soil sample; use a stable string such as ECAP_0001. Assigned when the field or laboratory measurements are performed and used to trace the capture event.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_datetime",
+          "descr": "Date and time when the soil environmental measurements were recorded, captured at the moment of the field or laboratory session. Record in ISO 8601 format; this indicates when the capture event occurred rather than the sample collection time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_ph",
+          "descr": "Measured soil pH value obtained during the capture session for the prepared soil sample. Record the active measurement as a numeric value; typical soil pH values are usually in the range of about 3.0 to 9.0 depending on site conditions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_moisture_content_percent",
+          "descr": "Measured soil moisture content recorded during the capture session, expressed as percent water content by mass or the protocol-defined moisture basis. Typical values are protocol-dependent and should reflect the instrument or gravimetric method used at the time of capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "organic_matter_percent",
+          "descr": "Measured organic matter content of the soil sample recorded during the capture session, expressed as a percentage or protocol-defined equivalent. Typical values depend on soil type and should be recorded as the directly measured value at this step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_instrument_model",
+          "descr": "Model name of the field or laboratory instrument used for the soil environmental measurement session, recorded as part of the capture configuration. Examples include pH meter model, moisture probe model, or analyzer model used to obtain the measurements.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_instrument_serial_number",
+          "descr": "Serial number of the instrument used in the soil environmental capture session, recorded to identify the specific hardware instance. Use a string format exactly as shown by the device label or asset record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_calibration_status",
+          "descr": "Calibration state of the measurement instrument at the time of the capture session. Use this to indicate whether the device was calibrated before recording soil environmental values.",
+          "type": "categorical",
+          "allowed_values": [
+            "calibrated",
+            "not_calibrated",
+            "calibration_unknown"
+          ]
+        },
+        {
+          "field_id": "capture_notes",
+          "descr": "Free-text operational notes about the environmental measurement session, such as deviations, sample handling issues, or field/lab observations relevant to interpreting the recorded values. Keep this limited to capture-session context, not sample provenance or downstream file properties.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_metadata": {
+      "reasoning": "This Signal node should describe the raw digital artefact produced by the environmental capture step: the table/file itself, its technical format, size, dimensions, and storage characteristics. I included fields that let downstream users locate and validate the file as a data object, plus basic quality/completeness metrics that are properties of the artefact. I excluded the scientific content of the measurements because that belongs to the upstream Capture node, and I excluded any analysis or transformed interpretations because those belong to downstream Derivative nodes. No already_generated list was supplied, so I focused only on file-level signal properties rather than repeating sample or capture metadata.",
+      "md_schema": [
+        {
+          "field_id": "environmental_metadata_file_id",
+          "descr": "Unique identifier for the environmental metadata file or table produced from the soil environment capture step. Use a stable string such as ENV_META_0001 to reference the raw digital artefact in storage and downstream processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital format of the environmental metadata artefact at the time it is stored or exported, such as csv, tsv, xlsx, or json. This describes the raw signal file format rather than the scientific content of the table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "json"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the environmental metadata file in bytes, measured from the stored artefact. Record this technical property to support validation and transfer checks; typical values depend on sample count and number of descriptors.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of data rows contained in the environmental metadata table, counted in the stored file. This is a technical dimension of the raw artefact and should reflect how many sample-timepoint records are present.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the environmental metadata table, counted in the stored file. Use this as a structural property of the digital artefact rather than a description of the measured variables themselves.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_count",
+          "descr": "Total number of missing or empty entries detected in the environmental metadata file at the time of storage or validation. This is a raw signal quality metric describing completeness of the digital artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Persistent file location or URI where the environmental metadata artefact is stored, such as a filesystem path, object-store URI, or database pointer. Record the exact retrieval location for downstream reuse.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "checksum_md5",
+          "descr": "Checksum of the environmental metadata file, recorded to verify integrity of the stored artefact. Use a string representation of the MD5 hash or equivalent checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "This Process node should describe how DNA was extracted from the homogenized soil material, including protocol parameters, reagents, and process outcome quality, but not the properties of the resulting DNA extract itself. I included extraction kit/buffer details, elution conditions, and yield/quality indicators because they are part of the extraction operation. I excluded the soil material provenance and homogenization details because those belong upstream, and I excluded DNA extract identity, concentration, purity, and storage because those belong to the downstream Entity node. No already_generated list was provided, so I did not need to suppress overlaps beyond keeping strictly to process-level extraction metadata.",
+      "md_schema": [
+        {
+          "field_id": "extraction_protocol_name",
+          "descr": "Name of the DNA extraction protocol used for the homogenized soil sample, recorded during the extraction process. Use a protocol label or kit name such as PowerSoil or a study-specific method name to identify how the extraction was performed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial or in-house extraction kit used in the DNA extraction step, recorded as part of the process configuration. Examples include soil DNA kits or equivalent reagents used to lyse cells and purify nucleic acids.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_soil_mass_grams",
+          "descr": "Mass of homogenized soil used as input to the extraction step, measured at the start of the process. Record in grams; this documents the process loading rather than a property of the soil entity itself.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Volume of elution buffer or water used to recover DNA at the end of the extraction process, measured in microliters. Typical values depend on the kit or method and should be recorded for reproducibility.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total elapsed time for the DNA extraction process, measured from sample loading to final eluate recovery. Record in minutes to support workflow reproducibility and throughput comparisons.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_nanograms",
+          "descr": "Total DNA yield recovered from the extraction process, measured after extraction and before amplicon preparation. Record in nanograms as a process outcome indicator of extraction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_260_280",
+          "descr": "Spectrophotometric purity ratio A260/A280 measured on the DNA extract as an end-of-process quality indicator. Typical values near 1.8 indicate relatively pure DNA; record the value used to assess extraction quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_issue_flag",
+          "descr": "Indicates whether a notable extraction problem occurred during the process, such as inhibitor carryover, low yield, or failed lysis. Use this only as a process-level quality flag, not as a property of the extracted DNA object.",
+          "type": "categorical",
+          "allowed_values": [
+            "no_issue",
+            "minor_issue",
+            "major_issue",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "soil_dna": {
+      "reasoning": "This Entity node should describe the extracted nucleic acid material itself, not how it was extracted. I included identity, concentration, purity, integrity, and storage-state fields because these are intrinsic properties of the DNA extract that downstream library preparation needs to know. I excluded extraction kit, elution, and yield-process details because those belong to the upstream DNA extraction Process node, and I excluded library preparation and sequencing details because those belong downstream. No already_generated list was supplied, so I avoided overlaps by keeping only DNA-extract entity characteristics.",
+      "md_schema": [
+        {
+          "field_id": "soil_dna_id",
+          "descr": "Unique identifier for the extracted soil DNA material; use a stable string such as DNA_0001 or sample_id_dna. Assigned after extraction and used to track the nucleic acid material into library preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "DNA concentration of the extract measured after extraction and before library preparation, expressed in nanograms per microliter. Typical values depend on soil biomass and extraction efficiency and should be measured using the lab's standard quantification method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total amount of DNA recovered in the extract, calculated from concentration and eluate volume or measured directly after extraction. Record in nanograms as an intrinsic quantity of the DNA material available for downstream use.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_a260_a280",
+          "descr": "Spectrophotometric purity ratio A260/A280 measured on the extracted soil DNA before library preparation. Values around 1.8 are often considered relatively pure for DNA; record the actual measured ratio as a property of the extract.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of the physical integrity of the extracted DNA before downstream amplification. Use this to indicate whether the extract appears intact enough for amplicon library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_degraded",
+            "degraded",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Storage temperature of the extracted soil DNA prior to library preparation, recorded as a property of the DNA material's preservation state. Common values may include refrigerated or frozen storage temperatures depending on laboratory practice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_buffer",
+          "descr": "Buffer or solution in which the extracted DNA is stored before downstream use, such as nuclease-free water or TE buffer. Record the storage medium as a property of the DNA extract itself.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "its_library_prep": {
+      "reasoning": "This Process node should capture how the ITS sequencing library was generated from extracted soil DNA, including amplification and library-preparation settings, reagents, and process performance. I included primer and PCR/library setup fields because they define the preparation workflow, along with cycle counts and reaction conditions that are essential for reproducibility. I also included a process-level success indicator because it reflects the outcome of the preparation step. I excluded the DNA extract's concentration and purity because those belong to the upstream Entity node, and I excluded library size/distribution and file-like properties because those belong to the downstream ITS amplicon library Entity or sequencing Signal node. No already_generated list was supplied, so I avoided repeating upstream DNA and downstream library identities by focusing only on the preparation operation.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_protocol_name",
+          "descr": "Name of the ITS library preparation protocol used to amplify and convert extracted soil DNA into a sequencing-ready library. Record the protocol or workflow name used during this process, such as a study-specific ITS amplification workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primer_pair_name",
+          "descr": "Primer pair used to amplify the fungal ITS region during library preparation, recorded at the time of PCR setup. Examples include ITS1F/ITS2 or ITS3/ITS4 depending on the target region and study design.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used during ITS library preparation. Record the exact cycle count applied in the amplification step, since this strongly affects library yield and chimera formation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annealing_temperature_celsius",
+          "descr": "PCR annealing temperature used during ITS amplification, measured in degrees Celsius as part of the library preparation process. Typical values depend on primer design and should be recorded exactly as used.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reaction_volume_microliters",
+          "descr": "Total reaction volume of the ITS amplification/library preparation PCR, recorded in microliters. Use the exact configured volume used in the process for reproducibility.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_clean_up_method",
+          "descr": "Method used to clean or size-select amplified ITS products before final library completion. Examples include bead cleanup, gel purification, or enzyme-based cleanup depending on the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_yield_ng",
+          "descr": "Total amount of amplified library DNA recovered at the end of library preparation, measured in nanograms. This is a process outcome indicating how much sequencing-ready material was produced.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_preparation_success",
+          "descr": "Qualitative outcome of the ITS library preparation step indicating whether the amplification and preparation produced a usable sequencing library. Use this as a process-level success indicator at the end of the operation.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "its_amplicon_library": {
+      "reasoning": "This Entity node should describe the sequencing-ready ITS amplicon material itself, not how it was generated or sequenced. I included identifiers and intrinsic physical attributes of the library such as expected amplicon size, concentration, molarity, pooling readiness, and storage state because these are properties of the library as a material entity. I excluded PCR cycle count, primers, and cleanup method because those belong to the upstream ITS library preparation Process node, and I excluded raw read file properties because those belong to the downstream sequencing Signal node. No already_generated list was supplied, so I kept the scope limited to the amplicon library entity and avoided overlap with upstream process metadata.",
+      "md_schema": [
+        {
+          "field_id": "its_amplicon_library_id",
+          "descr": "Unique identifier for the sequencing-ready ITS amplicon library derived from soil DNA; use a stable string such as ITS_LIB_0001 or sample_id_lib. Assigned after library preparation and used to track the library into sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expected_amplicon_size_bp",
+          "descr": "Expected fragment length of the ITS amplicon library in base pairs, determined by the targeted ITS region and primer pair. Record the library's intended insert/amplicon size as a property of the sequencing-ready material.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the ITS amplicon library prior to sequencing, expressed in nanograms per microliter. This is a property of the prepared library material used for pooling and loading.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_molarity_nm",
+          "descr": "Molar concentration of the ITS amplicon library before sequencing, expressed in nanomolar. Record this if used for normalization or pooling of libraries for sequencing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pooling_ready",
+          "descr": "Indicates whether the ITS amplicon library is suitable for pooling and sequencing after preparation. Use this as an entity-level readiness flag for the library material.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "needs_adjustment",
+            "not_ready"
+          ]
+        },
+        {
+          "field_id": "library_storage_condition",
+          "descr": "Condition under which the ITS amplicon library is held before sequencing, such as refrigerated, frozen, or in immediate-use buffer. Record the preservation state of the library material as an entity property.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "ngs_sequencing": {
+      "reasoning": "This Capture node should describe the sequencing session and instrument configuration used to measure the ITS amplicon library, not the resulting raw read file. I included sequencing platform and run-configuration fields such as instrument model/serial, flow cell or chemistry, read length, run start/end, and loading concentration because they are actively controlled or selected during capture. I also included run-level quality indicators because they summarize the measurement session. I excluded library concentration and pooling details because those belong to the upstream ITS amplicon library Entity node, and I excluded FASTQ/file properties because those belong to the downstream raw ITS reads Signal node. No already_generated list was supplied, so I kept the scope limited to capture-session metadata for sequencing.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Unique identifier for the sequencing run that measured the ITS amplicon library; use a stable string such as NGS_RUN_0001. Assigned at the start of the sequencing session and used to link all produced reads to the same capture event.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the run, recorded as part of the capture hardware description. Examples include Illumina or other platform vendors as applicable to the sequencing session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the sequencing instrument used to measure the ITS amplicon library. Record the actively configured hardware model at the time of capture, such as MiSeq or another platform model.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used in the run, recorded to identify the specific hardware instance. Use the exact string from the device or asset record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or reagent kit version selected for the run, recorded at the time of capture. This describes the active sequencing configuration rather than the sample being measured.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read generated in the run. Record the intended read length(s) used during capture, such as 2x250 bp for paired-end sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_start_datetime",
+          "descr": "Date and time when the sequencing run started, recorded as part of the capture session metadata. Use ISO 8601 format to identify when the measurement began.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_end_datetime",
+          "descr": "Date and time when the sequencing run ended, recorded as part of the capture session metadata. Use ISO 8601 format to identify when the measurement finished.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_loading_concentration_nm",
+          "descr": "Concentration of the ITS amplicon library loaded onto the sequencing instrument for this capture session, expressed in nanomolar. This is an actively configured run parameter used to start the measurement.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_quality_flag",
+          "descr": "Overall qualitative status of the sequencing run at completion, indicating whether the capture session generated usable raw reads. Use this as a run-level quality indicator.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_its_reads": {
+      "reasoning": "I revised the raw ITS reads Signal schema to remove field-id collisions with previously generated DAG steps. The raw-data file/object properties are still needed for this node, but I renamed them with a node-specific prefix so they remain clearly within raw-read territory and do not duplicate earlier generic file fields. I kept only signal-level artefact descriptors and technical quality metrics, excluding capture settings, biological sample properties, and downstream processing outputs.",
+      "md_schema": [
+        {
+          "field_id": "raw_its_reads_file_format",
+          "descr": "Digital format of the raw ITS sequencing reads at storage time, such as fastq, gzipped_fastq, or tar_gz. Record the format of the raw artefact rather than the sequencing chemistry or run configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "gzipped_fastq",
+            "fq",
+            "tar_gz"
+          ]
+        },
+        {
+          "field_id": "raw_its_reads_file_size_bytes",
+          "descr": "Size of the raw ITS read file in bytes, measured from the stored artefact. This is a technical property of the raw data object used for validation and transfer checks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_its_reads_storage_uri",
+          "descr": "Persistent location or URI where the raw ITS read file is stored, such as a filesystem path or object-store address. Record the exact retrieval location for reuse and downstream processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_its_reads_checksum_md5",
+          "descr": "Checksum of the raw ITS read file, recorded to verify integrity of the stored artefact. Use a string representation of the MD5 hash or equivalent checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of reads contained in the raw ITS sequencing file set, counted from the stored artefact. This is a structural property of the raw signal used to assess sequencing output volume.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end_status",
+          "descr": "Indicates whether the raw ITS reads are paired-end or single-end as stored in the artefact. Use this to describe the read layout of the data object itself, not the run configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_end",
+            "single_end"
+          ]
+        },
+        {
+          "field_id": "mean_read_length_bp",
+          "descr": "Average read length in base pairs across the raw ITS read file set, calculated from the stored reads. Record this as a technical property of the artefact; typical values depend on the configured sequencing run.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Mean base-call quality score across the raw ITS read artefact, measured from the stored reads. This is a raw-data quality metric describing technical signal quality before any trimming or filtering.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc_trimming": {
+      "reasoning": "This Process node should describe how raw ITS reads were transformed through trimming and filtering, including tool settings, adapter/quality thresholds, and process-level outcome indicators. I excluded generic file properties such as file_format, file_size_bytes, storage_uri, and checksum_md5 because those are signal-level fields and were already generated elsewhere in the DAG. I also excluded the raw read characteristics and the cleaned read artefact properties because those belong to the input Signal node and downstream output Signal node, respectively. No already_generated list was supplied in this turn, but I avoided the known colliding field names and kept the scope strictly to the read QC/trimming operation.",
+      "md_schema": [
+        {
+          "field_id": "qc_trimming_protocol_name",
+          "descr": "Name of the read trimming and filtering protocol used on raw ITS reads, recorded as the process workflow identifier or method label. Use a stable string such as cutadapt_fastp_pipeline or the study-specific QC workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_sequences_removed",
+          "descr": "Adapter or primer sequence set targeted for removal during read trimming, recorded at the time the QC process is configured. Provide the adapter name(s) or sequence family used to clean the reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Base-call quality threshold used to trim or filter low-quality sequence content in the read QC process. Record the configured PHRED cutoff applied during trimming, typically a numeric integer such as 20 or 30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering, measured in base pairs as configured for the QC process. Reads shorter than this threshold are removed during the processing step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_expected_error",
+          "descr": "Maximum expected error threshold applied during read filtering, if used by the QC workflow. Record the configured numeric limit used to remove reads with excessive predicted error.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_processed_count",
+          "descr": "Total number of raw ITS reads entering the trimming and filtering process, counted at the start of the operation. This is a process-level throughput count, not a file property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_retained_count",
+          "descr": "Total number of ITS reads retained after trimming and filtering, counted at the end of the QC process. This provides a process-level outcome metric for the cleaning step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_success_flag",
+          "descr": "Qualitative indicator of whether the trimming and filtering operation completed successfully and produced usable cleaned reads for downstream denoising. Use this as a process outcome flag at the end of the QC step.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "clean_its_reads": {
+      "reasoning": "This Signal node should describe the cleaned read artefact after QC trimming and filtering, focusing on properties of the stored data object rather than processing parameters. I retained file identity, format, size, read count, read length, quality, storage location, and checksum, because these are core technical characteristics of the cleaned signal. I removed the generic paired_end_status field because it was already generated elsewhere in the DAG and would collide semantically even if renamed; instead, I encode read layout in the cleaned file description only if needed by downstream users. I also avoided upstream raw-read and downstream denoising territory, keeping the schema strictly within the cleaned Signal layer.",
+      "md_schema": [
+        {
+          "field_id": "clean_reads_file_id",
+          "descr": "Unique identifier for the cleaned ITS read file set after trimming and filtering; use a stable string such as CLEAN_ITS_0001 or run_id_qc_id. Assigned to the cleaned artefact for tracking into denoising.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_reads_format",
+          "descr": "Digital format of the cleaned ITS reads at storage time, such as fastq, gzipped_fastq, or fq. This describes the cleaned data object itself and not the upstream sequencing run.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "gzipped_fastq",
+            "fq",
+            "tar_gz"
+          ]
+        },
+        {
+          "field_id": "clean_reads_size_bytes",
+          "descr": "Size of the cleaned ITS read file in bytes, measured from the stored artefact after trimming and filtering. This is a technical property of the cleaned signal used for validation and storage checks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_read_count",
+          "descr": "Total number of reads retained in the cleaned ITS read file set after QC trimming and filtering. Record this as a structural property of the cleaned signal object.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_clean_read_length_bp",
+          "descr": "Average read length in base pairs across the cleaned ITS reads, calculated after trimming and filtering. This is a technical property of the cleaned signal and should reflect the post-QC read length distribution.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_clean_phred_quality_score",
+          "descr": "Mean base-call quality score across the cleaned ITS reads, measured from the stored cleaned artefact. This is a raw-data quality metric after filtering and trimming.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_reads_storage_location",
+          "descr": "Persistent location or URI where the cleaned ITS read file is stored, such as a filesystem path or object-store address. Record the exact retrieval location for reuse and downstream denoising.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_reads_checksum",
+          "descr": "Checksum of the cleaned ITS read file, recorded to verify integrity of the stored artefact. Use a string representation of the checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "denoise_asv_inference": {
+      "reasoning": "This Process node should describe how cleaned ITS reads were transformed into ASV inferences, including denoising algorithm settings, parameter choices, and process-level outcome indicators. I included the denoising software/method, error model or thresholds, chimera handling, and counts of reads/ASVs produced because these are operation-specific settings and results. I excluded cleaned-read file properties and sequencing-run settings because those belong to upstream Signal and Capture nodes, and I excluded the ASV table contents because that belongs to the downstream Derivative node. I also avoided reusing the previously colliding field name paired_end_status by keeping all fields specific to denoising operation parameters and outputs.",
+      "md_schema": [
+        {
+          "field_id": "denoising_protocol_name",
+          "descr": "Name of the denoising workflow used to infer ASVs from cleaned ITS reads, recorded as the process method identifier. Use a stable label such as DADA2 or a study-specific denoising pipeline name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "error_model_source",
+          "descr": "Source of the sequencing error model used during ASV inference, recorded as part of the denoising configuration. Examples include built-in learned error models or prefit error tables depending on the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_removal_method",
+          "descr": "Method used to identify and remove chimeric sequences during ASV inference. Record the configured strategy, such as consensus, pooled, or de novo chimera detection, as used in the denoising process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "truncation_length_forward_bp",
+          "descr": "Forward-read truncation length in base pairs applied during denoising, if configured. Record the exact position or length used to trim reads before ASV inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "truncation_length_reverse_bp",
+          "descr": "Reverse-read truncation length in base pairs applied during denoising, if configured. Record the exact position or length used to trim reads before ASV inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_input_count",
+          "descr": "Total number of cleaned ITS reads entering the denoising process, counted at the start of ASV inference. This is a process-throughput metric for the operation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_count_generated",
+          "descr": "Total number of unique ASVs inferred by the denoising process from the cleaned ITS reads. Record this as a process outcome metric reflecting denoising yield.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "denoising_success_flag",
+          "descr": "Qualitative indicator of whether ASV inference completed successfully and produced a usable set of ASVs for downstream abundance table construction. Use this as a process-level outcome flag.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "asv_table": {
+      "reasoning": "This Derivative node should describe the computed ASV abundance table itself, including the algorithmic provenance of the table, its dimensions, sparsity/completeness, and overall analytical quality. I included table identity, row/column counts, nonzero/sparsity metrics, and derived abundance summaries because these are properties of the computed result. I excluded denoising parameters and raw read properties because those belong to the upstream Process and Signal nodes, and I excluded taxonomic labels because those belong to the downstream taxonomy assignment derivative. I also avoided the previously colliding generic file-level names by using table-specific identifiers and storage fields.",
+      "md_schema": [
+        {
+          "field_id": "asv_table_id",
+          "descr": "Unique identifier for the computed ASV abundance table; use a stable string such as ASV_TAB_0001. Assigned to the derivative result so it can be tracked into taxonomic assignment and community analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_generation_method",
+          "descr": "Computational method used to construct the ASV abundance table from the denoised reads. Record the algorithm or pipeline name and version used to produce the derivative result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of ASVs represented as rows in the computed abundance table, counted in the finalized derivative artifact. This is a structural property of the table output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_column_count",
+          "descr": "Number of samples represented as columns in the computed ASV abundance table, counted in the finalized derivative artifact. This is a structural property of the table output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nonzero_cell_count",
+          "descr": "Number of abundance matrix entries with nonzero counts in the ASV table, calculated on the final derived result. This provides a summary of table sparsity and sequencing coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_count_sum",
+          "descr": "Sum of all read or count values across the ASV abundance table, calculated from the finalized derivative output. Record this as a derived abundance summary for the table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_sparsity_percent",
+          "descr": "Percentage of zero-valued cells in the ASV abundance table, computed from the final derivative result. Use this as a technical quality indicator of table sparsity and data structure.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_storage_location",
+          "descr": "Persistent location or URI where the ASV abundance table is stored, such as a filesystem path or object-store address. Record the exact retrieval location for downstream taxonomic profiling and ecological analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_checksum",
+          "descr": "Checksum of the ASV abundance table file or serialized object, recorded to verify integrity of the stored derivative result. Use a string representation of the checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomy_assignment": {
+      "reasoning": "This Process node should describe how ASVs were matched to fungal reference databases to assign taxonomy, including reference database choice, classifier settings, confidence thresholds, and process-level output quality. I included the taxonomy database and assignment method because they are the core configuration of the operation, along with confidence cutoff and matched/unassigned counts as process outcomes. I excluded ASV table structure and abundance properties because those belong to the input Derivative node, and I excluded the resulting taxonomic profile file properties because those belong to the downstream Derivative node. No already_generated list was supplied for this turn, so I avoided overlap by keeping the scope limited to the taxonomy assignment operation.",
+      "md_schema": [
+        {
+          "field_id": "taxonomy_assignment_protocol_name",
+          "descr": "Name of the taxonomic assignment workflow used to classify ITS ASVs, recorded as the process method identifier. Use a stable label such as QIIME2_classify_sklearn or the study-specific taxonomy pipeline name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the fungal reference database used to assign ITS taxonomy to ASVs during the process. Examples include UNITE or another curated fungal ITS database used in the classification workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the fungal reference database used for taxonomic assignment. Record the exact database version as part of the process provenance to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classifier_method",
+          "descr": "Classification algorithm or assignment approach used to match ASVs to the fungal reference database. Record the configured method used during the taxonomy assignment process, such as naive Bayes or consensus matching.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_threshold",
+          "descr": "Minimum assignment confidence required to accept a taxonomic call during the taxonomy assignment process. Record the numeric threshold used to classify ASVs, typically a value between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_input_count",
+          "descr": "Total number of ASVs entering the taxonomy assignment process, counted from the upstream ASV table at the start of classification. This is a process-throughput metric rather than a table property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classified_asv_count",
+          "descr": "Number of ASVs receiving an accepted fungal taxonomic assignment during the process. Record this as an outcome metric for the classification step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unassigned_asv_count",
+          "descr": "Number of ASVs that remained unassigned or below threshold after taxonomy assignment. This is a process outcome metric used to assess classification coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_assignment_success_flag",
+          "descr": "Qualitative indicator of whether the taxonomy assignment step completed successfully and produced usable assignments for downstream profiling. Use this as the process-level outcome flag.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profile": {
+      "reasoning": "This Derivative node should describe the computed fungal taxonomic profile itself, including how it was derived from ASV assignments, its dimensions, summary abundance composition, and result-level quality indicators. I included profile identity, aggregation level, taxa counts, and proportion/coverage summaries because these are properties of the computed result. I excluded upstream taxonomy assignment parameters and ASV table structure because those belong to earlier Process/Derivative nodes, and I excluded file-system-level generic fields that were already used elsewhere or would collide with prior signal metadata. I also kept the fields focused on the taxonomic result, not on the ecological interpretation, which belongs to the downstream community analysis derivative.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_profile_id",
+          "descr": "Unique identifier for the computed fungal taxonomic profile; use a stable string such as TAX_PROF_0001. Assigned to the derivative result so it can be tracked into ecological analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_generation_method",
+          "descr": "Computational method used to build the fungal taxonomic profile from ASV assignments and abundance information. Record the algorithm or aggregation workflow name and version used to produce the derivative result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_rank_assigned",
+          "descr": "Highest or target taxonomic rank represented in the fungal community profile, such as phylum, genus, or species. Record the rank at which the profile summarizes the ASV assignments.",
+          "type": "categorical",
+          "allowed_values": [
+            "kingdom",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "taxon_count",
+          "descr": "Number of distinct taxa represented in the computed fungal taxonomic profile. Count this from the finalized derivative result after aggregation across ASVs and samples.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of soil samples represented in the computed taxonomic profile. Record this as a derivative dimension indicating how many samples were summarized in the result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_abundance_sum",
+          "descr": "Sum of relative abundance values across the computed taxonomic profile, calculated from the final result. Depending on normalization, this may be expected to approximate 1.0 per sample or reflect aggregated profile totals.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assigned_fraction",
+          "descr": "Fraction of ASV abundance or counts that could be assigned to taxonomic labels in the final profile. Record this as a result-quality indicator of taxonomic coverage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_storage_location",
+          "descr": "Persistent location or URI where the computed taxonomic profile is stored, such as a filesystem path or object-store address. Record the exact retrieval location for downstream ecological analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_checksum",
+          "descr": "Checksum of the taxonomic profile file or serialized object, recorded to verify integrity of the stored derivative result. Use a string representation of the checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_analysis": {
+      "reasoning": "This Process node should describe the analytical workflow used to combine upstream derivatives and signal-derived environmental metadata, including the software environment, model/design choices, and key analysis settings. I included the analysis method, software, and hypothesis/design fields because they define how the community ecology analysis was performed. I also included ordination and diversity settings plus process-level output quality indicators because they are the operation-specific parameters and outcomes. I excluded the ASV table, taxonomic profile, and environmental metadata contents themselves because those belong upstream, and I excluded the final ordination coordinates, diversity estimates, and associations because those belong to the downstream ecological results derivative. No already_generated list was supplied for this turn, so I kept the scope focused on the analysis process and avoided duplicating the output result fields.",
+      "md_schema": [
+        {
+          "field_id": "analysis_protocol_name",
+          "descr": "Name of the community ecology analysis workflow used to compare fungal community structure and relate it to environmental gradients. Record the analysis pipeline or method label used for this process, such as phyloseq_vegan_pipeline or a study-specific workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Primary software environment used to execute the community analysis process. Record the tool or platform name used for statistical and ecological computations, such as R or a workflow wrapper around R packages.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software used for the community ecology workflow, recorded at the time the process was run. This supports reproducibility of the analytical procedure.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ordination_method",
+          "descr": "Ordination or multivariate method configured for the community analysis process, if used to compare fungal community structure across groups or gradients. Examples include NMDS, PCoA, or PCA depending on the analysis design.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_metric_set",
+          "descr": "Set of alpha or beta diversity metrics calculated during the community analysis process. Record the metric names used in the workflow, such as observed richness, Shannon, or Bray-Curtis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "formula_or_design_specification",
+          "descr": "Statistical design or model formula used to relate fungal community composition to forest type, season, and environmental gradients. Record the exact design specification applied in the analysis process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_asv_table_id",
+          "descr": "Identifier of the ASV table used as input to the community analysis process. Use the upstream derivative ID to link the analysis to its abundance matrix source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_taxonomic_profile_id",
+          "descr": "Identifier of the taxonomic profile used as input to the community analysis process. Use the upstream derivative ID to link the analysis to its taxonomic source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_environmental_metadata_id",
+          "descr": "Identifier of the environmental metadata table used as input to the community analysis process. Use the upstream signal ID to link the analysis to the environmental descriptors source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_success_flag",
+          "descr": "Qualitative indicator of whether the community ecology analysis completed successfully and produced usable outputs for downstream ecological interpretation. Use this as a process-level outcome flag.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "ecological_results": {
+      "reasoning": "This final Derivative node should keep only result-specific ecological output fields and avoid colliding with a previously generated ordination_method field. I retained identifiers, result type, axis count, association type, dimensions, and storage/integrity fields because these describe the computed ecological result artifact itself. I removed ordination_method to avoid the cross-step collision noted in the error message, and I did not include any upstream analysis settings or raw inputs because those belong to earlier nodes. The schema stays focused on the final ecological results and uses unique field names that do not duplicate prior DAG metadata.",
+      "md_schema": [
+        {
+          "field_id": "ecological_results_id",
+          "descr": "Unique identifier for the ecological analysis result set; use a stable string such as ECO_RES_0001. Assigned to the final derivative output and used to reference the ecological findings downstream.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_generation_method",
+          "descr": "Computational method or analysis workflow used to generate the final ecological results from the community analysis inputs. Record the pipeline or software-based method name and version used for the derivative output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_estimate_type",
+          "descr": "Type of diversity estimates included in the ecological results, such as alpha diversity, beta diversity, or richness estimates. Record the primary diversity output category represented in the final result set.",
+          "type": "categorical",
+          "allowed_values": [
+            "alpha_diversity",
+            "beta_diversity",
+            "richness",
+            "evenness",
+            "multiple"
+          ]
+        },
+        {
+          "field_id": "ordination_axis_count",
+          "descr": "Number of ordination axes or dimensions represented in the final ecological result set. Record this as an integer reflecting how many axes are stored for interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environment_association_type",
+          "descr": "Type of environment-community association summarized in the ecological results, such as correlation, regression, PERMANOVA, or constrained ordination effects. Record the main association category reported in the output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_sample_count",
+          "descr": "Number of soil samples represented in the final ecological result set. Record this as a derivative dimension indicating how many samples were included in the computed output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_feature_count",
+          "descr": "Number of ecological features, taxa, or variables summarized in the final result set. Use this as a structural property of the derivative output to indicate its analytical scope.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_storage_location",
+          "descr": "Persistent location or URI where the ecological results are stored, such as a filesystem path or object-store address. Record the exact retrieval location for downstream reporting or reuse.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_checksum",
+          "descr": "Checksum of the ecological results file or serialized object, recorded to verify integrity of the stored derivative output. Use a string representation of the checksum value when available.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

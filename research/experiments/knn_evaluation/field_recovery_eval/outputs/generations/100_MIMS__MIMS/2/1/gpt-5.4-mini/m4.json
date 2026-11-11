@@ -1,0 +1,725 @@
+{
+  "md_name": "Urban Air Metagenomic Sampling Workflow",
+  "md_description": "This DAG represents the collection of urban air samples across locations, heights, times, and weather conditions, followed by nucleic acid extraction and metagenomic sequencing. The workflow produces raw sequence data and derived metagenomic profiles that can be used to study airborne microbial diversity and distribution in relation to pollution and human activity.",
+  "fields_per_node": {
+    "urban_air_sample": {
+      "reasoning": "The urban_air_sample node is an Entity, so I included only intrinsic sample identity/origin and collection-context fields that define what the sample is: where it came from and the conditions at collection. I excluded downstream process details (preparation, extraction, sequencing), capture-instrument settings, and any raw-signal or derivative properties because those belong to later nodes. I also avoided repeating experiment-wide identifiers if they would be generated elsewhere; for this node I focused on sample-specific location, height, timing, and weather descriptors that are essential to interpret the air sample itself.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for this urban air sample, assigned at collection and carried through the workflow; example format: UAS_0001. This is the primary sample key and should not be reused for other samples.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_location",
+          "descr": "Urban collection location or site name where the air sample was obtained, recorded at sampling time; use a stable site label or address fragment that distinguishes one site from another.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_height_meters",
+          "descr": "Sampling height above ground level in meters at which the air sample was collected; typical urban range 0.5-100 m, recorded at collection time.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_time_of_day",
+          "descr": "Local time-of-day category when the air sample was collected, recorded at sampling time. Use the category that best matches the start of sampling for this sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "morning",
+            "midday",
+            "afternoon",
+            "evening",
+            "night"
+          ]
+        },
+        {
+          "field_id": "collection_datetime",
+          "descr": "Date and local time when the sample was initiated or collected, recorded in ISO 8601-like form as a timestamp; example: 2026-08-18T14:30:00.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "weather_condition",
+          "descr": "Dominant weather condition at the time of sampling, recorded during collection to describe ambient conditions affecting airborne material loading; choose the best single label or the most representative condition.",
+          "type": "categorical",
+          "allowed_values": [
+            "clear",
+            "cloudy",
+            "overcast",
+            "rain",
+            "drizzle",
+            "fog",
+            "mist",
+            "snow",
+            "windy",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "air_temperature_celsius",
+          "descr": "Ambient air temperature in degrees Celsius at the sampling site during collection; typical urban range about -20 to 45 C, measured at the time of sampling using the site weather record or field instrument.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_humidity_percent",
+          "descr": "Relative humidity as a percentage at the sampling site during collection; valid range 0-100, measured at the time of sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "particulate_matter_concentration_ug_m3",
+          "descr": "Particulate matter concentration in micrograms per cubic meter measured at the sampling site during collection; record the study-relevant PM metric if available, such as PM2.5 or PM10, at the time of sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pollution_context",
+          "descr": "Brief categorical or controlled-vocabulary description of the local pollution context at the sampling site during collection, such as traffic-dense, residential, industrial, or park-adjacent. Use this only for the ambient context of the air sample, not later processed data.",
+          "type": "categorical",
+          "allowed_values": [
+            "traffic_dense",
+            "residential",
+            "industrial",
+            "commercial",
+            "park_adjacent",
+            "mixed_urban",
+            "other"
+          ]
+        }
+      ]
+    },
+    "air_sample_preparation": {
+      "reasoning": "The air_sample_preparation node is a Process, so I included only how the collected air sample was handled to make it suitable for extraction: preparation method, concentration/transfer approach, key reagent or buffer information if used, handling duration, and a simple output-quality indicator of whether the material was successfully made extraction-compatible. I excluded sample-origin fields from the upstream Entity and excluded nucleic-acid or library properties that belong downstream. I also avoided fields already generated for the sample entity, especially identifiers and collection context, because those are not part of the preparation process itself.",
+      "md_schema": [
+        {
+          "field_id": "preparation_method",
+          "descr": "Primary handling approach used to convert the collected air sample into extraction-compatible material; record the main method applied at this step, such as direct transfer, concentration, resuspension, or filter-to-buffer processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_transfer",
+            "concentration",
+            "resuspension",
+            "filter_to_buffer",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preparation_buffer_name",
+          "descr": "Name of the buffer or medium used during sample preparation, if any, for example PBS or extraction-compatible lysis buffer. Record the reagent actually used at this process step, not the later extraction chemistry.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preparation_buffer_volume_milliliters",
+          "descr": "Volume of buffer or medium used in sample preparation, in milliliters; typical range 0.1-50 mL, measured or dispensed during the preparation step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "concentration_factor",
+          "descr": "Fold-concentration applied to the collected air sample during preparation, if the sample was concentrated prior to extraction; use 1.0 if no concentration was performed.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preparation_duration_minutes",
+          "descr": "Elapsed time in minutes from the start of sample handling to the point the material became extraction-compatible; typical range 1-240 minutes, measured during this process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_compatible_material_type",
+          "descr": "Physical form of the prepared output material produced by this process, for example pellet, suspension, concentrate, or filter eluate. This describes the preparation outcome only, not the downstream extract.",
+          "type": "categorical",
+          "allowed_values": [
+            "pellet",
+            "suspension",
+            "concentrate",
+            "filter_eluate",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preparation_success",
+          "descr": "Whether the collected air sample was successfully converted into material suitable for downstream nucleic acid extraction at the end of this process step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "prepared_air_material": {
+      "reasoning": "The prepared_air_material node is an Entity, so I included only intrinsic properties of the processed material itself: what physical form it has, whether it is usable for extraction, its amount, and basic storage/preservation context as part of what the material is. I excluded preparation protocol details because those belong to the upstream Process, and I excluded extraction chemistry, library, sequencing, and raw-data properties because those are downstream nodes. I also avoided repeating the original sample identity and collection context already generated for the upstream air sample entity.",
+      "md_schema": [
+        {
+          "field_id": "material_id",
+          "descr": "Unique identifier for the prepared air-derived material, assigned after preparation; example format: PAM_0001. This identifies the processed material item, not the original sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "material_form",
+          "descr": "Physical form of the prepared air-derived material ready for extraction, recorded after preparation; examples include concentrate, pellet, suspension, or filter eluate.",
+          "type": "categorical",
+          "allowed_values": [
+            "concentrate",
+            "pellet",
+            "suspension",
+            "filter_eluate",
+            "other"
+          ]
+        },
+        {
+          "field_id": "material_amount",
+          "descr": "Amount of prepared material available for nucleic acid extraction, measured at the end of preparation using the most relevant unit for the material type; report in milliliters for liquids or milligrams for solids.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "material_amount_unit",
+          "descr": "Unit used for material_amount at the preparation endpoint; choose the unit that matches the reported quantity.",
+          "type": "categorical",
+          "allowed_values": [
+            "milliliters",
+            "milligrams"
+          ]
+        },
+        {
+          "field_id": "extraction_ready",
+          "descr": "Whether the prepared air-derived material met the study's criteria for nucleic acid extraction at the time it was released from preparation.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature in degrees Celsius at which the prepared material was held before extraction, recorded after preparation and before the next process step; typical range -80 to 25 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_minutes",
+          "descr": "Time in minutes that the prepared material spent in storage or holding after preparation and before extraction; typical range 0-10080 minutes.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nucleic_acid_extraction": {
+      "reasoning": "The nucleic_acid_extraction node is a Process, so I included only extraction protocol parameters and a process-level quality indicator: extraction chemistry, kit/reagent system, input amount, incubation/elution settings, and yield quality. I excluded properties of the upstream prepared material itself and excluded downstream extract identity or sequencing library features because those belong to the output Entity and later nodes. I also avoided repeating identifiers and collection context already handled earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "extraction_method",
+          "descr": "Primary nucleic-acid extraction approach applied to the prepared air-derived material; record the method actually used at this step, such as silica column, magnetic bead, phenol-chloroform, or other.",
+          "type": "categorical",
+          "allowed_values": [
+            "silica_column",
+            "magnetic_bead",
+            "phenol_chloroform",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Name of the extraction kit or reagent system used for nucleic acid extraction, if applicable; record the commercial or in-house system used during this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_material_amount",
+          "descr": "Amount of prepared air-derived material loaded into the extraction step, measured at the start of the process; use the most relevant unit for the material type, such as milliliters or milligrams.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_temperature_celsius",
+          "descr": "Temperature in degrees Celsius used during lysis or extraction incubation, recorded during the extraction process; typical range 0-100 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_duration_minutes",
+          "descr": "Duration in minutes of the main lysis or extraction incubation step, measured from start to end of the extraction reaction; typical range 1-240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final nucleic-acid elution volume in microliters produced by the extraction process; typical range 5-500 uL, measured at the end of extraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_ng",
+          "descr": "Total nucleic acid yield in nanograms obtained from the extraction, measured at the end of the process using the study's preferred quantification method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_success",
+          "descr": "Whether the extraction produced nucleic acid suitable for downstream metagenomic library preparation at the end of this process step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "air_nucleic_acid_extract": {
+      "reasoning": "I corrected the extract-level schema by removing the colliding field storage_temperature_celsius, which had already been generated for an earlier DAG step. The remaining fields stay within the Entity territory of air_nucleic_acid_extract: identity, nucleic acid composition, concentration, yield, purity/integrity, storage volume, and material availability. I did not add process, library, or sequencing fields, and I preserved only non-duplicative extract attributes needed to describe the material itself.",
+      "md_schema": [
+        {
+          "field_id": "extract_id",
+          "descr": "Unique identifier for the nucleic-acid extract, assigned immediately after extraction; example format: ANE_0001. This identifies the extract material itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Predominant nucleic acid recovered in the extract, recorded as the material identity after extraction; use the category that best reflects the extract intended for metagenomic library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "dna",
+            "rna",
+            "mixed_dna_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extract_concentration_ng_per_ul",
+          "descr": "Concentration of the nucleic-acid extract in nanograms per microliter, measured after extraction and before library preparation; typical range 0-1000 ng/uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_total_yield_ng",
+          "descr": "Total nucleic-acid yield in nanograms recovered in the extract, measured at the end of extraction; this is the extract-level mass available for downstream processing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_260_280",
+          "descr": "Spectrophotometric purity ratio A260/A280 for the extract, measured after extraction and before library preparation; typical range 0.5-2.5, used as a quality indicator for contamination.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrity_score",
+          "descr": "Numeric integrity or quality score for the extract, measured after extraction using the study's preferred assay or instrument; use the assay's native scale and document the method elsewhere if needed.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_volume_microliters",
+          "descr": "Volume of the nucleic-acid extract in microliters available after extraction and before library preparation; typical range 5-1000 uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_usable",
+          "descr": "Whether the extracted nucleic acid material passed the study's minimum quality and quantity threshold for proceeding to library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_library_preparation": {
+      "reasoning": "The metagenomic_library_preparation node is a Process, so I included only library-construction parameters and process-level outcomes: library preparation approach, input extract amount, adapter/index strategy, amplification/cycle settings, size-selection range, and whether the resulting library met sequencing-readiness criteria. I excluded extract intrinsic properties because those belong upstream, and I excluded library identity/size/file-like properties because those belong to the downstream library Entity. I also avoided the previously generated storage_temperature_celsius field and did not repeat any upstream sample or extract identifiers.",
+      "md_schema": [
+        {
+          "field_id": "library_preparation_method",
+          "descr": "Primary workflow used to convert nucleic acid extract into a sequencing-ready metagenomic library; record the actual method applied at this step, such as ligation-based, tagmentation-based, or PCR-based library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "ligation_based",
+            "tagmentation_based",
+            "pcr_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_extract_amount_ng",
+          "descr": "Amount of nucleic-acid extract used as input to library preparation, measured at the start of the process in nanograms; typical range 0.1-1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_strategy",
+          "descr": "Adapter and indexing strategy applied during library preparation, recorded for the sequencing-ready library construction step; use the category that best matches the actual protocol.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "unique_dual_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR amplification cycles used during library preparation, measured as the count of thermocycler cycles applied to the library reaction; typical range 0-25 cycles.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "size_selection_bp",
+          "descr": "Target insert-size range in base pairs selected during library preparation, recorded at the end of library construction; use the approximate selected fragment length range.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_preparation_duration_minutes",
+          "descr": "Elapsed time in minutes from start of library construction to completion of a sequencing-ready library; typical range 15-480 minutes, measured during this process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_ready",
+          "descr": "Whether the library met the study's acceptance criteria for downstream sequencing at the end of library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_library": {
+      "reasoning": "The metagenomic_library node is an Entity, so I included only intrinsic properties of the sequencing-ready library itself: its identity, library type, insert-size characteristics, adapter/index information, concentration, fragment size distribution, and whether it passed QC for sequencing. I excluded library construction protocol details because those belong to the upstream Process, and I excluded sequencing instrument settings and raw-file properties because those belong to the downstream Capture and Signal nodes. I also avoided any previously generated extract or sample identifiers and did not reuse the earlier storage_temperature_celsius field.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the sequencing-ready metagenomic library, assigned after library preparation; example format: MGL_0001. This identifies the library material itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library chemistry or construction class of the sequencing-ready metagenomic library, recorded as an intrinsic property of the library; choose the category that best matches the protocol used.",
+          "type": "categorical",
+          "allowed_values": [
+            "ligation_based",
+            "tagmentation_based",
+            "pcr_amplicon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate average insert size of the metagenomic library in base pairs, measured after library preparation and before sequencing; typical range 50-1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_index_scheme",
+          "descr": "Indexing scheme present in the library, recorded as an intrinsic property of the finished library; examples include single index, dual index, or unique dual index.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "unique_dual_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the finished sequencing-ready library in nanograms per microliter, measured after library preparation and before sequencing; typical range 0-1000 ng/uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Observed fragment-size mode or median for the final library in base pairs, measured by electrophoresis or equivalent QC after library preparation and before sequencing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_qc_pass",
+          "descr": "Whether the finished library met the study's quality-control criteria for proceeding to sequencing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_volume_microliters",
+          "descr": "Total volume of the finished library available for sequencing, measured after library preparation and before loading onto the instrument; typical range 1-1000 uL.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_sequencing": {
+      "reasoning": "The metagenomic_sequencing node is a Capture, so I included only instrument configuration and session details that are actively controlled during sequencing: platform/model identity, flow cell or chip type, chemistry/version, read length, run mode, lane/indexing configuration, and basic run completion metrics. I excluded sample and library intrinsic properties because those belong upstream, and I excluded file-format or read-count properties because those belong to the downstream raw Signal node. I also avoided repeating any previously generated sample, extract, or library identifiers and did not reuse excluded storage fields.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the metagenomic sequencing session; record the hardware vendor associated with the platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or platform designation of the sequencing instrument used for this capture session; example format: MiSeq, NextSeq 2000, NovaSeq 6000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the run, recorded to uniquely identify the hardware instance performing capture; example format: SN1234567.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_version",
+          "descr": "Sequencing chemistry or reagent version configured for this run, recorded at capture setup; use the vendor's official chemistry label or release version.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell, chip, or cartridge type loaded for the sequencing run, recorded as part of the instrument configuration at capture time; use the vendor's official type label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read, recorded at run setup; typical range 25-400 bp depending on platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_mode",
+          "descr": "Configured sequencing run mode for the capture session, describing whether the instrument was set for single-end, paired-end, or other mode.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "lane_count",
+          "descr": "Number of flow cell lanes or equivalent partitions used for this sequencing run, recorded at instrument configuration time; use 1 when not lane-partitioned.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_duration_hours",
+          "descr": "Duration in hours from run start to run completion, measured for the sequencing session; typical range 0.1-72 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_completion_status",
+          "descr": "Whether the sequencing capture session completed successfully and produced usable raw reads at the end of the run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_metagenomic_reads": {
+      "reasoning": "The raw_metagenomic_reads node is a Signal, so I included only raw-data artefact properties: file identity, format, size, sequencing-read counts, base count, dimensionality/paired-end structure, and basic technical quality metrics tied to the produced files. I excluded instrument settings and run parameters because those belong to the upstream Capture node, and I excluded any biological interpretation or downstream processing fields because those belong to the Derivative node. I also avoided repeating any upstream sample/library identifiers and did not reuse fields already generated elsewhere, including storage-related fields.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_id",
+          "descr": "Unique identifier for the raw sequence file or file set produced by the sequencing run; example format: RMR_0001. This identifies the raw signal artefact, not the sample or library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw metagenomic reads as stored after sequencing, such as FASTQ or BCL; record the primary format actually delivered for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file or file set in bytes, measured after sequencing and storage; use the on-disk size of the raw signal artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of sequence reads contained in the raw read file set, counted after sequencing and before any trimming or filtering; typical range 1e3-1e10.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count",
+          "descr": "Total number of nucleotide bases in the raw read file set, counted after sequencing and before any preprocessing; typical range 1e5-1e12 bases.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end",
+          "descr": "Whether the raw reads are organized as paired-end data in the produced signal artefact.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read1_length_bp",
+          "descr": "Length in base pairs of read 1 in the raw data file, measured as stored in the signal artefact; use the nominal read length before preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read2_length_bp",
+          "descr": "Length in base pairs of read 2 in the raw data file, measured as stored in the signal artefact for paired-end data; set null-equivalent omission if not paired-end.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_quality_score_mean",
+          "descr": "Mean per-base sequencing quality score across the raw reads, measured from the raw signal artefact before any trimming or filtering; use the platform's reported Phred-scale average if available.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_location",
+          "descr": "Storage location or URI where the raw sequencing files are archived after capture; example format: s3://bucket/path or local file path.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_processing": {
+      "reasoning": "The read_processing node is a Process, so I included only the computational transformation settings and process-level outcomes: software identity/version, input reads, filtering and trimming thresholds, host/contaminant removal choices, and a simple success/retention indicator. I excluded raw-read file properties because those belong to the upstream Signal node, and I excluded taxonomic results or feature-table dimensions because those belong to the downstream Derivative node. I also avoided repeating any previously generated sample, library, or sequencing instrument fields, and I did not reuse fields already created elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "processing_software_name",
+          "descr": "Name of the software used to filter, trim, and organize the raw metagenomic reads during this processing step; record the actual application used for preprocessing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_software_version",
+          "descr": "Version of the software used for read processing, recorded to make the preprocessing step reproducible; example format: 2.0.0 or v1.18.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_reads_file_id",
+          "descr": "Identifier of the raw metagenomic reads file set used as input to this processing step; refer to the upstream signal artefact identifier rather than the biological sample identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_phred_threshold",
+          "descr": "Minimum Phred quality score used to trim or remove low-quality bases during read processing; typical range 10-40, applied to raw reads before downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum retained read length in base pairs after trimming/filtering during processing; reads shorter than this threshold are discarded or excluded from downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Whether adapter sequences were removed from the raw reads during processing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_depletion_enabled",
+          "descr": "Whether host or non-microbial sequence depletion was applied during processing to enrich microbial reads.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_read_retention_percent",
+          "descr": "Percent of input reads retained after filtering and trimming, calculated at the end of processing; typical range 0-100 percent and used as a process quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_success",
+          "descr": "Whether the preprocessing step completed successfully and produced reads suitable for downstream taxonomic and diversity analysis.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_feature_table": {
+      "reasoning": "The metagenomic_feature_table node is a Derivative, so I included only computed-result properties: table identity, feature/observation dimensions, derivation algorithm, taxonomic resolution, normalization/scaling choices, sparsity, and a derived quality indicator. I excluded raw read properties, sequencing instrument settings, and preprocessing protocol details because those belong to upstream Signal, Capture, and Process nodes. I also avoided duplicating any previously generated identifiers or storage/location fields, and I did not reuse fields already present elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "feature_table_id",
+          "descr": "Unique identifier for the derived metagenomic feature table, assigned after read processing; example format: MFT_0001. This identifies the computed table artifact itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivation_method",
+          "descr": "Primary algorithm or pipeline used to compute the feature table from processed sequencing reads; record the actual analysis method used, such as taxonomic profiling, k-mer counting, or abundance aggregation.",
+          "type": "categorical",
+          "allowed_values": [
+            "taxonomic_profiling",
+            "kmer_counting",
+            "abundance_aggregation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_resolution",
+          "descr": "Taxonomic level represented in the derived table, measured as the depth of biological annotation assigned to features; choose the finest consistent level produced by the analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "domain",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species",
+            "strain",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_count",
+          "descr": "Number of features, taxa, or rows in the derived metagenomic table, measured after computation; use the final table row count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of samples represented as columns or observations in the derived table, measured after computation; use the final table column count if samples are columns, or the corresponding observation count in the chosen table orientation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization or scaling applied to the derived counts or abundances, recorded as part of the computed result; examples include relative abundance, rarefaction, centered log-ratio, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "relative_abundance",
+            "rarefaction",
+            "centered_log_ratio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_sparsity_percent",
+          "descr": "Percentage of zero-valued cells in the derived feature table, measured after computation; valid range 0-100 and used as a quality descriptor for sparsity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_abundance_sum",
+          "descr": "Sum of all relative abundance values in the derived table, measured after normalization when applicable; expected near 1.0 or 100 depending on scaling convention.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivative_quality_flag",
+          "descr": "Whether the derived feature table passed the study's post-computation quality checks for downstream interpretation and reuse.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

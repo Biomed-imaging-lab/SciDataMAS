@@ -1,0 +1,1009 @@
+{
+  "md_name": "Mouse Cortex Electrophysiology Decision Workflow",
+  "md_description": "This workflow represents in vivo multielectrode recordings from mouse cortex during behavioral tasks, producing raw electrophysiological time series and downstream derived spike and field-potential data. The pipeline includes animal preparation, neural signal acquisition, computational processing, and integration with task context such as stimulus parameters and behavioral annotations to study neural correlates of decision-making.",
+  "fields_per_node": {
+    "mouse_subject": {
+      "reasoning": "For the mouse_subject Entity node, I included only intrinsic subject metadata needed to identify the animal and interpret its biological context: subject identifier, strain/genotype, sex, age, body weight, and source/origin. I excluded any surgical, recording, signal, or analysis details because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided fields that might duplicate experiment-wide identifiers already generated elsewhere, and kept the schema focused on what the mouse is, not what was done to it.",
+      "md_schema": [
+        {
+          "field_id": "mouse_subject_id",
+          "descr": "Unique identifier for the individual mouse subject used in this in vivo experiment; use a stable lab or study code such as 'M001'. This identifier should be assigned at enrollment and reused across all downstream workflow nodes without encoding measurement or processing details.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "strain",
+          "descr": "Mouse strain/background of the subject at the time of enrollment, recorded as the biological stock used for the experiment; examples include 'C57BL/6J', 'BALB/c', or an F1 hybrid. Useful for interpreting cortical physiology and behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "genotype",
+          "descr": "Genotype of the mouse subject, including transgenic line or allele status when relevant; examples include 'wild_type', 'Thy1-GFP', or 'Emx1-Cre;Ai32'. Record this as the intrinsic genetic identity of the animal, not an experimental manipulation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sex",
+          "descr": "Biological sex of the mouse subject at the time of the experiment; use the value assigned from colony records or veterinary documentation. This is an intrinsic subject property relevant to cortical electrophysiology and behavior.",
+          "type": "categorical",
+          "allowed_values": [
+            "female",
+            "male",
+            "unknown",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "age_weeks",
+          "descr": "Age of the mouse in weeks at the time of recording or the start of the experimental session; typical range is approximately 6-40 weeks for adult mouse cortical physiology studies. Record the subject's age as an integer number of weeks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "body_weight_grams",
+          "descr": "Body weight of the mouse in grams measured close to the time of the experiment, typically on the day of surgery or recording; typical adult range is about 15-40 g depending on strain and sex. This is a subject property, not a procedure parameter.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_colony_or_vendor",
+          "descr": "Origin of the mouse subject, such as in-house breeding colony, institutional animal facility, or commercial vendor; examples include 'Jackson Laboratory' or 'internal colony'. Use this to trace subject provenance and husbandry background.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "surgical_preparation": {
+      "reasoning": "For the surgical_preparation Process node, I included only procedural and reagent/anesthesia details that describe how the mouse was prepared for cortical electrode access. I focused on surgery-specific parameters, timing, and procedural outcome/quality, because this node owns the transformation process itself. I excluded subject identity and intrinsic mouse properties because those belong to the Entity node, and I excluded recording hardware, raw signals, and downstream data products because those belong to Capture, Signal, and Derivative nodes. I also avoided repeating any already_generated fields from the mouse_subject node.",
+      "md_schema": [
+        {
+          "field_id": "preparation_type",
+          "descr": "Type of surgical preparation performed to enable cortical recording; use one of the listed categories to distinguish acute exposure from chronic implantation. Record the category that best describes the final access route used for electrode placement.",
+          "type": "categorical",
+          "allowed_values": [
+            "acute_craniotomy",
+            "chronic_implantation",
+            "acute_implantation",
+            "headpost_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "anesthesia_agent",
+          "descr": "Primary anesthetic used during surgical preparation, recorded as the active agent administered to the mouse during the procedure; examples include 'isoflurane', 'ketamine_xylazine', or 'urethane'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "anesthesia_dose",
+          "descr": "Dose or concentration of the anesthetic used during surgery, recorded in the unit appropriate to the agent; examples include mg/kg for injectable anesthetics or percent for inhaled isoflurane. This should reflect the operative setting used for preparation, not a subject property.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "surgery_duration_minutes",
+          "descr": "Total duration of the surgical preparation procedure in minutes, measured from first incision or induction to completion of closure or final electrode access preparation. Typical ranges for cortical access procedures are on the order of tens of minutes to a few hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "implant_location",
+          "descr": "Anatomical location targeted during preparation for electrode access, such as the cortical area exposed or implanted region; examples include 'motor cortex', 'prefrontal cortex', or a stereotaxic coordinate description. Record the intended recording site prepared by the surgery.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "implantation_type",
+          "descr": "Kind of access hardware or surgical preparation established for later electrophysiology; use this field to indicate whether a cranial window, electrode implant, headpost, or related access structure was created. This describes the procedure output at the surgical stage, not the final recording data.",
+          "type": "categorical",
+          "allowed_values": [
+            "craniotomy",
+            "cranial_window",
+            "electrode_implant",
+            "headpost_implant",
+            "combined_implant",
+            "no_implant",
+            "other"
+          ]
+        },
+        {
+          "field_id": "aseptic_technique_used",
+          "descr": "Whether sterile or aseptic surgical technique was used during preparation, recorded as a simple true/false indicator based on the operative protocol.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "postoperative_recovery_time_hours",
+          "descr": "Recovery period in hours provided after surgery before the mouse was returned to recording or further handling; typical values range from 0 hours for same-session acute procedures to days for chronic implants. Measure this from the end of surgery to the next experimental step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "surgical_success_status",
+          "descr": "Outcome quality indicator for the preparation step, recording whether cortical access or implantation was completed as intended and suitable for downstream recording. Use this to capture major preparation success/failure at the process level.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "partial_success",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "prepared_mouse": {
+      "reasoning": "For the prepared_mouse Entity node, I included only intrinsic post-preparation state properties that describe the mouse as an experimental subject after surgery and before recording. I focused on recovery/readiness, implant or cranial access status, and any observable post-surgical condition that affects whether the animal is suitable for electrophysiology. I excluded surgery procedure details because those belong to surgical_preparation, and I excluded recording hardware, session settings, raw signals, and downstream analysis because those belong to Capture/Signal/Derivative nodes. I also avoided repeating the subject identity fields already generated on mouse_subject.",
+      "md_schema": [
+        {
+          "field_id": "post_surgery_readiness",
+          "descr": "Overall readiness of the prepared mouse for in vivo cortical recording at the time it is moved to the recording stage; use this to indicate whether the subject is fully recovered, partially recovered, or not yet ready for electrophysiology. This is an intrinsic state of the prepared animal, assessed immediately before recording.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "not_ready",
+            "monitoring_needed"
+          ]
+        },
+        {
+          "field_id": "implant_or_access_status",
+          "descr": "Current physical access status of the mouse after preparation, such as whether a cranial opening, electrode implant, headpost, or other access structure is present and usable for recording. Record the state of the prepared animal rather than the surgical method itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact_access",
+            "implant_stable",
+            "access_compromised",
+            "no_access_structure"
+          ]
+        },
+        {
+          "field_id": "postoperative_condition",
+          "descr": "Observed general condition of the mouse after preparation and before recording, such as mobility, grooming, alertness, or gross distress indicators noted during the pre-recording check. This is a subject condition field, not a procedural parameter.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_since_preparation_hours",
+          "descr": "Elapsed time in hours between completion of surgical preparation and the start of the recording-ready assessment for this prepared mouse. Typical values range from minutes in acute setups to days or weeks in chronic experiments.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pre_recording_health_check_passed",
+          "descr": "Whether the prepared mouse passed the laboratory's pre-recording health or welfare check before entering the multielectrode recording stage; record true only if the animal met all readiness criteria.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analgesia_residual_effect_expected",
+          "descr": "Whether residual analgesic effects are expected to still influence the animal's state at the prepared stage, based on the post-surgical recovery interval and treatment plan. This captures the animal's condition before recording, not the drug administration protocol.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "cortical_multielectrode_recording": {
+      "reasoning": "For the cortical_multielectrode_recording Capture node, I included only the instrument configuration and session settings that describe how neuronal activity was acquired from the mouse cortex. I focused on hardware identity, electrode array configuration, recording mode, sampling and filtering settings, and session timing because those define the measurement session itself. I excluded animal properties from prepared_mouse, raw file properties from the signal nodes, and downstream processing or analysis parameters from Process/Derivative nodes. I also avoided repeating any fields already generated for the subject or preparation steps, and kept the schema within the capture layer as requested by the DAG semantics.",
+      "md_schema": [
+        {
+          "field_id": "device_manufacturer",
+          "descr": "Manufacturer of the multielectrode recording system used for this cortical acquisition session; examples include 'Intan Technologies', 'Blackrock Microsystems', or 'Neuronexus'. Record the hardware vendor for reproducibility and instrument provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "device_model",
+          "descr": "Model name or product line of the multielectrode array or acquisition rig used to record cortical activity; examples include 'Neuropixels 1.0', 'Utah array system', or a custom in-house rig model name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "device_serial_number",
+          "descr": "Serial number or unique instrument identifier of the recording system used in this session; use the manufacturer's serial format or an internal asset code such as 'SN12345'. This identifies the specific hardware instance that performed the capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "electrode_array_type",
+          "descr": "Type of multielectrode array configured for the recording session, describing the physical electrode platform used to measure cortical activity; examples include 'tetrode', 'silicon_probe', 'utah_array', or 'custom_multishank'.",
+          "type": "categorical",
+          "allowed_values": [
+            "tetrode",
+            "silicon_probe",
+            "utah_array",
+            "neuropixels",
+            "custom_multishank",
+            "other"
+          ]
+        },
+        {
+          "field_id": "number_of_channels",
+          "descr": "Total number of acquisition channels actively recorded during the session, measured at the capture stage; typical values range from a small handful to several hundred depending on the array and setup.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_rate_hz",
+          "descr": "Analog-to-digital sampling rate used to acquire the cortical electrophysiology signal during this session, measured in hertz at the acquisition hardware. Typical values for spike-capable recordings are in the tens of kHz or higher.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hardware_bandpass_filter_hz",
+          "descr": "Bandpass filter range configured on the acquisition hardware during recording, expressed as the lower and upper cutoff frequencies in hertz. Record the effective capture-side filter settings applied before raw data storage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_configuration",
+          "descr": "Reference electrode or referencing scheme used during acquisition, such as 'single_reference', 'local_reference', 'common_average_reference', or 'ground_reference'. This is part of the capture configuration and affects the recorded raw signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reference",
+            "local_reference",
+            "common_average_reference",
+            "ground_reference",
+            "other"
+          ]
+        },
+        {
+          "field_id": "recording_start_time",
+          "descr": "Start time of the cortical recording session, recorded as the session initiation timestamp or clock time when acquisition began. Use this to anchor downstream raw signals and task context alignment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recording_duration_minutes",
+          "descr": "Total duration of the electrophysiology capture session in minutes, measured from acquisition start to stop. Typical task sessions may last from several minutes to multiple hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recording_mode",
+          "descr": "Acquisition mode used during the session, distinguishing continuous voltage recording from event-triggered or multiplexed capture. This describes how the hardware was configured to acquire cortical activity.",
+          "type": "categorical",
+          "allowed_values": [
+            "continuous",
+            "triggered",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "online_monitoring_enabled",
+          "descr": "Whether the recording system performed online monitoring or display during acquisition, such as live impedance checks or signal visualization. This is a capture-session configuration detail that can affect operator oversight but not the raw signal file itself.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_lfp_trace": {
+      "reasoning": "For the raw_lfp_trace Signal node, I included only properties of the raw data artifact itself: file format, storage, size, dimensions, channel/time coverage, and technical quality flags relevant to the raw LFP trace. I excluded capture configuration because that belongs to cortical_multielectrode_recording, and I excluded filtering or analysis settings because those belong to downstream Process and Derivative nodes. I also avoided any subject, surgery, or task interpretation fields. No already_generated fields overlapped with raw signal artifact descriptors, so I kept the schema focused on raw-file identity and technical characteristics.",
+      "md_schema": [
+        {
+          "field_id": "file_name",
+          "descr": "Name of the raw LFP data file as stored in the dataset, such as 'session01_raw_lfp.edf' or 'mouseA_day2_lfp.nwb'. This identifies the raw artifact produced by the capture step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw local field potential trace, recorded as the container or exchange format used for storage; examples include 'nwb', 'edf', 'bin', or 'hdf5'.",
+          "type": "categorical",
+          "allowed_values": [
+            "nwb",
+            "edf",
+            "hdf5",
+            "bin",
+            "mat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw LFP file in bytes, measured on disk after acquisition and before downstream processing. Typical values may range from kilobytes for short excerpts to many gigabytes for long multichannel sessions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_channels",
+          "descr": "Number of electrophysiology channels represented in the raw LFP trace file, corresponding to the recorded cortical electrodes or derived LFP channels in the raw artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_samples",
+          "descr": "Total number of time samples contained in the raw LFP trace file across the full recording duration, measured in the stored artifact rather than at acquisition settings.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_resolution_seconds",
+          "descr": "Temporal resolution of the stored raw LFP trace, expressed as seconds per sample or equivalent record spacing in the file. This describes the raw artifact's sampling granularity as stored.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channel_order_description",
+          "descr": "Description of how channels are ordered in the raw LFP file, such as by electrode shank, physical depth, or acquisition channel index. Use this to interpret the artifact layout without implying biological meaning.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Primary storage location or file path for the raw LFP artifact, such as an object-store URI, network path, or local dataset path; example: 's3://bucket/session01/raw_lfp.nwb'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_used",
+          "descr": "Whether and how compression was applied to the stored raw LFP artifact, such as no compression or a specific lossless compression method. Record the storage-level encoding of the raw file.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "lossless",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_signal_quality_flag",
+          "descr": "Technical quality flag for the raw LFP artifact indicating whether the file is complete and readable at the data level, independent of scientific interpretation; examples include 'ok', 'truncated', or 'corrupted'.",
+          "type": "categorical",
+          "allowed_values": [
+            "ok",
+            "truncated",
+            "corrupted",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_spike_recording": {
+      "reasoning": "I removed all colliding raw-file fields because they were already generated elsewhere in the DAG. To keep the raw_spike_recording node within Signal territory without duplication, I replaced them with spike-specific artifact descriptors that are not generic file metadata: waveform data representation, electrode channel mapping, spike-band preservation, event count, artifact contamination, and technical completeness of the wideband recording. These remain properties of the raw signal artifact itself and do not overlap with capture settings or downstream spike-sorting outputs.",
+      "md_schema": [
+        {
+          "field_id": "waveform_representation",
+          "descr": "Description of how the raw spike waveform data are represented in the stored artifact, such as continuous wideband voltage traces or multiplexed waveform segments. This describes the raw signal encoding needed to interpret the spiking data before any sorting or feature extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "continuous_voltage",
+            "segmented_waveforms",
+            "interleaved_channels",
+            "other"
+          ]
+        },
+        {
+          "field_id": "electrode_channel_map_description",
+          "descr": "Description of how electrode channels map to the raw spike recording artifact, such as probe shank order, depth order, or acquisition index. Use this to interpret which channels correspond to the stored wideband spiking data in the raw file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_band_preservation",
+          "descr": "Whether the raw spike artifact preserves the full spike-band content required for later spike sorting, typically as unfiltered or minimally filtered wideband data. This is a signal-level property indicating suitability for downstream sorting.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "estimated_spike_event_count",
+          "descr": "Approximate number of high-frequency spike-like events present in the raw recording artifact, as assessed from the stored signal before formal spike sorting. Use an integer estimate derived from the raw trace, not the final sorted unit table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "motion_or_electrical_artifact_presence",
+          "descr": "Whether obvious motion artifacts, saturation, or electrical noise are present in the raw spike recording artifact. This is a technical quality indicator for the signal file itself and should be assessed on the stored raw trace.",
+          "type": "categorical",
+          "allowed_values": [
+            "none_detected",
+            "minor",
+            "moderate",
+            "severe",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "wideband_signal_integrity",
+          "descr": "Overall integrity of the raw wideband spike recording, indicating whether the artifact appears complete and usable for later spike sorting. Use this as a file-level signal quality indicator specific to the raw recording content.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "interrupted",
+            "corrupted",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "artifact_filtering": {
+      "reasoning": "For the artifact_filtering Process node, I included only computational filtering parameters, software/provenance details, and output-quality indicators that describe how the electrophysiological signals were cleaned. I excluded raw file properties because those belong to the Signal nodes, and I excluded the downstream cleaned LFP artifact itself because its file-level properties belong to the clean_lfp_trace Derivative node. I also avoided reusing any previously generated field names, especially generic signal/file terms, by naming fields around the processing operation and its settings.",
+      "md_schema": [
+        {
+          "field_id": "filtering_software_name",
+          "descr": "Name of the software package, library, or pipeline used to perform electrophysiology artifact filtering; examples include 'Python electrophysiology pipeline', 'MNE-Python', or 'custom_lab_pipeline'. Record the computational tool that executed the filtering step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_software_version",
+          "descr": "Version of the filtering software or pipeline used for artifact cleaning, such as '3.11', '1.6.1', or a git tag/commit label if no formal version exists. This captures the exact processing environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_repository",
+          "descr": "Repository, codebase, or provenance locator for the artifact filtering workflow, such as a GitHub URL, internal GitLab path, or commit hash reference. This helps reproduce the exact processing logic.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_type",
+          "descr": "Type of computational filtering applied to the raw electrophysiology trace, used to separate or clean signals for downstream analysis; choose the category that best matches the main transformation performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "bandpass",
+            "notch",
+            "highpass",
+            "lowpass",
+            "artifact_rejection",
+            "detrending",
+            "smoothing",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filter_low_cutoff_hz",
+          "descr": "Lower cutoff frequency in hertz used by the filtering step, measured as part of the processing parameters for cleaning electrophysiology data. Typical values may range from sub-hertz for detrending to several hundred hertz for spike-oriented bandpass filters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_high_cutoff_hz",
+          "descr": "Upper cutoff frequency in hertz used by the filtering step, measured as part of the processing parameters for cleaning electrophysiology data. Typical values vary depending on whether the goal is LFP preservation or spike isolation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "notch_filter_frequency_hz",
+          "descr": "Center frequency in hertz of any notch filter applied during artifact filtering, typically used to suppress mains line noise such as 50 Hz or 60 Hz and harmonics. Record 0 or omit conceptually if no notch was applied in this workflow layer.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_order",
+          "descr": "Order of the digital filter used during artifact filtering, recorded as an integer that defines filter steepness and response characteristics. This is a processing parameter, not a data property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "artifact_rejection_threshold",
+          "descr": "Threshold used to reject or suppress non-neural artifacts during filtering, such as amplitude, z-score, or derivative-based cutoffs. Record the threshold in the native units used by the pipeline and describe the metric in the text metadata if needed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_duration_minutes",
+          "descr": "Elapsed runtime of the filtering process in minutes, measured from start of computation to completion for the electrophysiology cleaning step. Useful for reproducibility and computational tracking.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_quality_indicator",
+          "descr": "Process-level quality indicator describing how successful the filtering was in producing a clean electrophysiology trace suitable for downstream LFP or spike analysis; use a controlled label to summarize whether filtering completed as intended.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "manual_review",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "clean_lfp_trace": {
+      "reasoning": "For the clean_lfp_trace Derivative node, I included only computed-result properties that describe the analysis-ready LFP output: algorithm/provenance, key derivation parameters, output dimensions, and result-level quality indicators. I excluded raw-file artifact details because those belong to the Signal nodes, and I excluded filtering settings and runtime because those belong to the artifact_filtering Process node. I also avoided repeating any previously generated fields by using derivative-specific names tied to the computed LFP result rather than generic file or acquisition terms.",
+      "md_schema": [
+        {
+          "field_id": "derivation_method_name",
+          "descr": "Name of the algorithm or computational method used to produce the clean LFP trace from raw cortical recordings; examples include 'bandpass_filtered_lfp', 'spline_detrended_lfp', or a named analysis pipeline. Record the method that generated the derivative output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivation_method_version",
+          "descr": "Version of the algorithm, codebase, or processing pipeline used to compute the clean LFP trace, such as a software version, release tag, or commit hash. This captures the exact derivative logic used in the analysis-ready output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivation_parameters",
+          "descr": "Human-readable summary of the key parameters used to compute the clean LFP trace, such as cutoff frequencies, resampling strategy, or artifact suppression settings. Record the parameters actually used for this derivative, not the raw capture settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lfp_channel_count",
+          "descr": "Number of LFP channels present in the cleaned derivative output, measured after filtering and any channel exclusion steps. This can differ from the raw recording channel count if channels were removed or combined.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lfp_sampling_rate_hz",
+          "descr": "Sampling rate in hertz of the cleaned LFP derivative output after any resampling or decimation step. Use the stored analysis-ready rate, which may be lower than the raw acquisition rate.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lfp_timepoints_count",
+          "descr": "Total number of time points in the clean LFP derivative output, representing the length of the analysis-ready time series after processing. This is a derivative dimension property, not a raw artifact property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lfp_frequency_band_hz",
+          "descr": "Effective frequency band retained in the cleaned LFP derivative, recorded as the lower and upper frequency limits in hertz. This should reflect the scientifically intended analysis band of the output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivative_quality_flag",
+          "descr": "Result-level quality flag indicating whether the cleaned LFP trace is suitable for downstream analysis, based on inspection of the derived signal after filtering. Examples include 'good', 'usable_with_caveats', or 'poor'.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "usable_with_caveats",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "signal_to_noise_estimate",
+          "descr": "Estimated signal-to-noise metric for the cleaned LFP derivative, calculated on the analysis-ready output using the pipeline's chosen method. If available, record the numeric estimate and note the calculation basis in the free-text value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "downsampled",
+          "descr": "Whether the clean LFP derivative was downsampled relative to the raw recording, indicating a transformation applied to create the analysis-ready output.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "spike_sorting": {
+      "reasoning": "For the spike_sorting Process node, I included only computational spike-sorting parameters, software provenance, and process-level output quality indicators that describe how units were identified from the raw electrophysiology recording. I excluded raw file properties because those belong to the Signal nodes, and I excluded the resulting spike train representation because its dimensions and content belong to the spike_train_table Derivative node. I also avoided repeating any previously generated field names by using spike-sorting-specific names tied to the process rather than generic signal or file terms.",
+      "md_schema": [
+        {
+          "field_id": "spike_sorting_software_name",
+          "descr": "Name of the software package, library, or pipeline used to perform spike sorting; examples include 'KiloSort', 'MountainSort', 'SpikeInterface', or a custom lab pipeline. Record the computational tool that identified spikes and units.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_sorting_software_version",
+          "descr": "Version of the spike sorting software or pipeline used for unit extraction, such as '2.5', 'v1.0.0', or a git commit hash. This captures the exact computational environment used to identify spikes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_sorting_repository",
+          "descr": "Repository, codebase, or provenance locator for the spike sorting workflow, such as a GitHub URL, internal repository path, or commit reference. Use this to make the sorting process reproducible.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sorting_algorithm",
+          "descr": "Primary algorithm or method used to detect and cluster spike events into neuronal units, such as template matching, density-based clustering, or PCA-based clustering. Record the high-level sorting approach used by the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "template_matching",
+            "clustering",
+            "manual_curation",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "detection_threshold_sd",
+          "descr": "Spike detection threshold expressed in standard deviations or equivalent units used by the sorter to detect candidate events in the raw electrophysiology data. This is a process parameter, not a property of the raw signal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prewhitening_applied",
+          "descr": "Whether prewhitening or similar decorrelation was applied before spike clustering, as part of the spike sorting workflow.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_detected_spikes",
+          "descr": "Total number of candidate spike events detected during sorting, counted before final unit acceptance or curation. This summarizes the computational process outcome rather than the final output table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_units_identified",
+          "descr": "Number of neuronal units identified by the spike sorting process before or after curation, depending on the workflow definition used. Record the count that corresponds to the sorter output in this experiment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "manual_curation_performed",
+          "descr": "Whether manual review or curation was performed after automated spike sorting to refine unit assignments. This indicates a process-level quality step within the sorting pipeline.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sorting_runtime_minutes",
+          "descr": "Elapsed runtime of the spike sorting process in minutes, measured from start of computation to completion. Useful for computational tracking and reproducibility.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sorting_quality_flag",
+          "descr": "Process-level quality indicator describing whether spike sorting completed successfully and produced interpretable units; use a controlled label to summarize the sorter run outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "manual_review",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "spike_train_table": {
+      "reasoning": "For the spike_train_table Derivative node, I included only computed-result properties that characterize the spike-train output itself: derivation method/provenance, table dimensions, unit and spike counts, temporal coverage, and output-level quality indicators. I excluded spike-sorting process parameters because those belong to the spike_sorting Process node, and I excluded raw signal artifact properties because those belong to the Signal nodes. I also avoided repeating any field ids already generated elsewhere by using derivative-specific names tied to the table output rather than generic file or acquisition terms.",
+      "md_schema": [
+        {
+          "field_id": "spike_train_method_name",
+          "descr": "Name of the method or pipeline used to convert sorted spikes into the spike train table; examples include 'spike_to_table', 'unit_time_binning', or a named analysis pipeline. Record the derivation method that produced the table of spike times and units.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_method_version",
+          "descr": "Version of the spike-train derivation code, library, or pipeline used to generate the table, such as a software version, release tag, or commit hash. This identifies the exact transformation used for the derivative output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_parameters",
+          "descr": "Human-readable summary of the key parameters used to construct the spike train table, such as bin width, time alignment rules, event window definitions, or unit inclusion criteria. Record the actual parameters applied in this experiment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_row_count",
+          "descr": "Number of rows in the spike train table output, typically corresponding to spike events, unit-by-time records, or another table schema used in the derivative. This is a structural property of the computed output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_unit_count",
+          "descr": "Number of unique neuronal units represented in the spike train table derivative. This may match or be a subset of the spike sorting output depending on curation and inclusion criteria.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_event_count",
+          "descr": "Total number of spike events represented in the spike train table, counted across all units and the full analysis interval. Use this to summarize the size of the derived spike representation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_time_range_seconds",
+          "descr": "Temporal span covered by the spike train table derivative, expressed as the start and end time in seconds relative to the recording or event alignment reference. Record the analysis window actually represented in the table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spike_train_alignment_reference",
+          "descr": "Reference used to align spike times in the derived table, such as recording onset, task event onset, stimulus onset, or another time zero convention. This describes how the derived spike times are interpreted.",
+          "type": "categorical",
+          "allowed_values": [
+            "recording_start",
+            "stimulus_onset",
+            "behavioral_event",
+            "task_epoch",
+            "other"
+          ]
+        },
+        {
+          "field_id": "spike_train_quality_flag",
+          "descr": "Output-level quality indicator describing whether the spike train table is complete and suitable for downstream analysis; examples include 'good', 'usable_with_caveats', or 'poor'. This reflects the quality of the derived table, not the sorting process itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "usable_with_caveats",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "spike_train_table_format",
+          "descr": "Storage or exchange format of the spike train table derivative, such as CSV, TSV, HDF5, Parquet, or an in-memory schema exported to a file. This is a property of the computed table output.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "hdf5",
+            "parquet",
+            "nwb",
+            "other"
+          ]
+        }
+      ]
+    },
+    "task_context_inputs": {
+      "reasoning": "For the task_context_inputs Signal node, I included only raw external digital artifact properties that describe the task-context file itself: filename, format, size, storage location, temporal coverage, and technical integrity. I excluded stimulus- or behavior-specific scientific interpretation and analysis outputs because those belong downstream in decision_analysis and decision_metrics. I also avoided any capture or process settings because this node is an external input signal, not an acquisition or computation step. To prevent collisions with already_generated fields, I used task-context-specific field ids rather than generic file names already used by earlier signal nodes.",
+      "md_schema": [
+        {
+          "field_id": "task_context_file_name",
+          "descr": "Name of the task context input file as stored in the dataset, such as 'session01_task_context.json' or 'behavior_annotations.csv'. This identifies the external digital artifact used as analysis input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_file_format",
+          "descr": "Digital file format of the task context input, recorded as the container or exchange format for stimulus parameters and behavioral annotations; examples include 'json', 'csv', 'tsv', or 'yaml'.",
+          "type": "categorical",
+          "allowed_values": [
+            "json",
+            "csv",
+            "tsv",
+            "yaml",
+            "xml",
+            "other"
+          ]
+        },
+        {
+          "field_id": "task_context_file_size_bytes",
+          "descr": "Size of the task context input file in bytes, measured on disk as stored in the dataset. This is a technical property of the external digital artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_storage_location",
+          "descr": "Primary storage location or file path for the task context input, such as an object-store URI, network path, or local dataset path; example: 's3://bucket/session01/task_context.json'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_start_time",
+          "descr": "Start time or reference time covered by the task context input, recorded if the file includes time-locked stimulus or behavior annotations. Use the stored or documented session-relative time reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_end_time",
+          "descr": "End time or reference time covered by the task context input, recorded if the file includes a bounded temporal interval of behavioral annotations or stimulus events.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_entry_count",
+          "descr": "Number of discrete entries, rows, or events in the task context input file, such as stimulus presentations or behavioral annotation records. This summarizes the structure of the external digital artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_quality_flag",
+          "descr": "Technical quality flag for the task context input artifact indicating whether the file is complete and readable at the data level; examples include 'ok', 'truncated', 'corrupted', or 'partial'.",
+          "type": "categorical",
+          "allowed_values": [
+            "ok",
+            "truncated",
+            "corrupted",
+            "partial",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "task_context_format_version",
+          "descr": "Schema or format version of the task context file, if provided by the external source; examples include 'v1', '2.0', or a documented metadata schema release. This helps interpret the structure of the imported task descriptors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "task_context_source",
+          "descr": "Origin of the task context input, such as behavioral control software, a manual annotation export, or a stimulus presentation log. This identifies the external provenance of the digital task descriptors.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "decision_analysis": {
+      "reasoning": "For the decision_analysis Process node, I included only computational analysis parameters, software provenance, and process-level settings that describe how neural derivatives and task context were integrated to quantify decision-making correlates. I excluded raw and derived input properties because those belong to the upstream Signal and Derivative nodes, and I excluded the final statistical results because those belong to the decision_metrics Derivative node. I also avoided repeating any already_generated field names by using analysis-specific identifiers tied to the joint computation rather than generic processing or file terms.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software package, library, or analysis pipeline used for the joint decision analysis; examples include 'Python statistical analysis pipeline', 'statsmodels', 'scikit-learn', or a custom lab workflow. Record the computational tool that integrated neural and task-context inputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software or pipeline used for the decision-making correlate analysis, such as '3.11', '1.2.0', or a git commit hash. This identifies the exact computational environment used for the analysis step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository, codebase, or provenance locator for the decision analysis workflow, such as a GitHub URL, internal repository path, or commit reference. Use this to make the joint analysis reproducible.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_model_type",
+          "descr": "Type of computational or statistical model used to relate neural derivatives to task context, such as regression, classifier, mixed-effects model, time-resolved alignment, or other joint analysis approach.",
+          "type": "categorical",
+          "allowed_values": [
+            "regression",
+            "classification",
+            "mixed_effects",
+            "time_resolved_alignment",
+            "correlation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dependent_variable_name",
+          "descr": "Name of the main behavioral or decision variable modeled in the joint analysis, such as choice, reaction time, confidence, or correctness. This identifies the target outcome for the computed correlate analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "independent_variable_names",
+          "descr": "Names of the primary neural and task-context predictors used in the joint analysis, such as LFP power, spike rate, stimulus identity, or trial type. Record the feature names as used in the analysis workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_alignment_reference",
+          "descr": "Reference event used to align neural derivatives and task context during the decision analysis, such as stimulus onset, response onset, or trial start. This is the alignment convention for the joint computation.",
+          "type": "categorical",
+          "allowed_values": [
+            "stimulus_onset",
+            "response_onset",
+            "trial_start",
+            "recording_start",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_window_start_seconds",
+          "descr": "Start of the temporal analysis window in seconds relative to the chosen alignment reference, describing the portion of the neural/task data used for decision analysis. Typical windows may include pre- and post-event intervals.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_window_end_seconds",
+          "descr": "End of the temporal analysis window in seconds relative to the chosen alignment reference, describing the portion of the neural/task data used for decision analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cross_validation_used",
+          "descr": "Whether cross-validation or another resampling scheme was used to evaluate the decision analysis model. This is a process-level validation setting that affects interpretability of the joint computation.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_runtime_minutes",
+          "descr": "Elapsed runtime of the decision analysis computation in minutes, measured from start of joint modeling to completion. Useful for computational tracking and reproducibility.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_quality_flag",
+          "descr": "Process-level quality indicator describing whether the decision analysis completed successfully and produced interpretable results; use a controlled label to summarize the run outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "manual_review",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "decision_metrics": {
+      "reasoning": "For the decision_metrics Derivative node, I included only computed-result properties that characterize the final analytical outputs: metric names, output dimensions, alignment basis, summary statistics, effect sizes, and result-level quality indicators. I excluded analysis software and model settings because those belong to the decision_analysis Process node, and I excluded raw/derived input artifact properties because those belong upstream to Signal and earlier Derivative nodes. I also avoided repeating any previously generated field ids by using metric-specific names that describe the final decision-making outputs rather than generic file or process terms.",
+      "md_schema": [
+        {
+          "field_id": "metric_set_name",
+          "descr": "Name of the decision-analysis result set produced by this derivative, such as 'choice_correlates', 'event_aligned_summary', or 'decision_response_metrics'. This identifies the analytical output collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_set_version",
+          "descr": "Version label, release tag, or commit hash for the decision metrics derivation logic used to produce this output set. This identifies the exact computational recipe for the derivative results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_definition_summary",
+          "descr": "Human-readable summary of what the decision metrics represent, such as neural correlates, response-aligned averages, or task-related effect estimates. Record the meaning of the computed outputs, not the upstream inputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_count",
+          "descr": "Number of distinct metrics, summary measures, or output columns in the decision metrics derivative. This is a structural property of the computed result table or object.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "observation_count",
+          "descr": "Number of observations, trials, events, or aligned samples used to compute the decision metrics derivative. This summarizes the amount of data contributing to the result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_reference",
+          "descr": "Reference event or epoch used to summarize the decision metrics, such as stimulus onset, response onset, trial start, or another task-related alignment point. This defines how the results are interpreted in time.",
+          "type": "categorical",
+          "allowed_values": [
+            "stimulus_onset",
+            "response_onset",
+            "trial_start",
+            "recording_start",
+            "other"
+          ]
+        },
+        {
+          "field_id": "summary_time_window_seconds",
+          "descr": "Temporal window in seconds relative to the alignment reference over which the decision metrics were computed, reported as a human-readable interval such as '-0.5 to 1.0'. This is a result-definition property of the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size",
+          "descr": "Primary effect size or magnitude estimate reported by the decision metrics derivative, using the numeric value output by the analysis workflow. If multiple effect sizes exist, record the main one used for interpretation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "Primary significance value associated with the decision metric or main hypothesis test, as reported by the derivative output. This is a result-level statistical summary, not a process setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval",
+          "descr": "Confidence interval associated with the main decision metric, recorded as a human-readable interval or formatted string such as '0.12 to 0.31'. This describes uncertainty in the computed result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_quality_flag",
+          "descr": "Result-level quality indicator describing whether the decision metrics are interpretable and ready for downstream reuse; examples include 'good', 'usable_with_caveats', or 'poor'. This reflects the quality of the computed derivative, not the analysis process.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "usable_with_caveats",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "result_table_format",
+          "descr": "Storage or exchange format of the decision metrics derivative, such as CSV, TSV, HDF5, Parquet, or NWB. This is a property of the computed result artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "hdf5",
+            "parquet",
+            "nwb",
+            "other"
+          ]
+        }
+      ]
+    }
+  }
+}

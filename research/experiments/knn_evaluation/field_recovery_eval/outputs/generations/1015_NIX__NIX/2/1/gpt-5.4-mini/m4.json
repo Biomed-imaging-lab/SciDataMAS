@@ -1,0 +1,1036 @@
+{
+  "md_name": "Drosophila Olfactory Calcium Imaging Workflow",
+  "md_description": "This DAG represents a calcium imaging data-generation and analysis pipeline for olfactory neurons in Drosophila. A fly brain preparation is measured with a two-photon microscope during odorant stimulation to produce raw multidimensional image stacks, which are then computationally processed into aligned images, annotated regions of interest, and activity traces. The resulting derived dataset links neural responses to odorant concentration and exposure time for downstream analysis of olfactory coding.",
+  "fields_per_node": {
+    "drosophila_brain_preparation": {
+      "reasoning": "This node is an Entity, so I included only intrinsic properties of the Drosophila brain preparation itself and excluded any measurement, capture, processing, or file-level fields. The DAG shows this preparation is the biological specimen measured by the two-photon capture node, so I focused on identity, organism, tissue/source, preparation state, genetic background, sex/age where relevant, and whether the preparation was ex vivo/live. I avoided any odor stimulation details, imaging parameters, raw data properties, or derived outputs because those belong to downstream nodes. I also avoided repeating generic experiment identifiers since those are not specified here and should remain unique if generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "specimen_id",
+          "descr": "Unique identifier for the fly brain preparation used in this experiment; string format example: \"FBP_001\". Record once for this entity and use to link to downstream capture and analysis outputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "organism",
+          "descr": "Biological organism of the specimen at the entity level; expected to be Drosophila melanogaster for this workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tissue_type",
+          "descr": "Tissue or anatomical material represented by the specimen; record the prepared fly brain tissue containing olfactory neurons, e.g. \"brain\" or \"brain preparation\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preparation_state",
+          "descr": "Physical/experimental state of the specimen at the time it is measured, describing whether the brain preparation is live, dissected, isolated, or mounted for imaging. This is intrinsic to the sample and not the imaging protocol.",
+          "type": "categorical",
+          "allowed_values": [
+            "live",
+            "dissected",
+            "isolated_brain",
+            "mounted_preparation",
+            "fixed"
+          ]
+        },
+        {
+          "field_id": "genotype",
+          "descr": "Genetic background or transgenic line of the Drosophila specimen, if relevant to the olfactory neuron calcium imaging experiment; string example: \"UAS-GCaMP6f; ORN-GAL4\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sex",
+          "descr": "Sex of the fly specimen when known and biologically relevant to interpretation of olfactory neural activity; record as the organism sex rather than reproductive state.",
+          "type": "categorical",
+          "allowed_values": [
+            "female",
+            "male",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "age_days",
+          "descr": "Age of the fly in days at the time of brain preparation, measured once at specimen setup; typical range in imaging studies is approximately 0-30 days.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "developmental_stage",
+          "descr": "Developmental stage of the specimen at preparation time, such as adult or larval; record the stage relevant to the olfactory calcium imaging specimen.",
+          "type": "categorical",
+          "allowed_values": [
+            "embryo",
+            "larva",
+            "pupa",
+            "adult",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "dissection_method",
+          "descr": "Brief description of how the fly brain preparation was obtained, e.g. whole-brain dissection or partial preparation. This captures specimen origin/preparation details, not subsequent imaging settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "brain_region",
+          "descr": "Anatomical brain region represented or exposed in the preparation, if specified; for example, antennal lobe, mushroom body, or broader brain preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contains_olfactory_neurons",
+          "descr": "Whether the preparation includes olfactory neurons relevant to the experiment's calcium imaging readout.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "odorant_stimulus_protocol": {
+      "reasoning": "This node is a Derivative, so I included only computed stimulus-specification fields that summarize the odor delivery conditions used during imaging. I excluded specimen properties (they belong to the Entity), microscope/session settings (Capture), and any raw/derived neural response quantities (downstream Derivative nodes). Because this node represents the protocol specification itself, the schema centers on odorant identity, concentration, exposure timing, and presentation structure needed to reproduce the stimulus conditions. I also avoided any field names already generated for other nodes by not reusing specimen identifiers or analysis/output fields.",
+      "md_schema": [
+        {
+          "field_id": "odorant_id",
+          "descr": "Identifier or name of the odorant used in the stimulus specification, as recorded in the computed protocol; string example: \"isoamyl_acetate\" or \"ethyl_butyrate\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "odorant_class",
+          "descr": "Chemical class or common odor category for the odorant, if provided in the protocol, to support grouping across stimuli; string example: \"ester\", \"alcohol\", \"acid\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "odorant_concentration_molar",
+          "descr": "Final odorant concentration used during imaging, expressed as molar concentration at the stimulus source or delivered solution depending on the protocol definition; typical values may range from nanomolar to millimolar levels, e.g. 1e-6 M.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "odorant_concentration_unit",
+          "descr": "Unit used to express odorant concentration in the computed stimulus specification; this field is included only if the concentration is not stored in a fixed unit.",
+          "type": "categorical",
+          "allowed_values": [
+            "M",
+            "mM",
+            "uM",
+            "nM",
+            "%v/v",
+            "%w/v"
+          ]
+        },
+        {
+          "field_id": "exposure_time_seconds",
+          "descr": "Duration of odorant exposure during imaging, measured per stimulus presentation; typical range is seconds to minutes, e.g. 2.0 s or 10.0 s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_pulse_count",
+          "descr": "Number of odorant exposure pulses included in the computed protocol for a trial or recording session, if multiple presentations were specified.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "inter_stimulus_interval_seconds",
+          "descr": "Time between consecutive odor presentations in the protocol, measured from the end of one exposure to the start of the next; typical range is seconds to minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_sequence_order",
+          "descr": "Ordering of odorants or presentations in the computed protocol when multiple stimuli were delivered; use a concise text description or ordered label list such as \"A-B-C\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protocol_representation",
+          "descr": "Computed format of the stimulus specification, indicating whether the protocol is a single odor presentation, a stimulus series, or a repeated block design.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_stimulus",
+            "stimulus_series",
+            "block_design",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "two_photon_calcium_imaging": {
+      "reasoning": "This node is a Capture, so I included fields describing the measurement session and actively configured instrument settings for the two-photon microscope. I focused on hardware identity and operational parameters that define how imaging was performed: microscope make/model/serial, excitation wavelength, objective, scan settings, detection channels, frame timing, resolution, and imaging mode. I excluded specimen descriptors (Entity territory), odor stimulus details already owned by the derivative stimulus protocol, and raw file properties that belong to the Signal node. I also avoided downstream derived quality or segmentation fields. Any software fields were omitted unless explicitly part of the capture hardware configuration, because the DAG assigns analysis software to Process nodes rather than Capture.",
+      "md_schema": [
+        {
+          "field_id": "microscope_manufacturer",
+          "descr": "Manufacturer of the two-photon microscope used for the capture session; record the hardware vendor that configured the imaging system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_model",
+          "descr": "Model name or platform of the two-photon microscope used during imaging; string example: \"Prairie Ultima\" or \"Bruker Investigator\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_serial_number",
+          "descr": "Serial number or unique hardware identifier for the two-photon microscope, recorded to distinguish the specific instrument used in the capture session; string example: \"SN-12345\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Objective magnification used during calcium imaging, typically measured at the microscope objective; common values include 20x, 25x, or 40x.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_numerical_aperture",
+          "descr": "Numerical aperture of the objective lens used for two-photon acquisition, recorded at the capture session to characterize resolution and light collection efficiency; typical range is about 0.5 to 1.2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "excitation_wavelength_nanometer",
+          "descr": "Two-photon excitation wavelength set on the microscope during imaging, measured in nanometers; typical range for GCaMP-style calcium imaging is approximately 800-1000 nm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "laser_power_milliwatt",
+          "descr": "Laser power at the sample or objective output during the imaging session, measured in milliwatts; record the configured value used for acquisition, typically within a low-to-moderate mW range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "scan_mode",
+          "descr": "Scanning mode used for the capture session, describing how the two-photon microscope acquired the image field; examples include resonant scanning or galvo scanning.",
+          "type": "categorical",
+          "allowed_values": [
+            "resonant",
+            "galvo",
+            "resonant_galvo",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "frame_rate_hz",
+          "descr": "Acquisition frame rate during capture, measured in frames per second; typical calcium imaging values are approximately 1-60 Hz depending on field of view and scan settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pixel_size_micrometer",
+          "descr": "In-plane pixel size set for the imaging session, measured as micrometers per pixel at the sample plane; typical values depend on objective and zoom and are often about 0.1-2.0 um/pixel.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_dimensions_px",
+          "descr": "Acquired image dimensions for each frame or stack in pixels, recorded as a concise text value such as \"512x512\" or \"1024x1024\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "z_stack_depth_micrometer",
+          "descr": "Axial depth spanned by the two-photon capture, measured in micrometers when volumetric or multidimensional imaging was performed; include the configured imaging depth range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channel_count",
+          "descr": "Number of detection channels configured during the capture session, such as one fluorescence channel or multiple simultaneous channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detector_type",
+          "descr": "Detector or emission detection configuration used in the microscope, such as PMT or GaAsP detector; record the detector class active during capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "PMT",
+            "GaAsP",
+            "hybrid",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_calcium_image_stack": {
+      "reasoning": "This node is a Signal, so I included only raw-data artefact descriptors: file format, storage location, dimensions, size, pixel/voxel sampling, channels/frames, and technical quality indicators that characterize the recorded stack itself. I excluded microscope settings and stimulus details because those belong to Capture and Derivative nodes upstream, and I excluded any processed alignment or segmentation fields because those belong to downstream Process/Derivative nodes. I also avoided repeating specimen, protocol, or instrument identifiers already handled elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "file_name",
+          "descr": "Name of the raw calcium imaging file containing the multidimensional image stack; string example: \"session01_raw.tif\". Record the original raw artifact filename as stored by the acquisition system or archive.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw image stack, recorded as the storage format of the unprocessed acquisition output; common values include TIFF, OME-TIFF, or HDF5.",
+          "type": "categorical",
+          "allowed_values": [
+            "TIFF",
+            "OME-TIFF",
+            "HDF5",
+            "NIfTI",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_path",
+          "descr": "Filesystem or object-store location of the raw image stack file, recorded as the path or URI where the raw artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw image stack file in bytes, measured after acquisition and before any processing; used as a technical storage descriptor.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stack_dimensions_px",
+          "descr": "Spatial dimensions of each image frame in pixels, recorded as width x height for the raw stack; string example: \"512x512\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_frames",
+          "descr": "Number of time frames in the raw calcium image stack, counted from the unprocessed acquisition output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_z_slices",
+          "descr": "Number of optical sections or z-slices in the raw stack when volumetric imaging was acquired; use 1 for single-plane recordings.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_channels",
+          "descr": "Number of imaging channels present in the raw stack, as encoded in the file; for example, one calcium fluorescence channel or multiple channels if acquired.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bit_depth",
+          "descr": "Bit depth of pixel intensities in the raw data, such as 8, 12, 16, or 32 bits per pixel, describing the native recorded precision.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "frame_time_step_seconds",
+          "descr": "Time interval between consecutive frames in the raw stack, as stored in the acquisition output; typical calcium imaging values may range from fractions of a second to several seconds.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_type",
+          "descr": "Compression scheme, if any, applied to the raw file as stored; record whether the file is uncompressed or uses a lossless/lossy compression method.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "lossless",
+            "lossy",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "signal_to_noise_ratio",
+          "descr": "Technical quality metric summarizing the raw stack signal quality, measured or estimated on the unprocessed data; report the value used in this dataset if available.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "is_raw_acquisition",
+          "descr": "Indicator that the file is the unprocessed original acquisition output rather than a registered or derived image.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "motion_correction_process": {
+      "reasoning": "This node is a Process, so I included only computational transformation details for motion correction: the algorithm/software identity, version, key registration parameters, and process-level quality indicators describing the correction outcome. I excluded raw input file properties and downstream registered image properties because those belong to the Signal node, and I excluded ROI annotation and trace extraction details because those are separate downstream processes. I also respected already_generated by not reusing specimen, microscope, or raw signal field names; software provenance is specifically allowed on Process nodes by the rules.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software or algorithm used for motion correction, recorded at the process node; string example: \"Suite2p\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the motion correction software used for the registration step; string example: \"v0.14\" or a semantic version such as \"1.2.3\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository or distribution source for the motion correction software, if available; string example: a GitHub URL or package source name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registration_method",
+          "descr": "Registration strategy used to correct movement artifacts in the raw calcium image stack, such as rigid or non-rigid registration.",
+          "type": "categorical",
+          "allowed_values": [
+            "rigid",
+            "non_rigid",
+            "piecewise_rigid",
+            "template_based",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "reference_frame_selection",
+          "descr": "How the reference frame or template was chosen for alignment, such as first frame, mean frame, or custom template. This describes the process setting used for registration.",
+          "type": "categorical",
+          "allowed_values": [
+            "first_frame",
+            "mean_frame",
+            "custom_template",
+            "median_frame",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "max_displacement_pixels",
+          "descr": "Maximum allowed frame displacement in pixels during motion correction before registration is constrained or flagged; record the configured threshold used by the algorithm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subpixel_registration",
+          "descr": "Whether subpixel alignment was enabled during motion correction to improve registration precision below whole-pixel shifts.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "iteration_count",
+          "descr": "Number of optimization iterations or passes performed by the motion correction algorithm, if configurable and recorded.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "motion_correction_quality_metric",
+          "descr": "Process-level quality indicator summarizing registration success, such as mean residual motion, correlation improvement, or algorithm-reported score; record the metric used for this step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_pixel_shift_summary",
+          "descr": "Summary of estimated x/y pixel shifts produced by the registration process, stored as a concise text description or range; this captures the transformation applied, not the corrected image file itself.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "registered_calcium_images": {
+      "reasoning": "This node is a Signal, so I included only properties of the motion-corrected image artefact itself: output file identity, format, storage location, dimensions, size, channel/frame counts, and technical quality/registration status. I excluded motion-correction algorithm settings because those belong to the upstream Process node, and I excluded ROI annotation or trace extraction details because they are downstream Process/Derivative nodes. I also avoided repeating raw-stack field names unless needed to describe the registered output as a distinct signal artefact; the focus here is on the corrected image file and its technical characteristics.",
+      "md_schema": [
+        {
+          "field_id": "registered_file_name",
+          "descr": "Name of the motion-corrected calcium image file produced after registration; string example: \"session01_registered.tif\". Record the post-correction artifact filename.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_file_format",
+          "descr": "Digital file format of the registered image stack, recorded as stored after motion correction; common values include TIFF, OME-TIFF, or HDF5.",
+          "type": "categorical",
+          "allowed_values": [
+            "TIFF",
+            "OME-TIFF",
+            "HDF5",
+            "NIfTI",
+            "other"
+          ]
+        },
+        {
+          "field_id": "registered_file_path",
+          "descr": "Filesystem or object-store location of the motion-corrected image stack file; record the path or URI where the registered artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_file_size_bytes",
+          "descr": "Size of the registered image stack file in bytes, measured after motion correction and before downstream annotation or extraction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_stack_dimensions_px",
+          "descr": "Spatial dimensions of each frame in the registered stack, recorded as width x height in pixels; string example: \"512x512\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_num_frames",
+          "descr": "Number of time frames in the motion-corrected stack, counted from the registered image output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_num_channels",
+          "descr": "Number of channels present in the registered image stack, as stored after motion correction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registered_bit_depth",
+          "descr": "Bit depth of pixel intensities in the registered output, such as 8, 12, 16, or 32 bits per pixel.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "residual_motion_pixels",
+          "descr": "Estimated residual frame-to-frame motion remaining after registration, expressed in pixels as a technical quality metric for the corrected signal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registration_applied",
+          "descr": "Indicator that the image stack has undergone motion correction and is the registered output rather than the raw acquisition.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "roi_annotation_process": {
+      "reasoning": "This node is a Process, so I included only ROI annotation workflow details: the annotation software identity/version, annotation strategy, criteria, manual vs automated mode, and process-level quality/reproducibility settings. I excluded registered image properties because those belong to the input Signal node, and I excluded ROI masks themselves because those are the downstream Derivative output. I also avoided overlap with already-generated capture, signal, and motion-correction fields by focusing strictly on how regions of interest are identified in the registered data.",
+      "md_schema": [
+        {
+          "field_id": "annotation_software_name",
+          "descr": "Name of the software used to annotate regions of interest in the registered calcium images; string example: \"ImageJ/Fiji\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_software_version",
+          "descr": "Version of the ROI annotation software used for this process; string example: \"2.14\" or a semantic version such as \"1.53\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_software_repository",
+          "descr": "Repository, package source, or distribution URL for the ROI annotation software, if available; record the provenance of the tool used for annotation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_mode",
+          "descr": "Mode used to identify ROIs in the registered imaging data, describing whether regions were drawn manually, detected automatically, or corrected with a hybrid approach.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual",
+            "automated",
+            "semi_automated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "roi_selection_criteria",
+          "descr": "Brief description of the criteria used to select regions of interest, such as fluorescence intensity, morphology, anatomical boundaries, or activity patterns.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_roi_size_pixels",
+          "descr": "Minimum allowed ROI size in pixels during annotation, if a size threshold was set to exclude tiny regions or noise; typical values depend on imaging resolution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "maximum_roi_size_pixels",
+          "descr": "Maximum allowed ROI size in pixels during annotation, if an upper bound was used to define acceptable ROIs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_review_rounds",
+          "descr": "Number of review or refinement rounds applied during ROI annotation before finalizing the region set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "inter_annotator_agreement_score",
+          "descr": "Agreement metric between annotators or between repeated ROI annotations, if measured as part of the annotation process quality control.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_quality_flag",
+          "descr": "Process-level quality assessment of the ROI annotation step, indicating whether the annotation completed successfully and passed review.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "review",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "roi_mask_derivative": {
+      "reasoning": "This node is a Derivative, so I included only computed ROI-mask output fields: the mask file identity and format, the number and type of ROIs, mask dimensions, labeling/indexing, and output quality metrics that characterize the derived segmentation product. I excluded annotation workflow settings because those belong to the upstream ROI annotation Process, and I excluded raw/registered image properties because those belong to Signal nodes. I also avoided repeating specimen or capture identifiers already handled elsewhere, focusing on the computed mask set itself as the reusable downstream artifact.",
+      "md_schema": [
+        {
+          "field_id": "roi_mask_file_name",
+          "descr": "Name of the computed ROI mask file produced from annotation; string example: \"roi_masks.npy\" or \"session01_roi_masks.tif\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_mask_file_format",
+          "descr": "Digital format of the ROI mask artifact, such as NumPy array, TIFF, NIfTI, or HDF5; record the stored representation of the derived masks.",
+          "type": "categorical",
+          "allowed_values": [
+            "NPY",
+            "TIFF",
+            "NIfTI",
+            "HDF5",
+            "CSV",
+            "other"
+          ]
+        },
+        {
+          "field_id": "roi_mask_file_path",
+          "descr": "Filesystem or object-store location of the ROI mask file; record the path or URI where the derived mask artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_count",
+          "descr": "Total number of regions of interest represented in the derived mask set, counted after final annotation and mask generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_label_scheme",
+          "descr": "Labeling scheme used for ROI identifiers in the mask set, such as sequential integer labels or named anatomical compartments.",
+          "type": "categorical",
+          "allowed_values": [
+            "sequential_integer",
+            "anatomical_name",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "mask_dimensions_px",
+          "descr": "Spatial dimensions of the ROI mask array in pixels, recorded as width x height to match the registered imaging data; string example: \"512x512\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mask_coverage_fraction",
+          "descr": "Fraction of the image field covered by ROI masks, expressed as a value between 0 and 1 to summarize segmentation extent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "boundary_smoothness_score",
+          "descr": "Derived quality metric describing how smooth or compact the ROI boundaries are, if computed for the final mask set; higher values generally indicate cleaner segmentation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_mask_overlap_fraction",
+          "descr": "Fraction of pixels shared by more than one ROI mask, if overlap was allowed or measured; typically expected to be near zero for non-overlapping masks.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contains_compartment_masks",
+          "descr": "Whether the derivative includes compartment-level masks defining neuronal structures or compartments in addition to single-cell or point ROIs.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "calcium_trace_extraction": {
+      "reasoning": "This node is a Process, so I included only the computational extraction settings and software provenance for converting annotated ROIs into fluorescence time series. I focused on trace-definition choices, baseline handling, temporal sampling, and process-level extraction quality because these describe how the transformation was performed. I excluded the registered images and ROI mask artifact properties because those belong to the upstream Signal and Derivative nodes, and I excluded the resulting trace file/output properties because those belong to the downstream ROI activity traces Derivative node. I also avoided reusing any already_generated field names by keeping the schema specific to trace extraction mechanics.",
+      "md_schema": [
+        {
+          "field_id": "trace_extraction_software_name",
+          "descr": "Name of the software or algorithm used to extract fluorescence traces from annotated ROIs; string example: \"CaImAn\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_extraction_software_version",
+          "descr": "Version of the trace extraction software used for this process; string example: \"v1.10\" or a semantic version such as \"1.10.0\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_extraction_software_repository",
+          "descr": "Repository, package source, or distribution URL for the trace extraction software, if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_definition_method",
+          "descr": "Method used to define the ROI fluorescence signal during extraction, such as mean pixel intensity, median intensity, or weighted extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean_intensity",
+            "median_intensity",
+            "weighted_sum",
+            "max_intensity",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "neuropil_correction_applied",
+          "descr": "Whether neuropil or surrounding-background correction was applied during trace extraction to reduce contamination from adjacent tissue.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_method",
+          "descr": "Method used to estimate fluorescence baseline during extraction, such as percentile-based baseline, rolling baseline, or fixed baseline window.",
+          "type": "categorical",
+          "allowed_values": [
+            "percentile",
+            "rolling_baseline",
+            "fixed_window",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "baseline_window_seconds",
+          "descr": "Length of the temporal window used for baseline estimation, measured in seconds when a rolling or window-based baseline method was used.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detrending_applied",
+          "descr": "Whether detrending was applied to the extracted fluorescence time series as part of the extraction process.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temporal_smoothing_window_frames",
+          "descr": "Number of frames used for optional temporal smoothing of the extracted traces, if smoothing was configured during the process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_extraction_quality_metric",
+          "descr": "Process-level quality metric summarizing trace extraction success, such as signal fidelity, trace completeness, or software-reported extraction score.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_trace_mapping_mode",
+          "descr": "How ROIs were mapped to fluorescence traces during extraction, such as one trace per ROI or multiple traces per ROI.",
+          "type": "categorical",
+          "allowed_values": [
+            "one_to_one",
+            "one_to_many",
+            "many_to_one",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "roi_activity_traces": {
+      "reasoning": "This node is a Derivative, so I included only output-trace properties: file identity, storage format, dimensionality, sampling characteristics, trace normalization/state, and scientific/technical quality indicators for the computed calcium activity traces. I excluded extraction parameters because those belong to the upstream trace-extraction Process, and I excluded ROI mask details and registered image properties because those belong to upstream Derivative/Signal nodes. I also avoided raw file properties already used for signal artifacts, focusing on the trace dataset itself as the reusable analytical product.",
+      "md_schema": [
+        {
+          "field_id": "activity_trace_file_name",
+          "descr": "Name of the derived file containing ROI calcium activity traces; string example: \"roi_traces.csv\" or \"session01_traces.h5\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_trace_file_format",
+          "descr": "Digital format of the derived trace artifact, such as CSV, HDF5, Parquet, or NumPy array storage; record how the trace data are stored.",
+          "type": "categorical",
+          "allowed_values": [
+            "CSV",
+            "HDF5",
+            "Parquet",
+            "NPY",
+            "other"
+          ]
+        },
+        {
+          "field_id": "activity_trace_file_path",
+          "descr": "Filesystem or object-store location of the derived activity trace file; record the path or URI where the trace artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_traces",
+          "descr": "Number of individual ROI calcium traces in the derived dataset, typically matching the ROI count after extraction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_length_frames",
+          "descr": "Length of each calcium activity trace in frames, corresponding to the number of time points extracted per ROI.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_sampling_interval_seconds",
+          "descr": "Temporal sampling interval of the activity traces in seconds, inherited from the imaging acquisition timing and recorded for the derived trace series.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_time_span_seconds",
+          "descr": "Total duration covered by each activity trace in seconds, measured from the first to the last sampled time point.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trace_normalization_method",
+          "descr": "Normalization or transformation applied to the raw fluorescence traces in the derived dataset, such as dF/F, z-score, or raw fluorescence.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_fluorescence",
+            "df_over_f",
+            "z_score",
+            "percent_change",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "baseline_subtracted",
+          "descr": "Whether a baseline correction or subtraction step was applied before storing the activity traces.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_quality_score",
+          "descr": "Derived quality metric summarizing trace quality, such as trace stability, responsiveness, or signal-to-noise after extraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contains_stimulus_aligned_traces",
+          "descr": "Whether the trace dataset includes stimulus-aligned segments or windows centered on odor presentation events.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_trace_labeling_scheme",
+          "descr": "Scheme used to label traces by ROI identity in the derived dataset, such as sequential ROI IDs or anatomical labels.",
+          "type": "categorical",
+          "allowed_values": [
+            "sequential_integer",
+            "anatomical_name",
+            "mixed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "stimulus_response_quantification": {
+      "reasoning": "I corrected the collision by removing the duplicated baseline_window_seconds field from the stimulus_response_quantification Process schema. The remaining fields stay within the process territory: software provenance, response metric definition, response window, concentration/exposure modeling, trial aggregation, multiple-comparison correction, and process quality. I excluded baseline definition because it had already been generated earlier in the DAG under another step, and I did not replace it with a near-duplicate field to avoid semantic overlap.",
+      "md_schema": [
+        {
+          "field_id": "response_analysis_software_name",
+          "descr": "Name of the software, script, or analysis package used to quantify neural responses from activity traces and odor stimulus conditions; string example: \"Python\" or \"custom analysis\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_analysis_software_version",
+          "descr": "Version of the response quantification software or analysis environment; string example: \"3.11\" or a semantic version such as \"1.0.0\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_analysis_repository",
+          "descr": "Repository, codebase, or distribution source for the response quantification method, if available; record provenance of the analysis implementation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_metric_name",
+          "descr": "Primary neural response metric computed during quantification, such as peak amplitude, area under the curve, mean response, or event count.",
+          "type": "categorical",
+          "allowed_values": [
+            "peak_amplitude",
+            "area_under_curve",
+            "mean_response",
+            "event_count",
+            "response_probability",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "response_window_seconds",
+          "descr": "Time window in seconds after odor onset used to compute the neural response summary metric; record the analysis window applied to each trial.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "concentration_response_model",
+          "descr": "Model or summary approach used to relate neural response magnitude to odorant concentration, such as linear, log-linear, or none if only descriptive summaries were computed.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear",
+            "log_linear",
+            "sigmoidal",
+            "descriptive",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "exposure_time_response_model",
+          "descr": "Model or summary approach used to relate neural response magnitude to odor exposure duration, such as linear, saturating, or descriptive summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear",
+            "saturating",
+            "descriptive",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "trial_aggregation_method",
+          "descr": "Method used to combine repeated trials or repeated presentations when summarizing responses, such as mean across trials or median across trials.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "max",
+            "single_trial",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "multiple_comparison_correction",
+          "descr": "Statistical correction method applied when testing multiple ROIs or odor conditions during response quantification, if applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "bonferroni",
+            "fdr",
+            "holm",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "quantification_quality_flag",
+          "descr": "Process-level flag indicating whether the response quantification completed successfully and passed analysis checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "review",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "odor_response_table": {
+      "reasoning": "This node is a Derivative, so I included only properties of the computed response table itself: table/file identity, storage format, dimensions, key columns, join keys, and table-level quality/completeness indicators. I excluded response quantification settings because those belong to the upstream Process node, and I excluded raw trace, ROI mask, and stimulus protocol properties because those are upstream inputs rather than properties of the table artifact. I also avoided the previously generated field baseline_window_seconds and any semantically equivalent baseline fields, and I did not repeat identifiers or file properties already used on other nodes beyond what is necessary to describe this distinct table output.",
+      "md_schema": [
+        {
+          "field_id": "odor_response_table_file_name",
+          "descr": "Name of the derived odor response table file; string example: \"odor_response_table.csv\" or \"session01_odor_response.parquet\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "odor_response_table_file_format",
+          "descr": "Digital format of the derived response table, such as CSV, Parquet, TSV, HDF5, or database extract; record how the table is stored.",
+          "type": "categorical",
+          "allowed_values": [
+            "CSV",
+            "TSV",
+            "Parquet",
+            "HDF5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "odor_response_table_file_path",
+          "descr": "Filesystem or object-store location of the derived odor response table file; record the path or URI where the table artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_rows",
+          "descr": "Number of rows in the derived response table, counted after all joins and filtering steps have been applied.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_columns",
+          "descr": "Number of columns in the derived response table, representing all response, ROI, and stimulus variables included in the final output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "roi_id_column_name",
+          "descr": "Name of the column used to link each table row to a specific ROI identifier; string example: \"roi_id\" or \"neuron_id\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "odorant_id_column_name",
+          "descr": "Name of the column containing odorant identity in the table; string example: \"odorant_id\" or \"odor_name\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "concentration_column_name",
+          "descr": "Name of the column containing odorant concentration values in the table; string example: \"odorant_concentration_molar\" or \"conc_uM\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_time_column_name",
+          "descr": "Name of the column containing odor exposure duration values in the table; string example: \"exposure_time_seconds\" or \"stimulus_duration_s\".",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_feature_columns",
+          "descr": "Comma-separated list or concise description of the response feature columns included in the table, such as peak amplitude, area under the curve, or normalized response.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_key_count",
+          "descr": "Number of key fields used to merge ROI activity features with odor stimulus conditions into the final table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_fraction",
+          "descr": "Fraction of missing entries in the derived table after construction, used as a table-level quality indicator for completeness.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_quality_flag",
+          "descr": "Overall quality assessment for the derived response table, indicating whether the table passed generation checks and is suitable for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "review",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

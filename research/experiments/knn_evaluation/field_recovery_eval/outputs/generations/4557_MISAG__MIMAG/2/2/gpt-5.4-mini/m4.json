@@ -1,0 +1,1313 @@
+{
+  "md_name": "Soil MAG Binning and Metadata Workflow",
+  "md_description": "This workflow captures soil samples collected across geographic locations, converts them into metagenomic sequence data, assembles reads into contigs, and applies multiple binning algorithms to recover metagenome-assembled genomes (MAGs). It also computes binning parameters, software provenance, and genome quality metrics such as completeness and contamination, producing a metadata table for comparative analysis of soil bacterial diversity and adaptation across environments.",
+  "fields_per_node": {
+    "soil_samples": {
+      "reasoning": "For the soil_samples Entity node, I included only intrinsic sample-origin and pre-processing properties: where and when the soil was collected, what kind of site it came from, and basic physical context needed to interpret downstream MAG diversity. I excluded extraction, library, sequencing, assembly, binning, and quality metrics because those belong to downstream Process/Capture/Derivative nodes. I also avoided duplicate identifier fields because experiment/sample identifiers are typically generated once at the root and may already be covered in already_generated in other nodes; no overlap-safe identifier fields were added unless they describe soil sample provenance rather than workflow outputs.",
+      "md_schema": [
+        {
+          "field_id": "collection_site_id",
+          "descr": "Unique identifier for the soil collection site or field location; use a stable string such as 'SITE_001' or a field code recorded at sampling. This identifies the geographic origin of the composite soil sample before any laboratory processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_country",
+          "descr": "Country where the soil sample was collected, recorded at the sampling point or from field notes; use standardized country names (for example, 'Canada', 'Kenya').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_region",
+          "descr": "Administrative region, state, province, or comparable subnational area of the sampling location; recorded from field metadata at collection time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_coordinates",
+          "descr": "Geographic coordinates of the sampling location recorded at collection time, typically as latitude,longitude in decimal degrees (for example, '45.4215,-75.6972'). Store as a string to preserve paired coordinates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_collection_date",
+          "descr": "Date when the soil was collected in the field, before transport or any laboratory handling; format should be ISO 8601 date (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_depth_cm",
+          "descr": "Depth below the soil surface from which the composite sample was collected, measured in centimeters at the time of field sampling; typical range 0 to 100 cm, depending on study design.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_type",
+          "descr": "General soil classification at the sampling location, recorded from site description or field classification; used to contextualize microbial community structure. Examples include sandy, loamy, clayey, peat, or mixed.",
+          "type": "categorical",
+          "allowed_values": [
+            "sandy",
+            "loamy",
+            "clayey",
+            "peat",
+            "silt",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "land_use_category",
+          "descr": "Broad land-use or habitat context of the sampling site observed at collection time, used to compare soil bacterial diversity across environments. Examples include agricultural field, forest, grassland, desert, wetland, or urban site.",
+          "type": "categorical",
+          "allowed_values": [
+            "agricultural",
+            "forest",
+            "grassland",
+            "desert",
+            "wetland",
+            "urban",
+            "shrubland",
+            "other"
+          ]
+        },
+        {
+          "field_id": "composite_subsample_count",
+          "descr": "Number of individual subsamples combined to form the composite soil sample, recorded during field sampling; integer count typically greater than or equal to 1.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_mass_grams",
+          "descr": "Mass of the collected composite soil sample before extraction, measured in grams at collection or upon receipt in the laboratory; typical range depends on protocol, often 1 to 1000 g.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition used to hold the soil sample between collection and DNA extraction, recorded as a pre-processing provenance attribute; examples include chilled, frozen, ambient_short_term, or preservative_stabilized.",
+          "type": "categorical",
+          "allowed_values": [
+            "chilled",
+            "frozen",
+            "ambient_short_term",
+            "preservative_stabilized",
+            "other"
+          ]
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "For the dna_extraction Process node, I included only protocol and reagent details that define how total community DNA was extracted from the soil samples, plus process-specific performance/quality indicators. I excluded sample-origin fields because those belong to the upstream soil_samples Entity, and I excluded downstream DNA entity properties such as concentration or purity because those describe the extracted DNA object rather than the extraction operation. I also avoided repeating any identifiers or generic workflow fields that may already be generated elsewhere, and I kept software provenance out because this node is a wet-lab process, not a computational one.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Name of the DNA extraction kit or protocol used to isolate total community DNA from soil samples; record the exact product or protocol name as used during extraction (for example, 'DNeasy PowerSoil Pro Kit').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_manufacturer",
+          "descr": "Manufacturer or supplier of the extraction kit/reagents used in the DNA extraction step; record the commercial source at the time of extraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_input_mass_grams",
+          "descr": "Mass of soil loaded into each extraction at the start of the DNA extraction process, measured in grams; typical range is protocol dependent, often 0.1 to 10 g for soil microbiome workflows.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bead_beating_duration_minutes",
+          "descr": "Duration of bead-beating or mechanical lysis applied during extraction, measured in minutes at the extraction step; typical range 0 to 30 minutes depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Temperature used during any enzymatic or chemical incubation stage of the extraction protocol, measured in degrees Celsius at the extraction step; typical range 4 to 70 C depending on kit or method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_duration_minutes",
+          "descr": "Total duration of extraction incubation steps, measured in minutes from protocol start to completion of the lysis/incubation phase; typical range 1 to 240 minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_yield_ng",
+          "descr": "Total mass of purified community DNA recovered from the soil extraction, measured after completion of the process and before library preparation; report in nanograms, typically from tens to thousands of ng depending on input mass and soil type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_success",
+          "descr": "Whether the extraction produced usable total community DNA for downstream library preparation, assessed at the end of the extraction process; use this as a pass/fail indicator based on yield and basic handling criteria.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "process_notes",
+          "descr": "Free-text notes about deviations, replicates, or extraction-specific observations recorded during the DNA extraction step; use for protocol exceptions not captured by structured fields.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_dna": {
+      "reasoning": "For the soil_dna Entity node, I included intrinsic properties of the purified DNA material itself, not the extraction protocol or the later library prep/sequencing steps. The fields focus on identity/provenance of the extract, concentration, purity/integrity, and storage conditions because these are properties of the DNA entity as received by downstream processing. I excluded DNA extraction parameters because they belong to the upstream dna_extraction Process, and I excluded library construction or sequencing settings because those belong downstream. I also avoided repeating sample identifiers or collection metadata that were already assigned to the soil_samples node or may already exist in already_generated.",
+      "md_schema": [
+        {
+          "field_id": "dna_extract_id",
+          "descr": "Unique identifier for the purified soil DNA extract as it enters downstream library preparation; use a stable string such as 'DNA_001' or the laboratory accession used for the extract.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_source_sample_id",
+          "descr": "Identifier linking this DNA extract back to the originating soil sample or composite sample set; use the same sample code recorded at the soil_samples stage, not a new extraction identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Measured DNA concentration of the purified extract at the point it is released from extraction and before library preparation, reported in ng/µL; typical range for soil extracts is approximately 0.1 to >100 ng/µL depending on yield and cleanup.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total amount of DNA recovered in the purified extract, measured after cleanup and before library preparation, reported in nanograms; typical range spans tens to thousands of ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "od260_280_ratio",
+          "descr": "Spectrophotometric purity ratio A260/A280 measured on the purified DNA extract before library preparation; values near 1.8 are commonly expected for relatively pure DNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "od260_230_ratio",
+          "descr": "Spectrophotometric purity ratio A260/A230 measured on the purified DNA extract before library preparation; values near 2.0 to 2.2 are often expected for clean DNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Assessment of the physical integrity of the purified community DNA at the time it is prepared for library construction; use qualitative categories based on observed fragmentation or degradation.",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "moderate",
+            "low",
+            "degraded"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the purified soil DNA extract is stored prior to library preparation, measured in degrees Celsius; common values include 4, -20, or -80 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_buffer",
+          "descr": "Buffer or solution used to store the purified DNA extract before library preparation, if applicable; examples include nuclease-free water or TE buffer.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "library_prep": {
+      "reasoning": "For the library_prep Process node, I included only the wet-lab library construction protocol parameters and process-level outcomes: fragmentation/size-selection settings, adapter/indexing strategy, amplification settings, input DNA amount, and whether the library met basic readiness criteria for sequencing. I excluded properties of the input DNA because those belong to the upstream soil_dna entity, and I excluded sequencer configuration and raw read file properties because those belong to the downstream sequencing_capture and raw_reads nodes. I also avoided repeating agent/provenance fields already represented elsewhere unless they are essential to the process itself; for a laboratory process, kit and protocol details are the key reproducibility fields.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Name of the library preparation kit or protocol used to convert extracted DNA into sequencing-ready metagenomic libraries; record the exact product or workflow name used at the time of preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_manufacturer",
+          "descr": "Manufacturer or supplier of the library prep kit/reagents used during this process step; record the commercial source associated with the kit or critical reagents.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_dna_amount_ng",
+          "descr": "Amount of purified soil DNA used as input to each library preparation reaction, measured in nanograms at the start of the library prep process; typical range is 0.1 to 1000 ng depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Method used to fragment DNA during library preparation, recorded as the active library construction setting; examples include enzymatic, mechanical, or none if input DNA was already appropriately fragmented.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic",
+            "mechanical",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "target_insert_size_bp",
+          "descr": "Target average insert size for the metagenomic library after fragmentation and size selection, measured in base pairs; typical range is 150 to 1000 bp depending on sequencing strategy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_system",
+          "descr": "Adapter and indexing system incorporated during library preparation, recorded as the specific adapter/indexing scheme used to make the library sequencing-ready; examples include dual-index adapters or platform-specific adapters.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles applied during library enrichment, measured as integer cycle count at the library prep step; typical range is 0 to 20 cycles depending on low-input requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "size_selection_method",
+          "descr": "Method used to select fragment sizes during library preparation, if applied; record the operational method used before sequencing library release.",
+          "type": "categorical",
+          "allowed_values": [
+            "ampure_beads",
+            "gel_extraction",
+            "instrument_based",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_prep_success",
+          "descr": "Whether the completed library met internal criteria for sequencing readiness at the end of the library preparation process; use as a pass/fail indicator based on yield, size profile, and absence of obvious contamination.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_library": {
+      "reasoning": "For the metagenomic_library Entity node, I included only intrinsic properties of the completed sequencing library, not the preparation protocol or sequencing instrument settings. The fields capture library identity, physical characteristics, indexing, and pre-sequencing QC because these describe what the library is after construction and before capture. I excluded library prep parameters because those belong to the upstream library_prep Process, and I excluded raw file properties and run configuration because those belong downstream to sequencing_capture and raw_reads. I also avoided duplicating DNA-level fields from soil_dna and sample provenance fields from soil_samples.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the completed metagenomic library as it enters sequencing; use a stable string such as 'LIB_001' or the laboratory library accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_dna_extract_id",
+          "descr": "Identifier of the purified soil DNA extract used to build this library; link to the soil_dna stage using the same extract code recorded upstream.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_input_dna_ng",
+          "descr": "Amount of purified DNA actually carried into the final library construct, measured in nanograms at the point the library is finalized; typical range is protocol dependent and often mirrors the input DNA amount used during preparation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_mean_bp",
+          "descr": "Mean fragment or insert size of the completed library measured after construction and before sequencing, reported in base pairs; typical range is 150 to 1000 bp for metagenomic libraries.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_nm",
+          "descr": "Concentration of the finalized sequencing library measured before loading onto the sequencer, reported in nM; typical range is low nanomolar to tens of nanomolar depending on platform and pooling strategy.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_pass",
+          "descr": "Whether the completed metagenomic library passed pre-sequencing QC checks, assessed at the end of library construction; use this for bead cleanup/size-profile/readiness screening results.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_scheme",
+          "descr": "Index or barcode scheme embedded in the completed library for multiplex sequencing, recorded as the library's barcode configuration; examples include single-index, dual-index, or custom barcodes.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "custom_barcode",
+            "none"
+          ]
+        },
+        {
+          "field_id": "expected_platform_compatibility",
+          "descr": "Sequencing platform class for which this library was prepared, recorded as the intended compatibility at the time the library was finalized; examples correspond to common short-read platforms.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina_short_read",
+            "pacbio_long_read",
+            "oxford_nanopore",
+            "other"
+          ]
+        }
+      ]
+    },
+    "sequencing_capture": {
+      "reasoning": "For the sequencing_capture Capture node, I included only the actively configured instrument/session settings and hardware provenance needed to reproduce the sequencing run: instrument identity, run chemistry, flow cell, read structure, loading concentration, and run-level output indicators. I excluded sample and library properties because those belong upstream to metagenomic_library, and I excluded raw file attributes because those belong downstream to raw_reads. Because this is a Capture node, hardware manufacturer/model/serial information is appropriate here per the schema rules, while software provenance is not the primary focus unless it is part of run control; I therefore kept the field set centered on the sequencing instrument session itself.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the shotgun sequencing capture session; record the hardware vendor associated with the run instrument (for example, 'Illumina').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Instrument model used to perform the shotgun sequencing capture session; record the exact sequencer model name at run time (for example, 'NovaSeq 6000').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Serial number or facility asset number of the sequencing instrument used for the capture session; use the hardware identifier recorded by the sequencing facility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_id",
+          "descr": "Unique identifier for the sequencing run/session that generated the raw reads; use a stable string such as 'RUN_001' or the instrument run accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell or cartridge type loaded for the shotgun sequencing run, recorded at the start of the capture session; use the platform-specific flow cell designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_version",
+          "descr": "Sequencing chemistry or reagent version used during the capture session; record the exact chemistry version available on the instrument at run time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length per end for the shotgun sequencing run, measured in base pairs and defined at the capture session setup; typical short-read values are 75 to 300 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_layout",
+          "descr": "Read layout configured for the sequencing capture session, indicating whether the library was sequenced as single-end or paired-end reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "library_loading_concentration_pm",
+          "descr": "Final library loading concentration used on the sequencer at run setup, measured in pM; typical range is platform dependent, often 1 to 100 pM for short-read instruments.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_density_k_per_mm2",
+          "descr": "Observed cluster density or equivalent run loading metric generated during sequencing, measured at the end of the capture session and reported in thousands per mm^2 when applicable; use platform-specific run output values.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_pass",
+          "descr": "Whether the sequencing capture session completed successfully and produced usable raw reads according to facility QC criteria; use as a run-level pass/fail indicator.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "For the raw_reads Signal node, I included only technical properties of the raw FASTQ artefact itself: file format, file size, read counts, base counts, read quality summaries, and storage location. I excluded sequencing instrument settings because those belong to the upstream sequencing_capture node, and I excluded assembly or binning interpretations because those belong downstream. This node is specifically the emitted data object, so the fields describe the file as stored and its technical quality rather than the biological content or the capture session that produced it.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_id",
+          "descr": "Unique identifier for the raw FASTQ file or file pair generated by sequencing; use a stable string such as 'FASTQ_001' or a run-specific file accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Identifier linking the raw FASTQ file back to the sequencing capture session that produced it; use the same run code recorded at the sequencing_capture stage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw read artefact as stored after sequencing; for this workflow the expected format is FASTQ, including compressed variants if applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw read file on storage media, measured in bytes at the time of archival or transfer; useful for integrity checks and data management.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of reads contained in the raw FASTQ artefact at the time of storage; count should reflect the file content before trimming or filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count_bp",
+          "descr": "Total number of bases contained across all raw reads in the FASTQ artefact, measured in base pairs; record the sequence yield before downstream processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_read_quality_score",
+          "descr": "Average per-base quality score across the raw reads, summarized from the FASTQ content at the time of QC; typical short-read values are often in the high 20s to 30s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "q30_fraction",
+          "descr": "Fraction of bases in the raw read file with Phred quality score of at least 30, calculated from the FASTQ data after sequencing and before any trimming; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_contamination_fraction",
+          "descr": "Proportion of raw reads or bases flagged as adapter-contaminated in the FASTQ file before trimming; values range from 0 to 1 and indicate technical data quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "File system path, object storage URI, or repository location where the raw FASTQ artefact is archived; record the access location used for downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembly_process": {
+      "reasoning": "For the assembly_process Process node, I included only computational assembly parameters, software provenance, and assembly-level success/quality indicators. This node is responsible for how raw reads were transformed into contigs, so I described assembler name/version, command-level settings such as k-mer choices and minimum contig length, resource/runtime settings when they materially affect reproducibility, and a few high-level assembly QC values. I excluded raw-read file properties because those belong to raw_reads, and I excluded assembled contig properties such as N50 or total length because those belong to the downstream assembled_contigs Derivative node. I also avoided duplicating software provenance fields already generated elsewhere unless they are directly needed to reproduce the assembly process.",
+      "md_schema": [
+        {
+          "field_id": "assembler_name",
+          "descr": "Name of the metagenome assembler used to convert raw reads into contigs; record the exact software package used at the assembly step (for example, 'MEGAHIT').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_version",
+          "descr": "Version of the assembler used at the time of the assembly process; record the exact software version string (for example, '1.2.9').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_repository",
+          "descr": "Software repository or provenance location for the assembler used in this process, such as a GitHub, GitLab, or release archive reference, recorded to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "kmer_list",
+          "descr": "List or summary of k-mer sizes used by the assembler during contig construction, recorded at the assembly process step; use a comma-separated string such as '21,33,55,77'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length threshold applied during assembly output filtering, measured in base pairs; contigs shorter than this value are excluded from the assembly result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "memory_limit_gb",
+          "descr": "Maximum memory allocated to the assembly job, measured in gigabytes, as configured for the computational assembly process; useful for reproducing resource-sensitive behavior.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "thread_count",
+          "descr": "Number of CPU threads used by the assembler during the assembly process; integer value recorded to support reproducibility and runtime interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_runtime_hours",
+          "descr": "Wall-clock runtime of the assembly job, measured in hours from job start to completion; use this as a process-level performance indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_success",
+          "descr": "Whether the assembly process completed successfully and produced contigs suitable for downstream binning; use as a pass/fail indicator at the end of the assembly step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembled_contigs": {
+      "reasoning": "For the assembled_contigs Derivative node, I included only computed contig-set properties: the identity of the contig file/set, size and composition statistics, and contig-level quality indicators that summarize the assembly output. I excluded assembly parameters and software provenance because those belong to the upstream assembly_process node, and I excluded binning or genome-quality metrics because those belong downstream. This node represents the assembled data product itself, so the fields focus on contig dimensions, N50/L50-style statistics, GC content, coverage summaries, and storage location.",
+      "md_schema": [
+        {
+          "field_id": "contig_set_id",
+          "descr": "Unique identifier for the assembled contig set produced from the metagenomic assembly; use a stable string such as 'CONTIGS_001' or an assembly accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_process_id",
+          "descr": "Identifier linking this contig set back to the assembly process that generated it; use the same assembly run code recorded at the assembly_process stage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_contig_count",
+          "descr": "Total number of contigs in the assembled metagenomic contig set after any assembly filtering, counted at the derivative output stage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_contig_length_bp",
+          "descr": "Sum of the lengths of all contigs in the assembly output, measured in base pairs at the time the contig set is finalized; use to summarize assembled sequence yield.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_contig_length_bp",
+          "descr": "Length of the longest contig in the assembly output, measured in base pairs; recorded as a summary statistic of assembly contiguity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp",
+          "descr": "N50 value of the assembled contig set, measured in base pairs and calculated from the final contig output; typical values depend strongly on community complexity and sequencing depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_l50_count",
+          "descr": "L50 value of the assembled contig set, reported as the number of contigs contributing to 50% of total assembled length; calculated from the final contig output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_contig_gc_fraction",
+          "descr": "Average GC fraction across the contigs in the final assembly output, calculated from the contig sequences; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_contig_coverage",
+          "descr": "Mean read coverage across the assembled contigs, summarized from mapping statistics over the final contig set; typical values vary with sequencing depth and community complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_file_path",
+          "descr": "File path, repository location, or object storage URI for the assembled contig set as delivered for downstream binning; record the access location of the derivative artefact.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_inputs_union": {
+      "reasoning": "For the binning_inputs_union Process node, I included only harmonization and shared input-preparation parameters that make the assembled contigs ready for multiple binning algorithms. This node sits between assembled_contigs and the individual binning processes, so it may describe common pre-binning transformations such as contig filtering, feature generation, and settings shared across all binning methods. I excluded algorithm-specific settings and downstream bin assignments because those belong to the individual binning processes and derivative MAG bins. I also avoided duplicating assembly statistics or contig-file technical properties because those belong to the assembled_contigs node rather than the harmonization process.",
+      "md_schema": [
+        {
+          "field_id": "harmonization_method",
+          "descr": "Method used to harmonize assembly-derived contigs for downstream application of multiple binning algorithms; record the approach used to make shared binning inputs consistent across methods.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_length_filter_bp",
+          "descr": "Minimum contig length threshold applied during preparation of binning inputs, measured in base pairs; contigs shorter than this value are excluded from the shared binning set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_coverage_profile_method",
+          "descr": "Method used to derive contig coverage profiles or abundance features for binning input preparation; examples include read-mapping-based coverage estimation or precomputed coverage tables.",
+          "type": "categorical",
+          "allowed_values": [
+            "read_mapping",
+            "precomputed_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "shared_feature_set",
+          "descr": "List or summary of contig features prepared for all downstream binning algorithms, recorded as the common input feature set; examples include coverage, tetranucleotide frequency, and GC content.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_input_count",
+          "descr": "Number of contigs retained after harmonization for the shared binning input set, counted at the end of the preparation step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_input_success",
+          "descr": "Whether the harmonized contig input set was successfully prepared for all downstream binning algorithms; use as a pass/fail indicator for the input-union process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_params": {
+      "reasoning": "For the binning_params Derivative node, I included the computed/shared parameter specification that is reused across multiple binning algorithms, plus a compact representation of the algorithm-specific settings that downstream users need to reproduce or compare binning results. I excluded contig properties because those belong to assembled_contigs or binning_inputs_union, and I excluded the actual bin assignments because those belong to the individual binning processes and the MAG-bin derivatives. Since this node is a computed parameter set, the fields describe the derived settings artifact itself rather than a single algorithm run.",
+      "md_schema": [
+        {
+          "field_id": "binning_param_set_id",
+          "descr": "Unique identifier for the computed binning parameter specification object; use a stable string such as 'BINPARAM_001' or a workflow-generated parameter accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "shared_contig_length_threshold_bp",
+          "descr": "Common minimum contig length threshold used across the binning methods, measured in base pairs; contigs shorter than this threshold are excluded from binning.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "shared_coverage_threshold",
+          "descr": "Common coverage-based inclusion threshold applied to contigs before or during binning, recorded as the numeric cutoff used in the parameter set; interpretation depends on the binning workflow but should be the same across methods.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "shared_feature_configuration",
+          "descr": "Summary of the shared features used for binning across methods, such as coverage profiles, sequence composition features, or abundance signals; record the parameterization in a compact descriptive string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_a_specific_params",
+          "descr": "Algorithm-specific parameter summary for the first binning method, captured as a compact string or serialized parameter list used when applying that method to the shared contig inputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_b_specific_params",
+          "descr": "Algorithm-specific parameter summary for the second binning method, captured as a compact string or serialized parameter list used when applying that method to the shared contig inputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_c_specific_params",
+          "descr": "Algorithm-specific parameter summary for the third binning method, captured as a compact string or serialized parameter list used when applying that method to the shared contig inputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parameter_set_version",
+          "descr": "Version label for the computed binning parameter specification, used when the same shared settings are revised across workflow iterations; record as a short string such as 'v1' or '2026-08'.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_algorithm_a": {
+      "reasoning": "For the binning_algorithm_a Process node, I included only the execution details of the first binning method: the algorithm identity, its software provenance, key run parameters, resource settings if relevant, and a process-level success indicator. I excluded the resulting bins themselves because those belong to the downstream mag_bins_a Derivative node, and I excluded shared binning input preparation because that belongs to binning_inputs_union and binning_params. Because this node is computational, software name/version/repository are appropriate process-agent provenance fields per the rules.",
+      "md_schema": [
+        {
+          "field_id": "binning_algorithm_a_name",
+          "descr": "Name of the first binning algorithm applied to the assembled contigs; record the exact method name used at this process step (for example, 'MetaBAT2').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_a_version",
+          "descr": "Version of the first binning software used during the binning process; record the exact version string (for example, '2.15').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_a_repository",
+          "descr": "Software repository or provenance reference for the first binning algorithm, such as a GitHub release, GitLab project, or archived source location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_contig_length_bp",
+          "descr": "Minimum contig length threshold used by the first binning algorithm, measured in base pairs and configured at the time of binning; contigs shorter than this are not considered for bin assignment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_marker_gene_count",
+          "descr": "Maximum marker gene count or related inclusion criterion used by the first binning algorithm if applicable; record the process-specific numeric setting that affects bin construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_threads",
+          "descr": "Number of CPU threads allocated to the first binning algorithm during execution; integer value recorded for reproducibility and runtime interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_memory_limit_gb",
+          "descr": "Maximum memory allocated to the first binning run, measured in gigabytes; record the computational resource limit used for this process step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_a_runtime_hours",
+          "descr": "Wall-clock runtime of the first binning process, measured in hours from start to completion; use as a process-level performance indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_a_success",
+          "descr": "Whether the first binning algorithm completed successfully and produced genome bins suitable for downstream use; use as a pass/fail indicator at the end of this process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mag_bins_a": {
+      "reasoning": "For the mag_bins_a Derivative node, I included only properties of the recovered bin set itself: bin identity, size/composition statistics, membership counts, and linkage to the upstream binning run. I excluded algorithm settings and runtime details because those belong to the upstream binning_algorithm_a Process, and I excluded genome-quality metrics because those are computed later in the quality_assessment/ mag_quality_metrics branch. This node represents the recovered genome bins as a data product, so the fields focus on bin counts, sequence lengths, GC/coverage summaries, and storage location for the first algorithm's outputs.",
+      "md_schema": [
+        {
+          "field_id": "mag_bin_set_a_id",
+          "descr": "Unique identifier for the set of genome bins recovered by the first binning algorithm; use a stable string such as 'MAGSET_A_001' or a workflow-generated bin set accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_a_id",
+          "descr": "Identifier linking this MAG bin set back to the first binning process that generated it; use the same process or run code recorded for binning_algorithm_a.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_count_a",
+          "descr": "Total number of genome bins recovered by the first binning algorithm, counted at the derivative output stage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_size_bp",
+          "descr": "Mean total sequence length per genome bin in this bin set, measured in base pairs; calculated from the recovered bins after binning.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_bin_size_bp",
+          "descr": "Total sequence length of the largest recovered genome bin in this set, measured in base pairs; used as a summary statistic of bin size distribution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_gc_fraction",
+          "descr": "Average GC fraction across the genome bins recovered by the first algorithm, calculated from the bin sequences; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_coverage",
+          "descr": "Average read coverage across the genome bins recovered by the first algorithm, summarized from bin-level coverage estimates; values depend on sequencing depth and community complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bins_a_file_path",
+          "descr": "File path, repository location, or object storage URI for the first algorithm's recovered genome bin set as delivered for downstream assessment or comparison.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_algorithm_b": {
+      "reasoning": "For the binning_algorithm_b Process node, I included the execution details specific to the second binning method: algorithm identity, version, repository provenance, the key parameters controlling bin assignment, resource allocation, runtime, and success status. I excluded contig and shared-input properties because those belong upstream to assembled_contigs/binning_params, and I excluded the output bin set because that belongs downstream to mag_bins_b. The field set mirrors the first binning process but is kept distinct so the second algorithm can be compared independently without duplicating downstream derivative fields.",
+      "md_schema": [
+        {
+          "field_id": "binning_algorithm_b_name",
+          "descr": "Name of the second binning algorithm applied to the assembled contigs; record the exact method name used at this process step (for example, 'CONCOCT').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_b_version",
+          "descr": "Version of the second binning software used during the binning process; record the exact version string (for example, '1.1.0').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_b_repository",
+          "descr": "Software repository or provenance reference for the second binning algorithm, such as a GitHub release, GitLab project, or archived source location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_number",
+          "descr": "Number of contig clusters or expected bins configured for the second binning method, measured as the process-level clustering setting used during execution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_contig_length_bp_b",
+          "descr": "Minimum contig length threshold used by the second binning algorithm, measured in base pairs and configured at the time of binning; contigs shorter than this are not considered for bin assignment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_threads_b",
+          "descr": "Number of CPU threads allocated to the second binning algorithm during execution; integer value recorded for reproducibility and runtime interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_memory_limit_gb_b",
+          "descr": "Maximum memory allocated to the second binning run, measured in gigabytes; record the computational resource limit used for this process step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_b_runtime_hours",
+          "descr": "Wall-clock runtime of the second binning process, measured in hours from start to completion; use as a process-level performance indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_b_success",
+          "descr": "Whether the second binning algorithm completed successfully and produced genome bins suitable for downstream use; use as a pass/fail indicator at the end of this process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mag_bins_b": {
+      "reasoning": "For the mag_bins_b Derivative node, I included only properties of the bin set produced by the second algorithm: bin-set identity, link back to the binning run, output count, size/composition summaries, and storage location. I excluded the second algorithm's parameters and computational settings because those belong on binning_algorithm_b, and I excluded completeness/contamination because those are computed later in quality_assessment. This keeps the derivative focused on the actual recovered MAG bin artefact rather than the method used to create it.",
+      "md_schema": [
+        {
+          "field_id": "mag_bin_set_b_id",
+          "descr": "Unique identifier for the set of genome bins recovered by the second binning algorithm; use a stable string such as 'MAGSET_B_001' or a workflow-generated bin set accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_b_id",
+          "descr": "Identifier linking this MAG bin set back to the second binning process that generated it; use the same process or run code recorded for binning_algorithm_b.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_count_b",
+          "descr": "Total number of genome bins recovered by the second binning algorithm, counted at the derivative output stage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_size_bp_b",
+          "descr": "Mean total sequence length per genome bin in this second bin set, measured in base pairs; calculated from the recovered bins after binning.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_bin_size_bp_b",
+          "descr": "Total sequence length of the largest recovered genome bin in this second bin set, measured in base pairs; used as a summary statistic of bin size distribution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_gc_fraction_b",
+          "descr": "Average GC fraction across the genome bins recovered by the second algorithm, calculated from the bin sequences; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_coverage_b",
+          "descr": "Average read coverage across the genome bins recovered by the second algorithm, summarized from bin-level coverage estimates; values depend on sequencing depth and community complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bins_b_file_path",
+          "descr": "File path, repository location, or object storage URI for the second algorithm's recovered genome bin set as delivered for downstream assessment or comparison.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_algorithm_c": {
+      "reasoning": "For the binning_algorithm_c Process node, I included only the execution details of the third binning method: software identity and provenance, the key algorithm-specific settings, computational resource allocation, runtime, and a success flag. I excluded upstream contig and shared parameter inputs because those belong to assembled_contigs, binning_inputs_union, and binning_params, and I excluded downstream genome-bin outputs because those belong to mag_bins_c. The field set is parallel to the other binning process nodes so the three algorithms can be compared consistently.",
+      "md_schema": [
+        {
+          "field_id": "binning_algorithm_c_name",
+          "descr": "Name of the third binning algorithm applied to the assembled contigs; record the exact method name used at this process step (for example, 'MaxBin2').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_c_version",
+          "descr": "Version of the third binning software used during the binning process; record the exact version string (for example, '2.2.7').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_c_repository",
+          "descr": "Software repository or provenance reference for the third binning algorithm, such as a GitHub release, GitLab project, or archived source location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "marker_gene_set",
+          "descr": "Marker gene set or marker-based reference configuration used by the third binning algorithm to guide genome binning, recorded as the process-level setting active during execution.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_contig_length_bp_c",
+          "descr": "Minimum contig length threshold used by the third binning algorithm, measured in base pairs and configured at the time of binning; contigs shorter than this are not considered for bin assignment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_threads_c",
+          "descr": "Number of CPU threads allocated to the third binning algorithm during execution; integer value recorded for reproducibility and runtime interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_memory_limit_gb_c",
+          "descr": "Maximum memory allocated to the third binning run, measured in gigabytes; record the computational resource limit used for this process step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "algorithm_c_runtime_hours",
+          "descr": "Wall-clock runtime of the third binning process, measured in hours from start to completion; use as a process-level performance indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_c_success",
+          "descr": "Whether the third binning algorithm completed successfully and produced genome bins suitable for downstream use; use as a pass/fail indicator at the end of this process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mag_bins_c": {
+      "reasoning": "For the mag_bins_c Derivative node, I included only properties of the genome-bin artefact recovered by the third algorithm: bin-set identity, link to the upstream binning process, output count, size/composition summaries, and storage location. I excluded algorithm settings and resource usage because those belong to binning_algorithm_c, and I excluded genome-quality metrics because those are produced later by quality_assessment and mag_quality_metrics. This keeps the node focused on the actual third set of recovered MAG bins for comparison against the other algorithms.",
+      "md_schema": [
+        {
+          "field_id": "mag_bin_set_c_id",
+          "descr": "Unique identifier for the set of genome bins recovered by the third binning algorithm; use a stable string such as 'MAGSET_C_001' or a workflow-generated bin set accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_algorithm_c_id",
+          "descr": "Identifier linking this MAG bin set back to the third binning process that generated it; use the same process or run code recorded for binning_algorithm_c.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_count_c",
+          "descr": "Total number of genome bins recovered by the third binning algorithm, counted at the derivative output stage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_size_bp_c",
+          "descr": "Mean total sequence length per genome bin in this third bin set, measured in base pairs; calculated from the recovered bins after binning.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_bin_size_bp_c",
+          "descr": "Total sequence length of the largest recovered genome bin in this third bin set, measured in base pairs; used as a summary statistic of bin size distribution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_gc_fraction_c",
+          "descr": "Average GC fraction across the genome bins recovered by the third algorithm, calculated from the bin sequences; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_coverage_c",
+          "descr": "Average read coverage across the genome bins recovered by the third algorithm, summarized from bin-level coverage estimates; values depend on sequencing depth and community complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bins_c_file_path",
+          "descr": "File path, repository location, or object storage URI for the third algorithm's recovered genome bin set as delivered for downstream assessment or comparison.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "quality_assessment": {
+      "reasoning": "For the quality_assessment Process node, I included only the computational assessment method, software provenance, key reference settings, and a process-level success indicator used to compute completeness and contamination for recovered MAGs. I excluded the MAG bin artefacts themselves because those belong upstream to mag_bins_a/b/c, and I excluded the resulting completeness and contamination values because those are the downstream mag_quality_metrics Derivative outputs. Because this is a computational process, software name/version/repository are appropriate agent-level provenance fields per the rules.",
+      "md_schema": [
+        {
+          "field_id": "quality_tool_name",
+          "descr": "Name of the MAG quality assessment software used to compute completeness and contamination; record the exact tool name used at this process step (for example, 'CheckM').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tool_version",
+          "descr": "Version of the quality assessment software used during the computation; record the exact version string (for example, '1.2.2').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tool_repository",
+          "descr": "Software repository or provenance reference for the quality assessment tool, such as a GitHub release, GitLab project, or archived source location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "marker_gene_database",
+          "descr": "Marker gene database or reference set used by the quality assessment tool to estimate completeness and contamination, recorded as the database/configuration active during the process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_threshold_completeness_pct",
+          "descr": "Completeness threshold used to classify or filter recovered MAGs during quality assessment, reported as a percentage cutoff at the process step; typical thresholds are in the 50 to 90 percent range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_threshold_contamination_pct",
+          "descr": "Contamination threshold used to classify or filter recovered MAGs during quality assessment, reported as a percentage cutoff at the process step; typical thresholds are in the 0 to 10 percent range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_threads",
+          "descr": "Number of CPU threads allocated to the quality assessment job; integer value recorded for reproducibility and runtime interpretation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_runtime_hours",
+          "descr": "Wall-clock runtime of the quality assessment process, measured in hours from start to completion; use as a process-level performance indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_success",
+          "descr": "Whether the quality assessment completed successfully and produced completeness/contamination estimates for the recovered MAGs; use as a pass/fail indicator at the end of this process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mag_quality_metrics": {
+      "reasoning": "For the mag_quality_metrics Derivative node, I included only the computed per-MAG quality outputs and their direct links back to the recovered bin sets and quality-assessment run. This node represents the result of running the quality assessment, so the fields focus on completeness, contamination, derived quality classification, and the storage location of the quality table. I excluded the quality-tool settings and reference database because those belong to the upstream quality_assessment Process node, and I excluded the binning parameters and MAG bin properties because those belong to earlier nodes. I also avoided duplicating sample or run identifiers already covered elsewhere unless they are necessary for linking the quality metrics to specific MAGs.",
+      "md_schema": [
+        {
+          "field_id": "mag_quality_table_id",
+          "descr": "Unique identifier for the computed MAG quality metrics table or per-MAG quality record set; use a stable string such as 'MAGQUAL_001' or a workflow-generated accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_id",
+          "descr": "Identifier linking the quality metrics back to the quality_assessment process that generated them; use the same run code recorded for the quality assessment step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_id",
+          "descr": "Identifier of the specific MAG or genome bin to which these quality metrics apply; use the bin identifier from the corresponding mag_bins_a, mag_bins_b, or mag_bins_c node.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_bin_set_id",
+          "descr": "Identifier of the MAG bin set from which this quality record was computed, linking the metric back to the upstream recovered bin artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_pct",
+          "descr": "Estimated genome completeness for the MAG, computed after quality assessment and reported as a percentage; values typically range from 0 to 100 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_pct",
+          "descr": "Estimated genome contamination for the MAG, computed after quality assessment and reported as a percentage; values typically range from 0 to 100 percent, with lower values indicating cleaner bins.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_category",
+          "descr": "Derived quality classification assigned to the MAG based on completeness and contamination criteria; use a consistent categorical scheme for downstream comparison.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "reject"
+          ]
+        },
+        {
+          "field_id": "quality_metric_notes",
+          "descr": "Optional notes about borderline cases, manual review, or exceptions affecting the reported completeness and contamination values for a MAG.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_quality_file_path",
+          "descr": "File path, repository location, or object storage URI for the computed MAG quality metrics table or record file used in downstream metadata assembly.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_assembly": {
+      "reasoning": "For the metadata_assembly Process node, I included only integration/merging settings and table-construction details needed to combine binning outputs, binning parameters, and quality metrics into a comparative metadata table. This node is downstream of the individual MAG bin and quality metric derivations, so I did not repeat any bin-level biological properties, completeness/contamination values, or algorithm-specific settings that already belong to earlier nodes. Because this is a computational process, I also included the software/workflow provenance used to assemble the table, along with a success indicator for the integration step.",
+      "md_schema": [
+        {
+          "field_id": "metadata_builder_name",
+          "descr": "Name of the software or workflow used to integrate binning outputs, parameter settings, and quality metrics into the final comparative metadata table; record the exact workflow or script name used at this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_builder_version",
+          "descr": "Version of the metadata assembly software or workflow used during table construction; record the exact version string or workflow release label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_builder_repository",
+          "descr": "Software repository or provenance reference for the metadata assembly workflow, such as a GitHub, GitLab, or archived source location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_bin_sets_included",
+          "descr": "List or count summary of the MAG bin sets included in the integrated metadata table, covering the outputs from the multiple binning algorithms. Use a concise representation such as a comma-separated list of bin set identifiers or an integer count plus identifiers if needed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_join_key",
+          "descr": "Primary join key used to merge binning parameter records, MAG bin records, and quality metrics into a single table; use the shared MAG or bin identifier field chosen for integration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_deduplication_method",
+          "descr": "Method used to resolve duplicate or overlapping records during metadata table construction, if multiple entries map to the same MAG or bin; examples include first_match, highest_quality, or manual_review.",
+          "type": "categorical",
+          "allowed_values": [
+            "first_match",
+            "highest_quality",
+            "manual_review",
+            "none"
+          ]
+        },
+        {
+          "field_id": "output_table_format",
+          "descr": "File or table format produced by the metadata assembly step, recorded for the final comparative metadata table; examples include CSV, TSV, Parquet, or relational table export.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "json",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metadata_assembly_success",
+          "descr": "Whether the metadata integration step completed successfully and produced the final comparative table used downstream; use as a pass/fail indicator at the end of this process.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "For the metadata_table Derivative node, I included only properties of the final integrated table itself: table identity, content scope, dimensionality, format, storage location, and a few technical quality indicators. I excluded the actual binning parameters, software provenance, and completeness/contamination values because those are row-level scientific contents already represented by upstream derivative/process nodes and should not be duplicated here. This node is the delivered comparison table, so the fields describe the table as an artefact that can be stored, queried, and reused, including its schema summary and whether it passed integrity checks.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_id",
+          "descr": "Unique identifier for the final integrated MAG metadata table; use a stable string such as 'MAGMETA_001' or a workflow-generated table accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_metadata_assembly_id",
+          "descr": "Identifier linking this table back to the metadata_assembly process that generated it; use the same process or run code recorded for the metadata assembly step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "included_algorithm_set",
+          "descr": "Summary of the binning algorithms represented in the table, recorded as the set of methods integrated for comparative analysis; examples include the first, second, and third binning algorithm names.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of records or MAG rows present in the final metadata table at the time of release; integer count used to summarize table size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the final metadata table schema, counted at release time; integer count used to summarize table complexity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_schema_version",
+          "descr": "Version label for the metadata table schema or column layout, used when the table structure is revised across workflow iterations; record as a short string such as 'v1' or a date-based version.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_format",
+          "descr": "File or table format of the delivered integrated metadata table, recorded as the output artefact format; examples include CSV, TSV, Parquet, XLSX, JSON, or database table export.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "json",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_file_path",
+          "descr": "File path, repository location, or object storage URI for the final integrated metadata table used for comparative analysis; record the access location of the delivered artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_integrity_check_passed",
+          "descr": "Whether the final metadata table passed integrity checks such as schema validation, row counts, and key consistency at release time; use as a pass/fail indicator for the delivered table.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

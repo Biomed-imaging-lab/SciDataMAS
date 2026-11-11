@@ -1,0 +1,1009 @@
+{
+  "md_name": "gut_microbiota_antibiotic_treatment_workflow",
+  "md_description": "Workflow for generating and analyzing gut microbiota sequencing data from stool samples collected from patients receiving antibiotics. It includes sample processing through nucleic acid extraction and library preparation, sequencing-based data capture, and downstream computation of microbial diversity and resistance-gene profiles. Patient health, diet, and medication metadata are incorporated for integrated analysis of antibiotic effects on the human gut microbiome.",
+  "fields_per_node": {
+    "patient_stool_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic sample identity/origin fields for the stool specimen itself: what kind of specimen it is, where it came from, when it was collected, and the patient-treatment context needed to interpret provenance. I excluded any processing details (extraction, library prep), capture/instrument settings, raw file properties, and downstream analysis outputs because those belong to other nodes. I also avoided repeating any generic patient identifiers since the root sample entity is the place where specimen identity is established, but no overlapping fields were provided in already_generated for this node.",
+      "md_schema": [
+        {
+          "field_id": "specimen_id",
+          "descr": "Unique identifier for the stool specimen, formatted as a string such as 'STOOL_001'. Record at sample accession/labeling time before any laboratory processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "specimen_type",
+          "descr": "Biological specimen type collected for sequencing; for this node it should identify stool/fecal material. Record at collection time as the physical sample category, not a protocol detail.",
+          "type": "categorical",
+          "allowed_values": [
+            "stool",
+            "fecal_sample"
+          ]
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the stool specimen was collected from the patient, recorded in YYYY-MM-DD format at the time of sample acquisition.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_context",
+          "descr": "Clinical context of collection indicating that the specimen was obtained from a patient undergoing antibiotic treatment. Record as a provenance descriptor at collection time; this is not a medication exposure table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_material_source",
+          "descr": "Anatomical or biological source of the specimen, describing the origin of the material as human gut/stool. Record once for provenance of the sample itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_storage_condition",
+          "descr": "Immediate post-collection storage condition for the stool specimen before extraction, such as chilled, frozen, or stabilizing reagent used. Record at sample handling stage; typical values may include 4_celsius, -20_celsius, or -80_celsius depending on study workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "room_temperature",
+            "4_celsius",
+            "-20_celsius",
+            "-80_celsius",
+            "stabilizing_reagent"
+          ]
+        },
+        {
+          "field_id": "sample_transport_duration_hours",
+          "descr": "Elapsed time in hours from stool collection to receipt in the laboratory or storage location, measured for the sample provenance chain. Typical range is 0-72 hours depending on logistics.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibiotic_treatment_status_at_collection",
+          "descr": "Whether the patient was actively receiving antibiotic treatment at the time the stool specimen was collected. Record at collection time as a binary clinical context flag for sample interpretation, not as a detailed medication record.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "extracted_nucleic_acids": {
+      "reasoning": "This is an Entity node describing the extracted material itself, so I included intrinsic properties of the purified nucleic acids: what biomolecule class it is, how much material was recovered, purity/quality metrics, concentration, and storage condition. I excluded stool sample provenance, extraction protocol reagents/settings, library prep details, sequencing capture settings, and downstream computational outputs because those belong to upstream Process or downstream nodes. I also avoided repeating any fields that would duplicate the parent sample identity or process-specific extraction conditions.",
+      "md_schema": [
+        {
+          "field_id": "nucleic_acid_id",
+          "descr": "Unique identifier for the extracted nucleic-acid aliquot, formatted as a string such as 'NA_001'. Assign after extraction and aliquoting, before library preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Biomolecule class present in the extract, recorded at post-extraction QC; use this to indicate whether the material is DNA, RNA, or mixed DNA_RNA derived from stool.",
+          "type": "categorical",
+          "allowed_values": [
+            "dna",
+            "rna",
+            "mixed_dna_rna"
+          ]
+        },
+        {
+          "field_id": "extraction_yield_ng",
+          "descr": "Total amount of purified nucleic acid recovered from the stool extraction, measured in nanograms after cleanup/QC and before library preparation. Typical range depends on stool input and protocol, often 1-1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_concentration_ng_per_ul",
+          "descr": "Concentration of the purified nucleic-acid preparation, measured in ng/uL after extraction and cleanup and before any dilution for library prep. Typical range is approximately 0.1-500 ng/uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_260_280",
+          "descr": "Spectrophotometric 260/280 absorbance ratio for the extract, measured during QC after purification to assess protein contamination. Typical acceptable range for high-quality DNA is about 1.7-2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_260_230",
+          "descr": "Spectrophotometric 260/230 absorbance ratio for the extract, measured during QC after purification to assess salt/organic carryover. Typical acceptable range is about 1.8-2.2 for clean material.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_size_bp",
+          "descr": "Approximate dominant fragment size of the purified nucleic acids, measured in base pairs by electrophoresis or equivalent QC after extraction. Typical stool-extract DNA can span from <200 bp to >20,000 bp depending on integrity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Storage condition for the extracted nucleic acids after purification and before library preparation, such as frozen or buffered. Record the condition actually used for aliquot preservation.",
+          "type": "categorical",
+          "allowed_values": [
+            "room_temperature",
+            "4_celsius",
+            "-20_celsius",
+            "-80_celsius",
+            "buffered_storage"
+          ]
+        }
+      ]
+    },
+    "sequencing_library": {
+      "reasoning": "This is an Entity node for the prepared sequencing library, so I included library-intrinsic attributes that describe the constructed molecule pool: library identifier, library type, insert size, adapter/index composition, and pre-sequencing QC metrics. I excluded extraction conditions, instrument capture settings, raw read file properties, and downstream analysis outputs because those belong to the upstream extraction Process, downstream Capture/Signal nodes, or later Derivative nodes. I also avoided repeating any already_generated specimen or nucleic-acid fields by focusing only on the final library product.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the sequencing library, formatted as a string such as 'LIB_001'. Assign after adapter ligation/indexing and before loading onto the sequencing instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library construction category recorded for the final sequencing-ready preparation, such as shotgun metagenomic library. Record at library release/QC as the assay-specific library class.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun_metagenomic",
+            "amplicon",
+            "rna_seq",
+            "targeted_panel"
+          ]
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate mean insert size of the prepared library in base pairs, measured after library QC and before sequencing loading. Typical range for metagenomic libraries is about 150-800 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_index_set",
+          "descr": "Adapter and barcode/index configuration used in the final sequencing-ready library, recorded after indexing and prior to sequencing. Use a study-specific code or name such as dual_index_set_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the prepared library measured after cleanup and QC, in ng/uL, immediately before normalization or instrument loading. Typical range is approximately 0.1-100 ng/uL depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_yield_ng",
+          "descr": "Total mass of sequencing-ready library recovered after construction and cleanup, measured in nanograms before pooling/loading. Typical range is protocol-dependent and often 1-1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_pass",
+          "descr": "Whether the prepared library met the study's acceptance criteria for sequencing loading, evaluated at final QC before capture. Use true only if size, concentration, and purity thresholds were satisfied.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "stool_nucleic_acid_extraction": {
+      "reasoning": "I corrected the extraction Process schema to avoid the cross-step field-name collision flagged for extraction_yield_ng. Since that yield concept was already generated on another DAG step, I removed it here and kept only process-specific parameters and acceptance indicators for the stool nucleic-acid extraction operation. I preserved the extraction method, kit, input amount, lysis settings, elution volume, and operator notes because those describe how the process was carried out, not the downstream product.",
+      "md_schema": [
+        {
+          "field_id": "extraction_method",
+          "descr": "Extraction protocol or method used to isolate microbial nucleic acids from stool, recorded at the process step when purification was performed. Examples include bead-beating plus silica-column cleanup or magnetic-bead extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating_silica_column",
+            "magnetic_bead_extraction",
+            "phenol_chloroform",
+            "kit_based_other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit or in-house extraction chemistry name used for stool-nucleic-acid purification, recorded during the extraction process. Example: 'Qiagen PowerSoil Pro' or a study-specific protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_stool_mass_mg",
+          "descr": "Mass of stool input processed for extraction, measured in milligrams at the start of the extraction step. Typical range is about 10-500 mg depending on protocol and available material.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bead_beating_duration_minutes",
+          "descr": "Duration of mechanical disruption used during extraction, measured in minutes as part of the process settings. Typical range is 0-30 minutes depending on stool lysis requirements.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_temperature_celsius",
+          "descr": "Temperature used during chemical or enzymatic lysis in the extraction workflow, measured in degrees Celsius at the process step. Typical range is 4-70 C depending on reagent chemistry.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_ul",
+          "descr": "Final elution volume used to recover purified nucleic acids from the extraction matrix, measured in microliters at process completion. Typical range is about 20-200 uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_purity_pass",
+          "descr": "Whether the extraction met the study's predefined purity or recovery acceptance criteria at process completion, before the nucleic-acid entity is advanced to library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "operator_notes",
+          "descr": "Free-text note capturing deviations, contamination concerns, or unusual observations made during the extraction process. Record only process-relevant issues documented at the time of extraction.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "This is a Process node, so I included only protocol-level details of converting extracted nucleic acids into a sequencing-ready library: preparation method, kit/workflow, input amount, adapter/indexing strategy, amplification/cycle settings, cleanup/selection settings, and final process quality indicators. I excluded properties of the input nucleic acids and the output library entity when those are intrinsic to the Entity nodes, except for process QC flags that summarize whether the preparation succeeded. I also avoided repeating the previously generated field extraction_yield_ng by not using any extraction-output naming here, and I did not include capture, signal, or downstream analysis fields.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_method",
+          "descr": "Library preparation protocol used to convert extracted nucleic acids into a sequencing-ready library, recorded during the process step. Examples include ligation-based shotgun preparation or PCR-based amplicon preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "ligation_based_shotgun",
+            "pcr_based_amplicon",
+            "tagmentation_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Commercial kit or in-house workflow name used for library construction, recorded at the time of library preparation. Example: 'NEBNext Ultra II DNA Library Prep Kit' or a study-specific protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_nucleic_acid_amount_ng",
+          "descr": "Mass of extracted nucleic acid used as input to library preparation, measured in nanograms at the start of the process. Typical range is about 0.1-1000 ng depending on assay and extraction yield.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used during library preparation, recorded as a process setting when amplification is part of the workflow. Typical range is 0-20 cycles depending on input amount.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_index_strategy",
+          "descr": "Adapter and indexing strategy used during library construction, such as single index, dual index, or unique molecular identifier integration. Record at the preparation step before sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "umi",
+            "no_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "size_selection_bp_range",
+          "descr": "Target fragment size range selected during library cleanup or bead-based selection, recorded in base pairs at process completion. Typical range for metagenomic libraries is about 200-800 bp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_qc_pass",
+          "descr": "Whether the prepared library met predefined QC criteria for concentration, size distribution, and adapter incorporation at the end of the preparation process.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplification_notes",
+          "descr": "Free-text process note describing amplification bias, low-input adjustments, failed cleanup, or other library-preparation deviations observed during the workflow.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "shotgun_sequencing_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement session and instrument configuration for the sequencing run: platform/model/serial, run parameters, read architecture, chemistry, flow cell, and quality-control settings that were actively configured or observed during capture. I excluded sample/library properties because those belong to upstream Entity nodes, and I excluded file-level properties because those belong to the downstream Signal node for raw reads. I also avoided repeating any already_generated process or entity fields, and I used the agent to capture the instrument description as required by the schema rules.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the capture session, recorded for the active hardware configuration. Example: Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Sequencing instrument model used for the run, recorded at the capture session start. Example: NovaSeq 6000, MiSeq, or NextSeq 2000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Instrument serial number for the sequencing platform used in this capture session, recorded from the hardware asset at run start. Use a string such as 'SN1234567'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_id",
+          "descr": "Unique identifier for the sequencing run/session, formatted as a string such as 'RUN_001'. Assign at the start of the capture session and use to link raw read files to this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry configured for the run, recorded at instrument setup. Examples include SBS v3 or a platform-specific chemistry name.",
+          "type": "categorical",
+          "allowed_values": [
+            "sbs_v2",
+            "sbs_v3",
+            "nanopore_kit",
+            "pacbio_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read, measured as an instrument setting at run setup. Typical values for shotgun metagenomics are 75-300 bp depending on platform and run design.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_type",
+          "descr": "Read structure configured for the sequencing session, recorded at run setup. Use this to specify whether the data were generated as single-end or paired-end reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell or equivalent consumable type loaded for the capture session, recorded at instrument setup. Example: NovaSeq SP flow cell or platform-specific equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_cluster_density_k_per_mm2",
+          "descr": "Target cluster density for the sequencing run, measured in thousands of clusters per square millimeter at loading/setup. Typical range depends on instrument and chemistry.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_qc_pass",
+          "descr": "Whether the sequencing capture session met run-level QC criteria at completion, based on instrument output metrics such as yield, quality, and error rate.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_sequence_reads": {
+      "reasoning": "This is a Signal node, so I included only properties of the raw data artefact itself: file identity, format, storage location, size, read counts, base/quality summaries, and technical QC flags. I excluded sequencing instrument settings because those belong to the upstream Capture node, and I excluded any biological interpretation or downstream computed features because those belong to Derivative nodes. I also avoided duplicating already-generated sample, nucleic acid, library, process, and capture fields, focusing on FASTQ-specific technical descriptors needed to locate and reuse the raw data.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_id",
+          "descr": "Unique identifier for the raw read file set, formatted as a string such as 'FASTQ_001'. Assign when the FASTQ data are written or archived.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "File format of the raw sequencing data artifact, recorded for the signal object itself. For this node it should identify the FASTQ-derived raw read format used by the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bcl",
+            "bam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_path",
+          "descr": "Storage path, URI, or archive location for the raw sequence read file set, recorded at data deposition or export. Example: '/data/run1/sampleA_R1.fastq.gz'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file set in bytes, measured for the archived signal artifact after sequencing data generation. Typical range is highly dependent on run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of reads contained in the raw FASTQ signal artifact, measured after base calling and file generation. Typical shotgun metagenomic datasets may contain millions to billions of reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_bases_bp",
+          "descr": "Total number of sequenced bases represented by the raw read files, measured in base pairs across all reads in the signal artifact. Typical values depend on run depth and read length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Mean base quality score across the raw read set, computed from the FASTQ quality strings as a technical quality metric for the signal artifact. Typical values for acceptable runs are often in the high 20s to 30s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "percent_q30_bases",
+          "descr": "Percentage of bases in the raw read files with Phred quality score of at least 30, computed as a technical quality summary for the signal artifact. Typical acceptable sequencing runs often exceed 70 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_qc_flag",
+          "descr": "Technical quality flag for the raw signal artifact indicating whether the FASTQ files passed basic integrity and quality checks after sequencing. Use true when file structure and run-level read quality were acceptable.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microbial_feature_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the microbial abundance matrix: table identity, generation method, filtering/normalization choices, matrix dimensions, sparsity, and summary QC metrics that describe the output itself. I excluded raw read file properties and sequencing capture settings because those belong to upstream Signal and Capture nodes, and I excluded clinical covariates and downstream statistical interpretation because those belong to separate external metadata and later analysis derivatives. I also avoided any field names overlapping with already_generated outputs by staying specific to the computed feature table and not reusing extraction, library, or read-level terminology.",
+      "md_schema": [
+        {
+          "field_id": "feature_table_id",
+          "descr": "Unique identifier for the microbial feature table, formatted as a string such as 'FT_001'. Assign when the table is produced from cleaned reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_method",
+          "descr": "Computational method used to generate the abundance matrix from processed reads, recorded at the derivative step. Examples include taxonomic profiling, OTU clustering, or ASV inference.",
+          "type": "categorical",
+          "allowed_values": [
+            "otu_clustering",
+            "asv_inference",
+            "taxonomic_profiling",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference taxonomy or marker-gene database used to assign features in the table, recorded during table generation. Example: SILVA, Greengenes, or a study-specific reference set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization or scaling method applied to the abundance matrix after feature generation, recorded as part of the derivative computation. Examples include rarefaction, relative abundance, or centered-log-ratio transformation.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "rarefaction",
+            "relative_abundance",
+            "clr",
+            "tss",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_count",
+          "descr": "Number of microbial features retained in the final abundance matrix, measured as the number of rows or columns representing taxa/ASVs/OTUs after filtering. Typical range depends on sequencing depth and taxonomic resolution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of samples represented in the microbial feature table, measured as the number of sample columns or rows in the final matrix. This should reflect the post-QC table size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_missing_fraction",
+          "descr": "Fraction of matrix cells that are missing or zero after table construction, recorded as a sparse-data summary for the derivative output. Typical values are workflow-dependent and often high in microbiome tables.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_qc_pass",
+          "descr": "Whether the computed feature table met the analysis pipeline's quality criteria, based on mapping rate, sparsity, and completeness checks at the end of derivation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "resistance_gene_profile": {
+      "reasoning": "This is a Derivative node, so I included only computed-result descriptors for the resistance-gene profile itself: profile identity, inference method, reference database, quantification mode, number of genes detected, matrix dimensions, and output QC. I excluded raw read and sequencing-run details because those belong upstream to Signal and Capture nodes, and I excluded patient medication context because that is external metadata used in the later integrated analysis. I also avoided overlapping with already_generated fields from the microbial feature table by using resistance-gene-specific terminology and output properties only.",
+      "md_schema": [
+        {
+          "field_id": "resistance_profile_id",
+          "descr": "Unique identifier for the resistance-gene profile, formatted as a string such as 'ARG_001'. Assign when the profile is computed from sequencing data.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "resistance_profile_method",
+          "descr": "Computational method used to infer antibiotic resistance genes from sequencing data, recorded at the derivative step. Examples include read mapping, assembly-based annotation, or k-mer classification.",
+          "type": "categorical",
+          "allowed_values": [
+            "read_mapping",
+            "assembly_annotation",
+            "kmer_classification",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reference_arg_database_name",
+          "descr": "Reference antibiotic resistance gene database used for annotation or classification, recorded during profile generation. Example: CARD, ResFinder, or a study-specific database.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_mode",
+          "descr": "Quantification mode for the resistance-gene output, indicating whether the result is abundance-based or presence-absence based. Record at profile generation time as the analysis representation.",
+          "type": "categorical",
+          "allowed_values": [
+            "abundance",
+            "presence_absence",
+            "both"
+          ]
+        },
+        {
+          "field_id": "detected_arg_count",
+          "descr": "Number of distinct antibiotic resistance genes detected in the final profile, measured after computational processing and filtering. Typical range depends on sample complexity and database coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_matrix_shape",
+          "descr": "Dimensions of the final resistance-gene matrix expressed as a string such as 'samples_x_genes' or a study-defined shape label. Record when the derivative output is finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "arg_abundance_normalization_method",
+          "descr": "Normalization or scaling method applied to resistance-gene abundances, recorded for the derived profile. Examples include TPM-like scaling, relative abundance, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "relative_abundance",
+            "tpm_like",
+            "clr",
+            "other"
+          ]
+        },
+        {
+          "field_id": "resistance_profile_qc_pass",
+          "descr": "Whether the resistance-gene profile met pipeline QC criteria, based on mapping confidence, coverage, and filtering thresholds at the end of derivation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "patient_health_status": {
+      "reasoning": "This node is an externally recorded Derivative used as analysis covariate, so I included only the patient health-status variables themselves: visit/status timing, clinical state category, severity/score, and a free-text diagnosis summary. I excluded sample, extraction, sequencing, and computational output fields because those belong to other nodes. I also avoided duplicating any already_generated fields and kept the schema focused on externally captured clinical context rather than laboratory processing or downstream inference.",
+      "md_schema": [
+        {
+          "field_id": "patient_health_status_id",
+          "descr": "Unique identifier for the patient health-status record, formatted as a string such as 'PHS_001'. Assign when the clinical covariate record is entered or linked to the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "health_status_timepoint",
+          "descr": "Clinical timepoint of the health-status assessment relative to antibiotic treatment and stool collection, recorded as a study-specific label such as baseline, during_treatment, or follow_up.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline",
+            "during_treatment",
+            "follow_up",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "health_status_category",
+          "descr": "Overall externally recorded patient health state used as an analysis covariate, captured at the time of clinical annotation. Use study-defined categories that summarize whether the patient was stable, symptomatic, or recovering.",
+          "type": "categorical",
+          "allowed_values": [
+            "healthy",
+            "mildly_ill",
+            "moderately_ill",
+            "severely_ill",
+            "recovering",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "clinical_severity_score",
+          "descr": "Numeric severity score or ordinal clinical index summarizing the patient's health status at the assessment timepoint. Record the study-specific score used, typically on a bounded scale such as 0-10, 0-100, or an established clinical index.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "health_status_description",
+          "descr": "Free-text or coded summary of the externally recorded health status information, including relevant diagnosis or symptom notes used for covariate adjustment. Record at the clinical metadata entry stage, not from laboratory processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "health_status_qc_flag",
+          "descr": "Whether the health-status record passed study-level completeness and plausibility checks before being used as a covariate in downstream analysis.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "patient_diet_metadata": {
+      "reasoning": "This node is an externally recorded Derivative used as an analysis covariate, so I included only diet-specific clinical metadata: assessment timepoint, diet pattern/category, key dietary features, and a summary field for the recorded diet record. I excluded laboratory processing, sequencing, and downstream analysis outputs because they are outside the semantic territory of this external metadata node. I also avoided repeating already_generated fields and kept the fields focused on dietary context rather than general patient identity or treatment details.",
+      "md_schema": [
+        {
+          "field_id": "patient_diet_metadata_id",
+          "descr": "Unique identifier for the patient diet record, formatted as a string such as 'DIET_001'. Assign when the dietary metadata are entered or linked to the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diet_assessment_timepoint",
+          "descr": "Timepoint of the diet assessment relative to stool collection and antibiotic exposure, recorded as a study label such as baseline, during_treatment, or follow_up.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline",
+            "during_treatment",
+            "follow_up",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "diet_pattern",
+          "descr": "Overall dietary pattern recorded for the patient at the assessment timepoint, used as a covariate in downstream analysis. Examples include omnivore, vegetarian, vegan, low_fiber, or high_fiber.",
+          "type": "categorical",
+          "allowed_values": [
+            "omnivore",
+            "vegetarian",
+            "vegan",
+            "low_fiber",
+            "high_fiber",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "fiber_intake_level",
+          "descr": "Reported dietary fiber intake level at the assessment timepoint, captured as a study-defined category or survey-derived level. Use this to summarize the intake relevant to gut microbiome analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "moderate",
+            "high",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "dietary_restrictions",
+          "descr": "Free-text or coded description of major dietary restrictions or unusual eating patterns recorded for the patient, such as fasting, elimination diet, or food allergies. Record only the externally captured diet information used for covariate adjustment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diet_record_qc_flag",
+          "descr": "Whether the diet record was complete and usable for analysis, based on study-level plausibility and completeness checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "patient_medication_metadata": {
+      "reasoning": "This node is an externally recorded Derivative used as an analysis covariate, so I included only medication-use metadata that describe the patient medication record itself: assessment timepoint, antibiotic exposure status, medication class, active agents, and summary duration/dose fields. I excluded laboratory protocol details, sequencing settings, and downstream statistical outputs because they belong to other nodes. I also avoided repeating already_generated fields and focused on medication context relevant to antibiotic-treated gut microbiome analysis.",
+      "md_schema": [
+        {
+          "field_id": "patient_medication_metadata_id",
+          "descr": "Unique identifier for the patient medication record, formatted as a string such as 'MED_001'. Assign when the medication metadata are entered or linked to the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "medication_assessment_timepoint",
+          "descr": "Timepoint of the medication assessment relative to stool collection and antibiotic exposure, recorded as a study label such as baseline, during_treatment, or follow_up.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline",
+            "during_treatment",
+            "follow_up",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "antibiotic_exposure_status",
+          "descr": "Whether the patient was exposed to antibiotics at the medication assessment timepoint, recorded as a covariate for microbiome analysis. Use this as the external medication-use flag tied to the sample interval.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "current",
+            "recent",
+            "past",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "medication_class",
+          "descr": "Medication class or therapeutic category recorded in the medication metadata, emphasizing antibiotic and co-medication use relevant to microbiome shifts. Examples include beta_lactam, macrolide, fluoroquinolone, probiotic, or other.",
+          "type": "categorical",
+          "allowed_values": [
+            "beta_lactam",
+            "macrolide",
+            "fluoroquinolone",
+            "tetracycline",
+            "aminoglycoside",
+            "metronidazole",
+            "probiotic",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "active_medication_names",
+          "descr": "Free-text or coded list of medication names recorded at the assessment timepoint, including antibiotics and other concurrent drugs used as covariates. Record the externally reported medication names rather than inferred compounds.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibiotic_course_duration_days",
+          "descr": "Duration of the antibiotic course in days, as externally recorded in the medication history. Typical range is 1-60 days depending on treatment plan.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "medication_record_qc_flag",
+          "descr": "Whether the medication record was complete and usable for analysis, based on study-level completeness and plausibility checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microbiome_diversity_analysis": {
+      "reasoning": "This is a Process node, so I included only how the diversity analysis was performed: analysis method, key diversity metrics, rarefaction/normalization settings, subgrouping or filtering parameters, software agent details, and a process-level QC indicator. I excluded the input feature table's properties and the resulting diversity values themselves, because those belong to the upstream Derivative and downstream Derivative nodes, respectively. I also avoided duplicating already_generated identifiers or capture-level instrument fields, keeping the schema focused on the computational workflow used to generate diversity outputs.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Software or pipeline name used to compute microbiome diversity from the feature table, recorded for the process node. Example: QIIME2, mothur, or a study-specific pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the diversity-analysis software or pipeline, recorded at the time the process was run. Example: '2024.2' or 'v1.8.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository, package source, or code location for the diversity-analysis workflow, recorded to support reproducibility. Example: GitHub URL, Conda package name, or internal repository path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_metrics_computed",
+          "descr": "Set of diversity metrics requested or calculated in this analysis step, recorded as the process configuration. Examples include Shannon, Simpson, observed features, and Bray-Curtis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "rarefaction_depth",
+          "descr": "Rarefaction depth applied before diversity computation, measured as the number of sequences or features retained per sample. Typical values depend on sequencing depth and study design.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "grouping_variable",
+          "descr": "Sample grouping variable used for diversity comparisons in the analysis step, such as treatment group, timepoint, or disease status. Record the covariate or factor configured for the computation, not the results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_parameter_summary",
+          "descr": "Concise text summary of major analysis parameters applied during diversity computation, such as filtering thresholds, normalization choices, and permutation settings. Record process-specific settings only.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_qc_pass",
+          "descr": "Whether the diversity-analysis process completed successfully and met workflow-defined QC criteria before results were emitted.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "integrated_antibiotic_effects_analysis": {
+      "reasoning": "This is a Process node, so I included only the integrated statistical-analysis configuration: software agent details, model type, covariates included, outputs requested, correction settings, and process QC. I excluded the upstream input objects themselves (diversity results, resistance profile, and patient covariate nodes) because those are represented elsewhere in the DAG, and I excluded final combined findings because those belong to the downstream integrated result Derivative. I also avoided repeating already_generated software/process fields by using integration-specific terms rather than generic analysis fields.",
+      "md_schema": [
+        {
+          "field_id": "integration_analysis_software_name",
+          "descr": "Software or statistical package used for the integrated antibiotic-effects analysis, recorded for the process step. Example: R, Python statsmodels, DESeq2-based workflow, or a study-specific pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_analysis_software_version",
+          "descr": "Version of the statistical software or pipeline used for the integrated analysis, recorded at run time. Example: '4.3.1' for R or 'v0.14.0' for a Python package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_analysis_repository",
+          "descr": "Repository, package source, or code location for the integrated-analysis workflow, recorded to support reproducibility. Example: GitHub URL or internal repository path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_model_type",
+          "descr": "Primary statistical model used to combine microbiome, resistance, and patient metadata in the integrated analysis, recorded at analysis configuration time. Examples include linear model, mixed-effects model, logistic regression, or multivariate association model.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "mixed_effects_model",
+            "logistic_regression",
+            "cox_model",
+            "multivariate_association",
+            "other"
+          ]
+        },
+        {
+          "field_id": "included_covariates",
+          "descr": "List or summary of patient and study covariates included in the integrated model, recorded as a process configuration. Examples include health status, diet, medication use, age, and sex.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction",
+          "descr": "Multiple-testing correction method applied in the integrated analysis, recorded during statistical processing. Examples include Benjamini-Hochberg FDR, Bonferroni, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "benjamini_hochberg",
+            "bonferroni",
+            "holm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "effect_size_metric",
+          "descr": "Effect-size metric requested or reported by the integrated analysis workflow, recorded as a process setting. Examples include beta coefficient, odds ratio, hazard ratio, or standardized effect size.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_analysis_qc_pass",
+          "descr": "Whether the integrated analysis completed successfully and met workflow-defined QC criteria before final results were emitted.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "diversity_results": {
+      "reasoning": "This is a Derivative node, so I included only the computed diversity-result objects themselves: result identifier, metric names, summary statistics, statistical test outputs, and confidence/FDR indicators. I excluded the upstream analysis configuration from the microbiome_diversity_analysis process and the raw feature-table properties because those belong to other nodes. I also avoided overlapping with earlier-generated process/software fields by focusing on the final numerical and statistical outputs that a downstream user would consume.",
+      "md_schema": [
+        {
+          "field_id": "diversity_results_id",
+          "descr": "Unique identifier for the diversity-results object, formatted as a string such as 'DIV_001'. Assign when the analysis output is finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_metric_name",
+          "descr": "Name of the diversity metric summarized in this result object, recorded for the derivative output. Examples include Shannon, Simpson, observed_features, or Faith_PD.",
+          "type": "categorical",
+          "allowed_values": [
+            "shannon",
+            "simpson",
+            "observed_features",
+            "faith_pd",
+            "bray_curtis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_group_name",
+          "descr": "Name of the sample group or comparison arm summarized by this result, such as antibiotic-treated, control, baseline, or follow-up. Record the group label associated with the reported diversity summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_statistic",
+          "descr": "Numeric value of the diversity summary or test statistic produced by the analysis, recorded for the derivative result. Typical scale depends on the metric and may be unitless or bounded by the metric definition.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_statistic_name",
+          "descr": "Name of the statistical quantity stored in the diversity result, such as mean, median, fold_change, p_value, or test_statistic. Record the output type associated with the numerical field.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "fold_change",
+            "p_value",
+            "test_statistic",
+            "effect_size",
+            "other"
+          ]
+        },
+        {
+          "field_id": "confidence_interval_lower",
+          "descr": "Lower bound of the confidence interval associated with the diversity estimate or effect size, recorded for the derivative output when applicable. Use the same units as the associated statistic.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_upper",
+          "descr": "Upper bound of the confidence interval associated with the diversity estimate or effect size, recorded for the derivative output when applicable. Use the same units as the associated statistic.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fdr_adjusted_p_value",
+          "descr": "False-discovery-rate adjusted p-value for the diversity comparison, recorded when statistical testing was performed. Typical range is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_result_qc_pass",
+          "descr": "Whether the diversity result passed output validation checks, such as non-missing values and valid statistical summaries, at the end of derivation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "integrated_study_results": {
+      "reasoning": "This is the final Derivative node, so I included only the integrated study-result outputs: result identity, comparison summary, combined effect estimates, association direction, significance metrics, and a final QC flag. I excluded upstream process configuration, source metadata objects, and intermediate derivative details because they belong to earlier nodes in the DAG. I also avoided duplicating any already_generated fields by using integrated-result terminology rather than generic diversity or resistance-output names, while keeping the schema focused on the final combined analysis artifact that downstream users will consume.",
+      "md_schema": [
+        {
+          "field_id": "integrated_results_id",
+          "descr": "Unique identifier for the final integrated study-results object, formatted as a string such as 'INT_001'. Assign when the combined analysis is finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_comparison_label",
+          "descr": "Label for the primary comparison or contrast summarized in the final integrated result, such as antibiotic vs baseline, treatment vs control, or pre vs post exposure. Record the comparison being reported at the final result stage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "combined_effect_metric",
+          "descr": "Numerical effect estimate summarizing the integrated association between antibiotic treatment, microbiome diversity, resistance-gene emergence, and patient metadata. Use the same units or scale defined by the analysis model, often a coefficient, odds ratio, or standardized effect size.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "combined_effect_direction",
+          "descr": "Direction of the integrated effect reported by the final analysis, indicating whether the association is increased, decreased, or not directional. Record the interpretation corresponding to the combined effect metric.",
+          "type": "categorical",
+          "allowed_values": [
+            "increased",
+            "decreased",
+            "neutral",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "combined_significance_p_value",
+          "descr": "P-value for the final integrated analysis contrast, recorded as the unadjusted significance value for the combined result. Typical range is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "combined_fdr_adjusted_p_value",
+          "descr": "False-discovery-rate adjusted p-value for the final integrated analysis, recorded when multiple testing correction was applied. Typical range is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "combined_association_summary",
+          "descr": "Concise textual summary of the final integrated finding linking antibiotic exposure, patient metadata, microbial diversity, and resistance-gene outcomes. Record the synthesized interpretation produced by the analysis workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_results_qc_pass",
+          "descr": "Whether the final integrated study result passed validation checks for completeness, consistency, and statistical output integrity at derivation completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1650 @@
+{
+  "md_name": "eeg_visual_erp_workflow",
+  "md_description": "Workflow for human EEG recordings during visual stimulation, capturing raw scalp electrical activity and subject responses, then preprocessing and deriving ERP measures for analysis of visual perception and cognitive processing. The pipeline includes participant preparation, synchronized stimulus presentation, signal preprocessing, response parsing, and joint analysis of neural and behavioral data.",
+  "fields_per_node": {
+    "human_subject_participant": {
+      "reasoning": "This node is an Entity, so I included only intrinsic participant metadata: identity/eligibility attributes that describe who the subject is before any preparation, stimulation, recording, or analysis. I excluded procedural fields such as cap setup, stimulus timing, EEG settings, response capture, preprocessing, epochs, or ERP outputs because those belong to downstream Process/Capture/Signal/Derivative nodes. Since no fields have been generated yet, there were no prior overlaps to avoid, but I still avoided repeating identifiers that should remain root-entity only by focusing on participant-level descriptors rather than downstream sample or session identifiers.",
+      "md_schema": [
+        {
+          "field_id": "participant_id",
+          "descr": "Unique human participant identifier for this recruited subject, recorded at enrollment for internal linking across the EEG workflow; use a stable code such as 'P001' or 'sub-014'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "participant_age_years",
+          "descr": "Age of the participant in years at the time of enrollment or first session; integer years, typically adult human-subject range in this workflow (e.g., 18-65).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "participant_sex",
+          "descr": "Recorded biological sex or sex as documented for the participant at enrollment; captured once as a subject attribute and not as an experimental manipulation.",
+          "type": "categorical",
+          "allowed_values": [
+            "female",
+            "male",
+            "intersex",
+            "unknown",
+            "prefer_not_to_say"
+          ]
+        },
+        {
+          "field_id": "participant_handness",
+          "descr": "Self-reported handedness of the participant, collected at screening because it can be relevant for cognitive/neural interpretation; use standardized categories.",
+          "type": "categorical",
+          "allowed_values": [
+            "left",
+            "right",
+            "ambidextrous",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "participant_vision_status",
+          "descr": "Visual status of the participant relevant to visual ERP eligibility, recorded at screening; indicates whether normal or corrected-to-normal vision was available during the task.",
+          "type": "categorical",
+          "allowed_values": [
+            "normal",
+            "corrected_to_normal",
+            "impaired",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "participant_exclusion_criteria_met",
+          "descr": "Whether the participant met any pre-defined exclusion criteria at screening before EEG preparation, such as inability to comply, neurological contraindications, or poor vision correction; record as a boolean eligibility flag.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "participant_informed_consent_obtained",
+          "descr": "Whether informed consent was obtained from the participant before any experimental preparation or recording steps; boolean ethics/participation status.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "participant_group_label",
+          "descr": "Study-specific cohort or grouping label assigned at enrollment, if applicable, such as control, patient, or experimental subgroup; used only if the workflow stratifies participants.",
+          "type": "categorical",
+          "allowed_values": [
+            "control",
+            "patient",
+            "experimental",
+            "other",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "eeg_cap_preparation": {
+      "reasoning": "This node is a Process, so I included only fields that describe how EEG cap/electrode preparation was performed and with what operational details. I excluded participant intrinsic attributes because those belong to the Entity node, and I excluded downstream recording quality, file, or signal properties because those belong to Capture/Signal nodes. I also avoided repeating already-generated participant identity and screening fields from the root entity. The fields focus on protocol-specific preparation parameters, materials, and immediate preparation outcome needed to reproduce the setup.",
+      "md_schema": [
+        {
+          "field_id": "cap_system_type",
+          "descr": "Type of EEG cap or electrode montage used during participant preparation, recorded at the time electrodes are positioned; examples include gel-based cap, saline cap, or individual electrode montage.",
+          "type": "categorical",
+          "allowed_values": [
+            "gel_based_cap",
+            "saline_cap",
+            "individual_electrodes",
+            "other"
+          ]
+        },
+        {
+          "field_id": "number_of_eeg_channels",
+          "descr": "Total number of EEG electrodes positioned during cap preparation, measured immediately after setup and before recording; typical values in this workflow are commonly 32, 64, or 128 channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "electrode_layout_standard",
+          "descr": "Naming standard or montage specification used to place electrodes during preparation, such as 10_20 or 10_10; recorded at setup to define cap geometry.",
+          "type": "categorical",
+          "allowed_values": [
+            "10_20",
+            "10_10",
+            "custom",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "skin_preparation_method",
+          "descr": "Method used to prepare scalp skin before electrode placement, recorded during setup; includes abrasion, cleaning, or no additional preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "abrasion",
+            "alcohol_cleaning",
+            "abrasion_and_cleaning",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "conductive_medium_type",
+          "descr": "Conductive material applied to ensure stable electrode contact during cap preparation, such as gel or saline; recorded while placing electrodes.",
+          "type": "categorical",
+          "allowed_values": [
+            "gel",
+            "saline",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "electrode_contact_quality",
+          "descr": "Immediate qualitative assessment of electrode contact/stability after cap preparation and before recording, used as a setup quality indicator rather than a signal quality metric.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "preparation_duration_minutes",
+          "descr": "Elapsed time in minutes required to complete EEG cap and electrode preparation for the participant, measured from start of skin preparation to readiness for recording; typical range is roughly 5-60 minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "impedance_threshold_kohm",
+          "descr": "Target maximum electrode impedance in kilo-ohms used during preparation before starting EEG recording; measured with the EEG system after placement and prior to data acquisition, typically within 5-20 kOhm.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "prepared_participant": {
+      "reasoning": "This node is an Entity representing the participant after preparation, so I included only the intrinsic readiness/status properties created by the preparation step. I excluded cap setup protocol details because those belong to the upstream Process node, and I excluded stimulus, capture, and signal properties because those belong to downstream nodes. I also avoided repeating root participant identity fields from the original entity. The selected fields capture the prepared state needed to indicate the subject is ready for synchronized stimulation and recording.",
+      "md_schema": [
+        {
+          "field_id": "prepared_participant_id",
+          "descr": "Stable identifier for the prepared participant object after EEG cap/electrode setup; this should link back to the root participant record while representing the post-preparation entity instance, for example 'P001_prepared'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ready_for_recording",
+          "descr": "Boolean indicator recorded immediately after EEG cap preparation and before any stimulus presentation, showing whether the participant is ready for synchronized EEG and behavioral recording.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cap_fit_status",
+          "descr": "Assessment of how well the EEG cap fits the participant after placement, recorded at the end of preparation; used to document whether fit was secure enough for stable recording.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "electrode_attachment_status",
+          "descr": "Overall status of electrode attachment/contact on the prepared participant at the end of setup, describing whether electrodes remained stably positioned for the upcoming recording session.",
+          "type": "categorical",
+          "allowed_values": [
+            "stable",
+            "partially_stable",
+            "unstable",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "pre_recording_participant_state",
+          "descr": "Brief state description of the participant immediately after preparation and before stimulation begins, capturing whether they are seated, instructed, and ready for the task.",
+          "type": "categorical",
+          "allowed_values": [
+            "seated_ready",
+            "awaiting_instruction",
+            "repositioned",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "visual_stimulus_protocol": {
+      "reasoning": "This node is a Derivative representing the computed/structured stimulus schedule, so I included fields that describe the protocol definition itself: condition structure, ordering, timing parameters, and stimulus set characteristics. I excluded presentation hardware/configuration because that belongs to the Capture node, and I excluded raw timing traces because those belong to the Signal node. I also avoided participant or preparation metadata from upstream Entity/Process nodes. Since this is the stimulus design artifact, the fields focus on what the schedule contains and how it is parameterized for downstream presentation and analysis.",
+      "md_schema": [
+        {
+          "field_id": "protocol_id",
+          "descr": "Unique identifier for the visual stimulus protocol document or schedule used in this experiment, for example 'VSP_001'; this identifies the derived stimulus plan rather than an individual trial.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_modality",
+          "descr": "Primary sensory modality of the protocol stimuli defined in the schedule; recorded for this visual ERP workflow when the protocol contains images or patterns presented visually.",
+          "type": "categorical",
+          "allowed_values": [
+            "image",
+            "pattern",
+            "grating",
+            "face",
+            "scene",
+            "symbol",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "number_of_conditions",
+          "descr": "Total number of stimulus conditions defined in the protocol, counted from the final structured schedule before presentation; typical values are experiment-specific and often range from 2 to 20.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_trials_per_condition",
+          "descr": "Planned number of trials assigned to each condition in the protocol, recorded from the derived schedule; if unequal across conditions, use the nominal or per-condition mapping documented elsewhere.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_ordering_scheme",
+          "descr": "Rule used to arrange trials in the protocol, describing whether conditions are presented in fixed, randomized, or counterbalanced order within the schedule.",
+          "type": "categorical",
+          "allowed_values": [
+            "fixed",
+            "randomized",
+            "counterbalanced",
+            "blocked",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "trial_duration_seconds",
+          "descr": "Planned duration in seconds of each stimulus trial as encoded in the protocol, measured from trial onset to trial end in the schedule; typical visual ERP values are often around 0.1-2.0 s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "inter_trial_interval_seconds",
+          "descr": "Planned inter-trial interval in seconds encoded in the protocol, measured between the end of one trial and the onset of the next; this is part of the derived schedule, not the actual observed timing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_onset_mode",
+          "descr": "How stimulus onset is defined in the protocol schedule, such as instantaneous onset or ramped onset/offset, used to parameterize event timing for downstream presentation and ERP alignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "instantaneous",
+            "ramped",
+            "masked",
+            "other"
+          ]
+        },
+        {
+          "field_id": "stimulus_condition_labels",
+          "descr": "Set of condition labels defined in the protocol for analysis, such as 'face', 'house', 'scrambled', or task-specific codes; store as the protocol's categorical condition taxonomy.",
+          "type": "categorical",
+          "allowed_values": [
+            "condition_a",
+            "condition_b",
+            "condition_c",
+            "condition_d",
+            "other"
+          ]
+        }
+      ]
+    },
+    "stimulus_presentation": {
+      "reasoning": "This node is a Capture, so I included only the measurement-session and instrument-configuration fields for the stimulus delivery system itself: what software/hardware controlled presentation, what display was used, and the actively configured timing parameters. I excluded the stimulus protocol structure because that belongs to the upstream Derivative node, and I excluded raw timing traces/file properties because those belong to the downstream Signal node. I also avoided participant-specific or analysis fields. The selected metadata are the minimum needed to reproduce the presentation environment and interpret the effective stimulus delivery session.",
+      "md_schema": [
+        {
+          "field_id": "presentation_software_name",
+          "descr": "Name of the stimulus presentation software used to control the visual task during this capture session, recorded as the actively configured control software; example: PsychoPy.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "presentation_software_version",
+          "descr": "Version of the stimulus presentation software used in this capture session, recorded to reproduce timing behavior and event handling; example: '2024.1'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "presentation_software_repository",
+          "descr": "Repository or source location for the presentation software or experiment script used to run the session, recorded as the configured software provenance; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "display_device_manufacturer",
+          "descr": "Manufacturer of the display device used for visual stimulus presentation during the capture session, recorded from the configured instrument description; example: Dell, ASUS, Eizo.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "display_device_model",
+          "descr": "Model name or number of the display device used for stimulus presentation, recorded at capture setup; example: 'U2415' or similar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "display_refresh_rate_hz",
+          "descr": "Configured refresh rate of the display in hertz during stimulus presentation, measured or set before the session because it constrains timing precision; typical values are 60, 120, or 144 Hz.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "screen_resolution_width_px",
+          "descr": "Horizontal display resolution in pixels configured for the presentation session, measured at capture setup; used to document stimulus rendering conditions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "screen_resolution_height_px",
+          "descr": "Vertical display resolution in pixels configured for the presentation session, measured at capture setup; used to document stimulus rendering conditions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "viewing_distance_cm",
+          "descr": "Participant viewing distance from the display in centimeters during the presentation session, configured before stimulus onset because it affects visual angle; typical values are around 40-100 cm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulus_presentation_mode",
+          "descr": "Operational mode of presentation during the capture session, describing whether stimuli were shown full-screen, windowed, or on another controlled display mode.",
+          "type": "categorical",
+          "allowed_values": [
+            "full_screen",
+            "windowed",
+            "projected",
+            "other"
+          ]
+        },
+        {
+          "field_id": "timing_sync_method",
+          "descr": "Method used by the presentation system to synchronize stimulus onset/offset with the recording workflow during this capture session, such as software triggers or hardware TTL; this is an actively configured capture setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "software_trigger",
+            "hardware_ttl",
+            "photodiode",
+            "mixed",
+            "other"
+          ]
+        }
+      ]
+    },
+    "presented_stimulus_timing": {
+      "reasoning": "This node is a Signal, so I included only raw data artifact properties: file/storage technical details, temporal dimensions, event sampling/encoding characteristics, and signal-level quality indicators. I excluded presentation software, display settings, and synchronization method because those belong to the upstream Capture node. I also excluded protocol structure and downstream preprocessing/analysis fields. The chosen fields are the minimum needed to understand and reuse the raw timing trace as a technical artifact.",
+      "md_schema": [
+        {
+          "field_id": "timing_trace_file_format",
+          "descr": "File format of the raw presented-stimulus timing trace recorded from the presentation session, such as CSV, TSV, JSON, or TXT; this describes the raw data artifact itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "mat",
+            "hdf5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "timing_trace_file_size_bytes",
+          "descr": "Size of the raw timing trace file in bytes, measured for the stored artifact after acquisition; used as a technical property of the signal file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "timing_trace_duration_seconds",
+          "descr": "Total duration in seconds covered by the raw timing trace file, measured from the first recorded presentation event to the last; describes the temporal extent of the artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "timing_trace_sampling_rate_hz",
+          "descr": "Sampling or event logging rate in hertz for the raw timing trace if the trace is stored as a time series; record the effective rate used by the acquisition/logging output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_timing_events",
+          "descr": "Total number of onset, offset, or trigger events encoded in the raw timing trace file, counted in the stored artifact before any preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_trials_logged",
+          "descr": "Number of stimulus trials represented in the raw timing trace, as encoded by the presentation session output; this is a raw artifact count and not a protocol-planned count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "timing_trace_event_encoding",
+          "descr": "Encoding scheme used in the raw trace to represent onset and offset events, such as numeric trigger codes or named event labels, recorded as a technical property of the file.",
+          "type": "categorical",
+          "allowed_values": [
+            "numeric_codes",
+            "event_labels",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "timing_trace_storage_location",
+          "descr": "Storage location or path of the raw timing trace artifact, such as a file path or object-store URI, recorded for data access and provenance of the raw signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "timing_trace_integrity_ok",
+          "descr": "Boolean flag indicating whether the raw timing trace file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a technical quality flag for the signal artifact.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "eeg_recording": {
+      "reasoning": "This node is a Capture, so I included only the measurement-session and instrument-configuration fields for the EEG acquisition system: hardware identity, amplifier settings, acquisition timing, and controlled recording parameters. I excluded participant preparation details because those belong upstream, and I excluded raw EEG file characteristics because those belong to the downstream Signal node. I also avoided stimulus protocol fields except where they directly constrain the capture session, and I did not include analysis/preprocessing metadata. The fields are chosen to let a downstream user understand how the recording was configured and whether the acquisition was suitable for later EEG analysis.",
+      "md_schema": [
+        {
+          "field_id": "eeg_device_manufacturer",
+          "descr": "Manufacturer of the EEG amplifier or acquisition system used during the recording session, recorded as part of the instrument description; example: Brain Products, BioSemi, g.tec.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_device_model",
+          "descr": "Model name or number of the EEG amplifier or acquisition system used for the session, recorded to identify the configured instrument; example: 'ActiCHamp' or similar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_device_serial_number",
+          "descr": "Serial number of the EEG amplifier or acquisition system used for this recording session, recorded for instrument provenance and traceability; use the manufacturer-assigned serial code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_channel_count",
+          "descr": "Number of EEG channels actively recorded during the session, measured from the configured acquisition setup; typical visual ERP recordings commonly use 32, 64, or 128 channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_sampling_rate_hz",
+          "descr": "Acquisition sampling rate in hertz configured for the EEG recording session, set before data capture and determining the temporal resolution of the recorded scalp activity; typical values include 250, 500, 1000, or higher.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_reference_scheme",
+          "descr": "Reference scheme used during EEG acquisition, configured at recording time; examples include common average, linked mastoids, or a single reference electrode.",
+          "type": "categorical",
+          "allowed_values": [
+            "common_average",
+            "linked_mastoids",
+            "single_reference",
+            "bipolar",
+            "other"
+          ]
+        },
+        {
+          "field_id": "eeg_online_filtering_applied",
+          "descr": "Whether any online filtering was applied by the acquisition system during the recording session; record only capture-time filtering, not later preprocessing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_highpass_cutoff_hz",
+          "descr": "High-pass filter cutoff in hertz configured online during EEG acquisition, if used; report the capture-session setting rather than preprocessing parameters. Typical values are often 0.01-1.0 Hz.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_lowpass_cutoff_hz",
+          "descr": "Low-pass filter cutoff in hertz configured online during EEG acquisition, if used; report the capture-session setting rather than preprocessing parameters. Typical values are often 30-250 Hz.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_recording_duration_seconds",
+          "descr": "Total duration in seconds of the EEG recording session for this capture, measured from the start of acquisition to the stop of acquisition; used as a session-level technical property.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trigger_input_method",
+          "descr": "Method used to send event markers or synchronization triggers into the EEG acquisition system during recording, such as software trigger or hardware TTL, recorded as a capture setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "software_trigger",
+            "hardware_ttl",
+            "photodiode_sync",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "impedance_check_passed",
+          "descr": "Boolean indicator of whether electrode impedances were acceptable at the start of EEG acquisition, assessed immediately before recording and used as a capture-quality flag.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_eeg_signal": {
+      "reasoning": "This node is a Signal, so I included only raw artifact properties of the continuous EEG file: storage format, size, temporal extent, dimensionality, channel count, and technical integrity/quality indicators. I excluded amplifier settings, sampling configuration, reference scheme, and trigger synchronization because those belong to the upstream Capture node. I also excluded preprocessing, epochs, and ERP-derived summaries because those belong downstream. The fields are intended to help a user locate, load, validate, and understand the technical structure of the raw EEG recording without interpreting its scientific content.",
+      "md_schema": [
+        {
+          "field_id": "raw_eeg_file_format",
+          "descr": "File format of the raw continuous EEG recording artifact, such as EDF, BDF, FIF, SET, CNT, or HDF5; this describes the stored signal file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "edf",
+            "bdf",
+            "fif",
+            "set",
+            "cnt",
+            "hdf5",
+            "mat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_eeg_file_size_bytes",
+          "descr": "Size of the raw EEG file in bytes, measured after acquisition and storage; used as a technical property of the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_duration_seconds",
+          "descr": "Total duration in seconds of the continuous EEG recording represented by the raw file, measured from the start to end of the stored signal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_channel_count",
+          "descr": "Number of EEG channels present in the raw recording file, counted in the stored artifact before any channel rejection or preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_sampling_rate_hz",
+          "descr": "Sampling rate in hertz encoded in the raw EEG file, describing the temporal resolution of the stored signal artifact; typical values include 250, 500, 1000, or higher.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_dimension_count",
+          "descr": "Number of dimensions in the raw EEG data array, such as channels x time or channels x time x trials if stored in a multidimensional format; this is a technical structure property of the file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_storage_location",
+          "descr": "Storage location or path of the raw EEG artifact, such as a file path or object-store URI, recorded for access and provenance of the raw signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_integrity_ok",
+          "descr": "Boolean flag indicating whether the raw EEG file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a signal-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_missing_data_fraction",
+          "descr": "Fraction of samples in the raw EEG recording that are missing, unreadable, or marked invalid in the stored artifact, measured as a technical data-quality metric before preprocessing; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_eeg_device_sync_status",
+          "descr": "Technical indicator of whether the raw EEG recording is synchronized with the event markers or acquisition clock in the stored artifact, reported as a signal-level status flag.",
+          "type": "categorical",
+          "allowed_values": [
+            "synchronized",
+            "partially_synchronized",
+            "unsynchronized",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "behavioral_response_capture": {
+      "reasoning": "This node is a Capture, so I included only the response acquisition session and instrument-configuration details for the response device: hardware identity, response modality, active mapping, and timing-related capture settings. I excluded raw response timestamps and event traces because those belong to the downstream Signal node, and I excluded parsed accuracy/reaction-time measures because those belong to the downstream Derivative node. I also avoided participant identity and stimulus protocol fields except where directly tied to the capture configuration. The resulting metadata are the minimum needed to reproduce and interpret the behavioral response recording session.",
+      "md_schema": [
+        {
+          "field_id": "response_device_manufacturer",
+          "descr": "Manufacturer of the response box, keyboard, or other response device used during the behavioral capture session, recorded as part of the instrument description; example: Cedrus, USB keyboard vendor, LabHackers.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_device_model",
+          "descr": "Model name or number of the response device used to collect task responses during the session, recorded to identify the configured instrument; example: RB-740 or similar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_device_serial_number",
+          "descr": "Serial number of the response device used in this capture session, recorded for provenance and traceability; use the manufacturer-assigned serial code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_modality",
+          "descr": "Type of response collected during the session, such as button press or keyboard entry, recorded as the actively configured behavioral input mode.",
+          "type": "categorical",
+          "allowed_values": [
+            "button_press",
+            "keyboard",
+            "voice",
+            "touch",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_button_count",
+          "descr": "Number of distinct response buttons or keys made available to the participant during the capture session, measured from the configured response device layout; typically 1-8 in this workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_mapping_scheme",
+          "descr": "Rule used to map buttons/keys to response options during the session, configured before capture; examples include left/right, yes/no, or condition-specific mappings.",
+          "type": "categorical",
+          "allowed_values": [
+            "left_right",
+            "yes_no",
+            "multiple_choice",
+            "custom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_sampling_rate_hz",
+          "descr": "Sampling or polling rate in hertz used by the response acquisition system to detect responses during the session, recorded as an active capture setting; used to characterize timing precision.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_latency_correction_ms",
+          "descr": "Configured latency correction in milliseconds applied by the response capture system, if any, to account for device delays during response acquisition; record the session setting used at capture time.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_capture_start_mode",
+          "descr": "Operational mode describing when response capture began relative to the task session, such as starting before the first stimulus or only during active trials.",
+          "type": "categorical",
+          "allowed_values": [
+            "session_start",
+            "trial_gated",
+            "stimulus_locked",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_device_connection_type",
+          "descr": "Physical or logical connection used by the response device during capture, such as USB, Bluetooth, or dedicated interface, recorded as part of the acquisition setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "usb",
+            "bluetooth",
+            "serial",
+            "wireless_dongle",
+            "other"
+          ]
+        }
+      ]
+    },
+    "raw_response_signal": {
+      "reasoning": "This node is a Signal, so I included only raw response artifact properties: file format, storage, size, event count, temporal extent, and technical integrity. I excluded response device configuration because that belongs to the upstream Capture node, and I excluded parsed accuracy/reaction-time summaries because those belong to the downstream Derivative node. I also avoided participant identity and stimulus protocol details. The selected fields describe the raw behavioral response trace as a technical data object that can be loaded and validated before interpretation.",
+      "md_schema": [
+        {
+          "field_id": "raw_response_file_format",
+          "descr": "File format of the raw behavioral response trace artifact, such as CSV, TSV, JSON, TXT, or HDF5; this describes the stored signal file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "hdf5",
+            "mat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_response_file_size_bytes",
+          "descr": "Size of the raw response file in bytes, measured after acquisition and storage; used as a technical property of the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_duration_seconds",
+          "descr": "Total duration in seconds covered by the raw behavioral response trace, measured from the first logged response-related event to the last in the stored artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_event_count",
+          "descr": "Total number of recorded response events in the raw trace, such as button presses, releases, or choice codes, counted before any parsing or summarization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_choice_event_count",
+          "descr": "Number of discrete choice events represented in the raw response trace, counted as raw logged selections before behavioral derivation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_storage_location",
+          "descr": "Storage location or path of the raw response artifact, such as a file path or object-store URI, recorded for access and provenance of the raw signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_integrity_ok",
+          "descr": "Boolean flag indicating whether the raw response file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a signal-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_missing_event_fraction",
+          "descr": "Fraction of expected response events missing or unlogged in the raw artifact, measured as a technical quality metric before parsing; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_response_time_encoding",
+          "descr": "Encoding used for response timing values in the raw file, such as milliseconds since session start or absolute timestamps; this is a technical property of the artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "milliseconds_since_start",
+            "absolute_timestamp",
+            "sample_index",
+            "mixed",
+            "other"
+          ]
+        }
+      ]
+    },
+    "eeg_preprocessing": {
+      "reasoning": "This node is a Process, so I included only the preprocessing operations and parameters used to transform raw EEG into a cleaner signal: filters, re-referencing, artifact handling, channel handling, and the software that executed the pipeline. I excluded raw EEG file properties because those belong to the upstream Signal node, and I excluded cleaned signal characteristics because those belong to the downstream Signal node. I also avoided recording participant or stimulus details. The selected fields are the minimum needed to reproduce the preprocessing step and understand how the clean EEG was generated.",
+      "md_schema": [
+        {
+          "field_id": "preprocessing_software_name",
+          "descr": "Name of the software or analysis environment used for EEG preprocessing, recorded for reproducibility; example: MNE-Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessing_software_version",
+          "descr": "Version of the preprocessing software used for the EEG cleaning pipeline, recorded to capture behavior of filtering and artifact routines; example: '1.7'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessing_software_repository",
+          "descr": "Repository, package source, or script location for the preprocessing implementation used in this workflow, recorded as software provenance; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "highpass_filter_cutoff_hz",
+          "descr": "High-pass filter cutoff in hertz applied during preprocessing to the raw EEG signal, measured as the lower bound of retained frequencies; typical values are often 0.1-1.0 Hz.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lowpass_filter_cutoff_hz",
+          "descr": "Low-pass filter cutoff in hertz applied during preprocessing to the raw EEG signal, measured as the upper bound of retained frequencies; typical values are often 30-40 Hz for ERP-focused analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "notch_filter_frequency_hz",
+          "descr": "Notch filter frequency in hertz applied during preprocessing to suppress line noise, if used; common values are 50 or 60 Hz depending on recording site.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "re_reference_scheme",
+          "descr": "Reference scheme applied during preprocessing, such as common average or linked mastoids, used to transform the raw EEG channels before analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "common_average",
+            "linked_mastoids",
+            "single_reference",
+            "bipolar",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "artifact_reduction_method",
+          "descr": "Primary method used to reduce artifacts during preprocessing, such as independent component analysis, manual rejection, or automated cleaning; record the main strategy applied to the raw EEG.",
+          "type": "categorical",
+          "allowed_values": [
+            "ica",
+            "manual_rejection",
+            "automated_cleaning",
+            "regression",
+            "mixed",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "artifact_rejected_channel_count",
+          "descr": "Number of channels removed or marked unusable during preprocessing, counted after artifact screening and before downstream epoch extraction; typical values depend on cap quality and subject movement.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "artifact_rejected_segment_fraction",
+          "descr": "Fraction of the raw EEG recording removed or excluded during preprocessing because of artifacts, measured as a proportion from 0 to 1; used as a preprocessing quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bad_channel_interpolation_used",
+          "descr": "Whether bad channels were interpolated during preprocessing, recorded as a boolean pipeline setting applied before event-related analysis.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessing_quality_status",
+          "descr": "Overall qualitative assessment of the preprocessing outcome immediately after cleaning, indicating whether the resulting signal was suitable for epoching and ERP analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "clean_eeg_signal": {
+      "reasoning": "This node is a Signal, so I included only properties of the cleaned EEG artifact itself: file format, storage, size, temporal extent, channel/dimensional structure, and signal-level quality metrics. I excluded preprocessing parameters because those belong to the upstream Process node, and I excluded epochs and ERP summaries because those belong downstream. I also avoided participant or stimulus metadata. The fields describe the cleaned EEG as a reusable technical artifact ready for epoching and analysis.",
+      "md_schema": [
+        {
+          "field_id": "clean_eeg_file_format",
+          "descr": "File format of the cleaned EEG artifact after preprocessing, such as FIF, EDF, BDF, SET, HDF5, or MAT; this describes the stored signal file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "edf",
+            "bdf",
+            "fif",
+            "set",
+            "cnt",
+            "hdf5",
+            "mat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "clean_eeg_file_size_bytes",
+          "descr": "Size of the cleaned EEG file in bytes, measured after preprocessing and storage; used as a technical property of the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_duration_seconds",
+          "descr": "Total duration in seconds of the cleaned EEG time series represented by the file, measured from the first retained sample to the last retained sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_channel_count",
+          "descr": "Number of EEG channels present after preprocessing, counted in the cleaned artifact after any channel rejection or interpolation decisions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_sampling_rate_hz",
+          "descr": "Sampling rate in hertz encoded in the cleaned EEG file, describing the temporal resolution of the preprocessed signal artifact; often unchanged from raw data.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_dimension_count",
+          "descr": "Number of dimensions in the cleaned EEG data array, such as channels x time or channels x time x segments if stored in a multidimensional format; this is a technical structure property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_storage_location",
+          "descr": "Storage location or path of the cleaned EEG artifact, such as a file path or object-store URI, recorded for access and provenance of the preprocessed signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_integrity_ok",
+          "descr": "Boolean flag indicating whether the cleaned EEG file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a signal-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_noise_level_score",
+          "descr": "Numeric summary of residual noise in the cleaned EEG artifact, computed or assessed after preprocessing and before epoch extraction; use a consistent study-defined scale or z-scored metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clean_eeg_missing_data_fraction",
+          "descr": "Fraction of samples missing or invalid in the cleaned EEG artifact after preprocessing, measured as a technical quality metric; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "epoch_extraction": {
+      "reasoning": "This node is a Process, so I included only the segmentation operation details that define how epochs were created from cleaned EEG using timing information: epoch window, alignment rule, baseline handling, trial selection, and the software that executed the extraction. I excluded cleaned EEG file properties because those belong upstream, and I excluded the epoch file/shape itself because that belongs to the downstream Signal node. I also avoided ERP or behavioral interpretation fields. The selected metadata are sufficient to reproduce the stimulus-locked segmentation step and understand its trial inclusion criteria.",
+      "md_schema": [
+        {
+          "field_id": "epoch_extraction_software_name",
+          "descr": "Name of the software or analysis environment used to extract EEG epochs, recorded for reproducibility; example: MNE-Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_extraction_software_version",
+          "descr": "Version of the software used for epoch extraction, recorded to capture implementation details affecting segmentation; example: '1.7'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_extraction_software_repository",
+          "descr": "Repository, package source, or script location for the epoch extraction implementation used in this workflow; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_start_seconds",
+          "descr": "Epoch start time in seconds relative to the stimulus event used for alignment, measured during extraction; typical ERP windows often begin at -0.2 s or 0 s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_end_seconds",
+          "descr": "Epoch end time in seconds relative to the stimulus event used for alignment, measured during extraction; typical ERP windows often end at 0.8 s or 1.0 s.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_alignment_event",
+          "descr": "Event used to time-lock epoch extraction, such as stimulus onset or offset, defined at the moment segments are created from the cleaned EEG.",
+          "type": "categorical",
+          "allowed_values": [
+            "stimulus_onset",
+            "stimulus_offset",
+            "response_onset",
+            "other"
+          ]
+        },
+        {
+          "field_id": "baseline_correction_applied",
+          "descr": "Whether baseline correction was applied during epoch extraction before downstream analysis, recorded as a process setting.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_window_seconds",
+          "descr": "Time window in seconds used for baseline correction relative to the alignment event, for example -0.2 to 0.0 s; record the extraction-time window if baseline correction was applied.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "epoch_rejection_criteria",
+          "descr": "Rule used to reject epochs during extraction, such as amplitude threshold, artifact flag, or manual exclusion; describe the primary criterion applied to segment inclusion.",
+          "type": "categorical",
+          "allowed_values": [
+            "amplitude_threshold",
+            "artifact_flag",
+            "manual_review",
+            "mixed",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "epochs_retained_fraction",
+          "descr": "Fraction of candidate epochs retained after extraction and rejection, computed from the segmentation step as a process output quality indicator; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_trials_required_per_condition",
+          "descr": "Minimum number of valid trials per condition required by the extraction workflow before an epoch set is accepted for downstream analysis; if not used, record the study default or threshold.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "eeg_epochs": {
+      "reasoning": "This node is a Signal, so I included only raw artifact properties of the epoch file/set: file format, size, storage location, shape, and technical quality indicators. I excluded epoch-window and rejection logic because those belong to the upstream Process node, and I excluded ERP summaries because those belong downstream. I also avoided stimulus protocol and participant fields. The resulting metadata describe the segmented EEG artifact itself so it can be loaded, validated, and reused for later ERP computation.",
+      "md_schema": [
+        {
+          "field_id": "eeg_epochs_file_format",
+          "descr": "File format of the epoched EEG artifact, such as FIF, HDF5, MAT, or other array-based storage; this describes the stored epoch data itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "fif",
+            "hdf5",
+            "mat",
+            "npy",
+            "npz",
+            "set",
+            "other"
+          ]
+        },
+        {
+          "field_id": "eeg_epochs_file_size_bytes",
+          "descr": "Size of the epochs file in bytes, measured after segmentation and storage; used as a technical property of the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_storage_location",
+          "descr": "Storage location or path of the EEG epochs artifact, such as a file path or object-store URI, recorded for access and provenance of the segmented signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_trial_count",
+          "descr": "Total number of epochs or trials represented in the stored EEG epochs artifact, counted after extraction and rejection.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_channel_count",
+          "descr": "Number of EEG channels present in each epoch in the stored artifact, counted after segmentation and any channel handling performed earlier.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_timepoints_per_epoch",
+          "descr": "Number of time points per epoch in the stored EEG epochs artifact, describing the temporal dimension of each segmented trial.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_sampling_rate_hz",
+          "descr": "Sampling rate in hertz encoded in the epoched EEG artifact, describing the temporal resolution of each segment; typically inherited from the cleaned EEG signal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_condition_count",
+          "descr": "Number of experimental conditions represented in the epochs artifact, counted from the stored trial labels associated with the segmented EEG data.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_integrity_ok",
+          "descr": "Boolean flag indicating whether the epochs artifact passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a signal-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_missing_data_fraction",
+          "descr": "Fraction of samples missing or invalid in the epochs artifact, measured as a technical quality metric before ERP derivation; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eeg_epochs_time_reference",
+          "descr": "Time reference used within each epoch, such as seconds relative to stimulus onset, describing how the stored segment time axis is anchored.",
+          "type": "categorical",
+          "allowed_values": [
+            "stimulus_onset_relative",
+            "stimulus_offset_relative",
+            "response_relative",
+            "other"
+          ]
+        }
+      ]
+    },
+    "erp_derivation": {
+      "reasoning": "This node is a Process, so I included only the computation details for deriving ERPs from epoched EEG: software provenance, averaging/summarization method, trial inclusion rules, baseline handling, and a process-level quality indicator. I excluded epoch artifact properties because those belong upstream to the Signal node, and I excluded the ERP waveform file/content because that belongs to the downstream Derivative node. I also avoided participant and stimulus protocol metadata except where they directly affect the derivation settings. The fields are sufficient to reproduce how the ERP summary was computed from the aligned epochs.",
+      "md_schema": [
+        {
+          "field_id": "erp_derivation_software_name",
+          "descr": "Name of the software or analysis environment used to compute ERP waveforms from epoched EEG, recorded for reproducibility; example: MNE-Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_derivation_software_version",
+          "descr": "Version of the software used for ERP derivation, recorded to capture implementation details affecting averaging and summarization; example: '1.7'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_derivation_software_repository",
+          "descr": "Repository, package source, or script location for the ERP derivation implementation used in this workflow; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_summarization_method",
+          "descr": "Method used to summarize epoched EEG into ERP waveforms, recorded at the time of derivation; examples include simple average, weighted average, or robust median-based summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "average",
+            "weighted_average",
+            "median",
+            "robust_average",
+            "other"
+          ]
+        },
+        {
+          "field_id": "erp_trial_weighting_used",
+          "descr": "Whether trials were weighted differently during ERP derivation, such as by condition, quality score, or inverse variance, recorded as a process setting.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_baseline_correction_applied",
+          "descr": "Whether baseline correction was applied during ERP derivation before summarization, recorded as a process setting.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_baseline_window_seconds",
+          "descr": "Time window in seconds used for baseline correction during ERP derivation, for example -0.2 to 0.0 s relative to stimulus onset; record the derivation-time window if used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_minimum_epochs_per_condition",
+          "descr": "Minimum number of valid epochs required per condition for ERP derivation to proceed or be accepted, recorded as a trial inclusion threshold.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_rejection_criteria",
+          "descr": "Primary rejection rule applied to epochs before or during ERP derivation, such as amplitude threshold, artifact flag, or manual review; record the main criterion used.",
+          "type": "categorical",
+          "allowed_values": [
+            "amplitude_threshold",
+            "artifact_flag",
+            "manual_review",
+            "mixed",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "erp_component_windows_seconds",
+          "descr": "Analysis windows in seconds used to summarize ERP components during derivation, if the process computed component-specific features in addition to waveforms; record as the derivation-time windows.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_derivation_quality_status",
+          "descr": "Overall qualitative assessment of the ERP derivation outcome immediately after computation, indicating whether the resulting waveforms were suitable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "erp_waveforms": {
+      "reasoning": "This node is a Derivative, so I included only computed ERP-result properties: output file/structure, dimensions, time axis, component summaries, and scientific quality indicators. I excluded derivation software and averaging parameters because those belong to the upstream Process node, and I excluded raw EEG/epoch properties because those belong to upstream Signal nodes. I also avoided participant or stimulus protocol metadata except insofar as the derived ERP file is organized by condition and component. The fields are sufficient for a downstream user to interpret, reuse, and compare the derived ERP waveforms.",
+      "md_schema": [
+        {
+          "field_id": "erp_waveforms_file_format",
+          "descr": "File format of the derived ERP waveform artifact, such as FIF, HDF5, MAT, CSV, or other array-based storage; this describes the computed result file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "fif",
+            "hdf5",
+            "mat",
+            "csv",
+            "tsv",
+            "npy",
+            "npz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "erp_waveforms_file_size_bytes",
+          "descr": "Size of the ERP waveform file in bytes, measured after derivation and storage; used as a technical property of the derived artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_storage_location",
+          "descr": "Storage location or path of the ERP waveform artifact, such as a file path or object-store URI, recorded for access and provenance of the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_condition_count",
+          "descr": "Number of stimulus conditions represented in the ERP waveform artifact, counted from the derived output file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_channel_count",
+          "descr": "Number of EEG channels represented in the ERP waveform artifact, counted in the derived result after any channel selection or aggregation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_timepoints_per_waveform",
+          "descr": "Number of time points per ERP waveform in the derived artifact, describing the temporal resolution of the computed result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_sampling_rate_hz",
+          "descr": "Sampling rate in hertz associated with the ERP waveforms, describing the temporal resolution of the derived time series; typically inherited from the epoched EEG.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_waveforms_time_range_seconds",
+          "descr": "Time range in seconds covered by each ERP waveform, typically relative to stimulus onset, describing the analysis window represented by the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_peak_latency_ms",
+          "descr": "Latency in milliseconds of the primary ERP peak identified in the derived waveform, measured on the computed result for a component of interest; report the study-defined peak window if applicable.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_peak_amplitude_uv",
+          "descr": "Peak amplitude in microvolts of the primary ERP component measured from the derived waveform, computed on the output result for a component of interest; typical ERP magnitudes are often in the low microvolt range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_component_label",
+          "descr": "Label of the ERP component represented or summarized in the derived waveform artifact, such as P1, N1, N170, or P300, if component annotation is included in the output.",
+          "type": "categorical",
+          "allowed_values": [
+            "p1",
+            "n1",
+            "p2",
+            "n2",
+            "p300",
+            "n170",
+            "other"
+          ]
+        },
+        {
+          "field_id": "erp_waveforms_integrity_ok",
+          "descr": "Boolean flag indicating whether the ERP waveform file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a result-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "response_parsing": {
+      "reasoning": "This node is a Process, so I included only the parsing/derivation procedure that converts raw response traces into behavioral measures: software provenance, response-event decoding, rule-based mapping to trials, and process-level output quality. I excluded raw response file properties because those belong upstream to the Signal node, and I excluded the final trial-level behavioral metrics themselves because those belong to the downstream Derivative node. I also avoided EEG or stimulus presentation fields except where needed to define parsing alignment logic. The selected fields are sufficient to reproduce how responses were decoded into behavioral measures.",
+      "md_schema": [
+        {
+          "field_id": "response_parsing_software_name",
+          "descr": "Name of the software or analysis environment used to parse raw response traces into trial-level behavioral measures, recorded for reproducibility; example: Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_parsing_software_version",
+          "descr": "Version of the software used for response parsing, recorded to capture implementation details affecting decoding and trial matching; example: '3.11'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_parsing_software_repository",
+          "descr": "Repository, package source, or script location for the response parsing implementation used in this workflow; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_event_code_mapping",
+          "descr": "Mapping used to translate raw response codes or key presses into behavioral meanings during parsing, recorded as the decoding rule set applied to the raw signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_to_trial_alignment_rule",
+          "descr": "Rule used to align raw response events to trials during parsing, such as nearest stimulus onset, within-trial windowing, or first-response-only assignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "nearest_onset",
+            "within_trial_window",
+            "first_response_only",
+            "multiple_responses_allowed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reaction_time_reference_event",
+          "descr": "Event used as the temporal zero point for reaction time calculation during parsing, typically stimulus onset or cue onset; this is the reference used in the decoding step.",
+          "type": "categorical",
+          "allowed_values": [
+            "stimulus_onset",
+            "cue_onset",
+            "response_onset",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_parsing_time_window_seconds",
+          "descr": "Time window in seconds relative to the reference event used to search for valid responses during parsing, recorded as the behavioral inclusion window; for example, 0.0 to 2.0 s.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_parsing_exclusion_rules",
+          "descr": "Rules used to exclude invalid or ambiguous responses during parsing, such as multiple button presses, responses outside the allowed window, or missing trial markers.",
+          "type": "categorical",
+          "allowed_values": [
+            "outside_window",
+            "multiple_responses",
+            "missing_marker",
+            "invalid_code",
+            "mixed",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_parsing_missing_response_strategy",
+          "descr": "Strategy used when a trial had no detectable response in the raw trace, such as marking missing, imputing, or carrying forward a default code; record the parsing policy used.",
+          "type": "categorical",
+          "allowed_values": [
+            "mark_missing",
+            "impute",
+            "default_code",
+            "ignore_trial",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_parsing_quality_status",
+          "descr": "Overall qualitative assessment of the parsing outcome immediately after decoding, indicating whether the raw responses were successfully converted into usable trial-level measures.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "behavioral_measures": {
+      "reasoning": "This node is a Derivative, so I included only computed behavioral output properties: trial/condition-level measures, summary statistics, missingness, and behavioral quality indicators. I excluded raw response device configuration and parsing logic because those belong to the upstream Capture and Process nodes, and I excluded EEG or ERP fields because those are outside this node's semantic territory. The fields provide the minimum information needed to interpret the derived behavioral dataset and relate it to later joint analysis.",
+      "md_schema": [
+        {
+          "field_id": "behavioral_measures_file_format",
+          "descr": "File format of the derived behavioral measures artifact, such as CSV, TSV, JSON, or HDF5; this describes the computed result file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "hdf5",
+            "mat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "behavioral_measures_file_size_bytes",
+          "descr": "Size of the behavioral measures file in bytes, measured after derivation and storage; used as a technical property of the derived artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "behavioral_measures_storage_location",
+          "descr": "Storage location or path of the behavioral measures artifact, such as a file path or object-store URI, recorded for access and provenance of the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "behavioral_trial_count",
+          "descr": "Number of trials represented in the derived behavioral measures artifact, counted after parsing and any trial exclusion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "behavioral_condition_count",
+          "descr": "Number of experimental conditions represented in the derived behavioral measures artifact, counted from the trial-level outputs or summaries.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_reaction_time_ms",
+          "descr": "Mean reaction time in milliseconds computed from the derived behavioral measures, typically calculated across valid trials or within a condition; typical ERP task values often fall within roughly 200-1500 ms depending on task demands.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reaction_time_standard_deviation_ms",
+          "descr": "Standard deviation of reaction time in milliseconds computed from the derived behavioral measures, summarizing response variability across valid trials or within condition.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "accuracy_rate",
+          "descr": "Proportion of trials answered correctly in the derived behavioral measures, computed from parsed trial outcomes; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "choice_distribution",
+          "descr": "Distribution of behavioral choices represented in the derived output, summarized across trials or conditions; may reflect the relative frequency of each response option.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "behavioral_missing_trial_fraction",
+          "descr": "Fraction of trials without a valid parsed behavioral outcome in the derived dataset, measured as a quality metric after derivation; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "behavioral_measures_integrity_ok",
+          "descr": "Boolean flag indicating whether the derived behavioral measures file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a result-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "joint_erp_behavior_analysis": {
+      "reasoning": "This node is a Process, so I included only the analysis procedure that combines ERP-derived features with stimulus labels and behavioral measures: software provenance, feature/linkage strategy, statistical/model parameters, and a process-level quality indicator. I excluded the ERP waveform artifact, behavioral derived values, and stimulus protocol details as standalone fields because those belong to upstream Derivative nodes or the protocol-derived input node. I also avoided downstream final result interpretations. The selected fields describe how the joint analysis was performed so it can be reproduced and audited.",
+      "md_schema": [
+        {
+          "field_id": "joint_analysis_software_name",
+          "descr": "Name of the software or analysis environment used for the joint ERP-behavior analysis, recorded for reproducibility; example: Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "joint_analysis_software_version",
+          "descr": "Version of the software used for the joint analysis, recorded to capture implementation details affecting model fitting or feature aggregation; example: '3.11'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "joint_analysis_software_repository",
+          "descr": "Repository, package source, or script location for the joint analysis implementation used in this workflow; example: GitHub URL or local project path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_feature_set_used",
+          "descr": "Set of ERP features included in the joint analysis, such as peak amplitude, latency, mean amplitude in a window, or condition contrasts; record the feature family used at analysis time.",
+          "type": "categorical",
+          "allowed_values": [
+            "peak_amplitude",
+            "peak_latency",
+            "mean_amplitude",
+            "area_under_curve",
+            "condition_contrast",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "behavioral_measure_set_used",
+          "descr": "Set of behavioral measures included in the joint analysis, such as reaction time, accuracy, and choice category; record the measure family used at analysis time.",
+          "type": "categorical",
+          "allowed_values": [
+            "reaction_time",
+            "accuracy",
+            "choice",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "stimulus_label_join_key",
+          "descr": "Label or key used to join ERP features to stimulus condition information and behavioral measures during analysis, such as trial_id or condition_code; this defines the linkage field.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_model_type",
+          "descr": "Type of statistical or machine-learning model used to combine ERP and behavioral features, recorded at the analysis step; examples include linear model, mixed-effects model, or correlation analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "mixed_effects_model",
+            "correlation",
+            "anova",
+            "classification",
+            "regression",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_window_seconds",
+          "descr": "Time window in seconds over which ERP features were aggregated or compared in the joint analysis, for example around a specific component window; record the analysis-time window used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_comparisons_correction",
+          "descr": "Method used to correct for multiple statistical tests in the joint analysis, if applicable, recorded as the inferential control applied to the combined results.",
+          "type": "categorical",
+          "allowed_values": [
+            "bonferroni",
+            "fdr",
+            "holm",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "joint_analysis_quality_status",
+          "descr": "Overall qualitative assessment of the joint ERP-behavior analysis outcome immediately after computation, indicating whether the combined analysis was suitable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "acceptable",
+            "poor",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "analysis_results": {
+      "reasoning": "This node is a Derivative, so I included only final computed result properties: output artifact structure, key result types, statistical summary fields, and result-level quality indicators. I excluded the analysis software and modeling parameters because those belong to the upstream Process node, and I excluded raw ERP/behavioral inputs because those belong upstream to Derivative/Signal nodes. I also avoided participant and stimulus protocol fields. The selected fields capture the final integrated findings needed for downstream reporting, reuse, and interpretation.",
+      "md_schema": [
+        {
+          "field_id": "analysis_results_file_format",
+          "descr": "File format of the final derived analysis results artifact, such as CSV, TSV, JSON, PDF, or HDF5; this describes the computed result file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "hdf5",
+            "pdf",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_results_file_size_bytes",
+          "descr": "Size of the final analysis results file in bytes, measured after derivation and storage; used as a technical property of the derived artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_results_storage_location",
+          "descr": "Storage location or path of the final analysis results artifact, such as a file path or object-store URI, recorded for access and provenance of the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "erp_component_summary_count",
+          "descr": "Number of ERP component summaries included in the final results artifact, counted across components such as P1, N1, N170, or P300.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "condition_contrast_count",
+          "descr": "Number of condition contrasts reported in the final analysis results, counted across pairwise or omnibus comparisons of stimulus conditions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_finding_count",
+          "descr": "Number of integrated neural-behavioral findings reported in the final analysis results artifact, counted as distinct conclusions or summary statements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_statistical_significance_present",
+          "descr": "Boolean indicator of whether the final analysis results include statistically significant effects or contrasts after correction and summarization.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_p_value_threshold",
+          "descr": "P-value threshold used to classify statistically significant findings in the final results, recorded as the inferential cutoff applied to the computed outputs; typical values are 0.05 or lower.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_effect_size_metric",
+          "descr": "Effect size metric reported in the final analysis results, such as Cohen's d, partial eta squared, or correlation coefficient; record the primary summary metric used.",
+          "type": "categorical",
+          "allowed_values": [
+            "cohens_d",
+            "partial_eta_squared",
+            "correlation_coefficient",
+            "odds_ratio",
+            "beta_coefficient",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_results_integrity_ok",
+          "descr": "Boolean flag indicating whether the final analysis results file passed basic integrity checks at ingest, such as readable format and non-corrupt content; this is a result-level technical quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

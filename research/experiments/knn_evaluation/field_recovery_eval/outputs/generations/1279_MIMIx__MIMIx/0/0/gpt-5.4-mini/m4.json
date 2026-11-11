@@ -1,0 +1,872 @@
+{
+  "md_name": "Cancer Cell PPI Co-IP MS Workflow",
+  "md_description": "This DAG represents a protein–protein interaction workflow in oncogene-mutant cancer cells using co-immunoprecipitation followed by mass spectrometry. It starts from the cancer cell culture, enriches protein complexes with specific antibodies, acquires mass spectra, and computationally identifies interacting proteins and altered interaction networks. The resulting derivatives support interpretation of mutation-dependent network changes and candidate therapeutic targets.",
+  "fields_per_node": {
+    "cancer_cell_culture": {
+      "reasoning": "This node is an Entity, so I included only intrinsic sample identity/origin and biological properties of the cancer cell culture. I excluded any procedural details such as lysis, antibody enrichment, mass spectrometry, or computational analysis because those belong to downstream Process/Capture/Derivative nodes. I also avoided sample identifiers that would likely be generated at the root and must not be repeated elsewhere. Because no fields were already_generated in the prompt, I could define the core culture and oncogenic background attributes needed to understand the starting material.",
+      "md_schema": [
+        {
+          "field_id": "cell_line_name",
+          "descr": "Name of the cancer cell line used as the starting culture for the interaction experiment; use a standardized cell line name when available (example: 'A549', 'MCF7', 'HCT116'). Record at the entity level before any lysis or enrichment steps.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tissue_of_origin",
+          "descr": "Primary tissue or anatomical source from which the cancer cell line was derived; record as the biological origin of the cultured cells (example: 'lung', 'breast', 'colon').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "oncogenic_mutation",
+          "descr": "Known oncogenic mutation carried by the cultured cancer cells at the start of the workflow; describe the altered gene and variant when known (example: 'KRAS G12D', 'TP53 R175H'). This is an intrinsic property of the input culture, not an assay result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mutation_status",
+          "descr": "Whether the starting cell culture is wild-type or carries an oncogenic alteration relevant to the interaction experiment; record as the intrinsic genotype state of the culture before downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "wild_type",
+            "heterozygous_mutant",
+            "homozygous_mutant",
+            "mixed_population",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "species",
+          "descr": "Organismal species of the cultured cells at the point they enter the workflow; use standard species names (example: 'Homo sapiens').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cell_culture_condition",
+          "descr": "High-level culture state of the cells when harvested for the experiment; use this to indicate whether the cells were maintained under standard growth conditions or a specific treatment state that is intrinsic to the starting material (example: 'basal', 'drug_treated', 'stimulated'). Do not use for protocol steps like lysis or IP.",
+          "type": "categorical",
+          "allowed_values": [
+            "basal",
+            "drug_treated",
+            "stimulated",
+            "serum_starved",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "cell_lysis": {
+      "reasoning": "This node is a Process, so I included only lysis protocol parameters and the key operating conditions used to preserve protein interactions before co-immunoprecipitation. I excluded cell identity and mutation properties because those belong to the upstream Entity node, and I excluded lysate or fraction properties because those belong to downstream Entity/Signal nodes. No already_generated fields were provided for this turn, so I focused on the minimum reproducible protocol details for the lysis step plus the responsible agent.",
+      "md_schema": [
+        {
+          "field_id": "lysis_buffer_composition",
+          "descr": "Composition of the lysis buffer used to disrupt cells while preserving protein-protein interactions; record the major buffer components and concentrations used at the lysis step (example: Tris, NaCl, NP-40 or Triton X-100, glycerol, inhibitor cocktails).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_buffer_pH",
+          "descr": "pH of the lysis buffer measured or set immediately before cell disruption; include the operational pH used to maintain native interactions (typical range often near neutral, e.g. 7.0-8.0).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_temperature_celsius",
+          "descr": "Temperature in degrees Celsius at which cells were lysed and the lysate was handled during the lysis step; record the temperature at the time of disruption (typical range 0-25 °C, often on ice or 4 °C to preserve complexes).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_duration_minutes",
+          "descr": "Duration in minutes of the lysis incubation or mechanical disruption window used to generate soluble lysate; record the time for the lysis step only, not downstream clarification or IP incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protease_inhibitor_used",
+          "descr": "Whether protease inhibitors were included in the lysis buffer to prevent protein degradation during sample preparation; record as a yes/no process attribute for the lysis step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "phosphatase_inhibitor_used",
+          "descr": "Whether phosphatase inhibitors were included in the lysis buffer to preserve protein phosphorylation state during lysis; record as a yes/no process attribute for the lysis step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary mechanical or chemical method used to lyse the cells during this process step; choose the method that best describes how the cell membrane was disrupted (for example: detergent lysis, sonication-assisted lysis, freeze_thaw).",
+          "type": "categorical",
+          "allowed_values": [
+            "detergent_lysis",
+            "sonication_assisted",
+            "freeze_thaw",
+            "mechanical_homogenization",
+            "combined_method",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "lysis_agent",
+          "descr": "Name of the person or group responsible for performing the lysis step; use the operational actor for this process node (example: 'researcher').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protein_lysate": {
+      "reasoning": "This node is an Entity, so I included intrinsic properties of the prepared lysate itself and excluded lysis protocol settings, which belong to the upstream Process node, and downstream enrichment or capture details, which belong to later nodes. I also avoided repeating any identifiers that would typically live at the root Entity level. The fields focus on what a downstream user needs to know about the lysate composition, concentration, and handling state before co-immunoprecipitation.",
+      "md_schema": [
+        {
+          "field_id": "lysate_protein_concentration_mg_ml",
+          "descr": "Total soluble protein concentration of the prepared lysate measured after lysis and any clarification step, immediately before immunoprecipitation; report in mg/mL, typically across a broad range depending on cell density and lysis efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysate_volume_ml",
+          "descr": "Total volume of the prepared lysate available for the co-immunoprecipitation step, measured after preparation and before antibody incubation; report in mL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clarification_status",
+          "descr": "Whether the lysate was clarified to remove insoluble debris before immunoprecipitation; record the state of the prepared lysate as an entity property.",
+          "type": "categorical",
+          "allowed_values": [
+            "clarified",
+            "unclarified",
+            "partially_clarified",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "lysate_storage_condition",
+          "descr": "Storage condition of the prepared lysate before immunoprecipitation, if not used immediately; describe the short-term holding state for the entity (example: 'on_ice', '4_celsius', 'frozen_at_minus_80_celsius').",
+          "type": "categorical",
+          "allowed_values": [
+            "on_ice",
+            "4_celsius",
+            "frozen_at_minus_20_celsius",
+            "frozen_at_minus_80_celsius",
+            "used_immediately",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "lysate_freeze_thaw_cycles",
+          "descr": "Number of freeze-thaw cycles experienced by the prepared lysate before immunoprecipitation; this is an entity quality attribute because repeated cycles can affect protein complex integrity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysate_quality_note",
+          "descr": "Free-text note describing visible quality or integrity of the prepared lysate, such as viscosity, turbidity, or presence of precipitate, recorded immediately before immunoprecipitation.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "coip_enrichment": {
+      "reasoning": "This node is a Process, so I included only the immunoprecipitation/enrichment parameters that describe how the protein complexes were captured from the lysate. I excluded lysate properties because they belong to the upstream Entity node, and I excluded readout/signal quality or downstream mass spectrometry outputs because those belong to Capture and Signal nodes. I also included the process agent because this is an operation node, and I avoided duplicating generic sample identifiers or experiment identifiers. The selected fields capture the minimal reproducible details needed to understand and repeat the co-IP enrichment.",
+      "md_schema": [
+        {
+          "field_id": "antibody_target",
+          "descr": "Antigen or protein target recognized by the antibody used for co-immunoprecipitation enrichment; record the intended bait or pull-down target (example: 'EGFR', 'KRAS', 'FLAG epitope').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_clone",
+          "descr": "Specific antibody clone or catalog-designated clone used in the enrichment step, when applicable; record the clone identifier exactly as used in the co-IP (example: 'clone 9E10').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_isotype",
+          "descr": "Immunoglobulin isotype of the antibody used for enrichment, recorded as a process-level reagent property relevant to specificity and controls (example: IgG1, IgG2a, rabbit polyclonal).",
+          "type": "categorical",
+          "allowed_values": [
+            "IgG1",
+            "IgG2a",
+            "IgG2b",
+            "IgG3",
+            "IgA",
+            "IgM",
+            "rabbit_IgG",
+            "mouse_IgG",
+            "goat_IgG",
+            "polyclonal",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "antibody_amount_ug",
+          "descr": "Mass of antibody added to the lysate for the co-immunoprecipitation enrichment step, reported in micrograms (ug) at the time of incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysate_input_protein_amount_mg",
+          "descr": "Total soluble protein mass from the lysate loaded into the enrichment reaction, reported in mg at the start of antibody incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_buffer_composition",
+          "descr": "Composition of the buffer used during antibody-lysate incubation for enrichment; record major components and their concentrations used to preserve binding interactions at the co-IP step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_temperature_celsius",
+          "descr": "Temperature in degrees Celsius during antibody-lysate incubation for enrichment; record the controlled temperature at which complexes were captured (commonly 4 °C or room temperature depending on protocol).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_duration_minutes",
+          "descr": "Incubation time in minutes for the antibody-lysate binding reaction during co-IP enrichment; measure from the start to the end of the capture incubation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_stringency_level",
+          "descr": "Overall wash stringency applied after antibody binding to remove nonspecific interactors; use a qualitative protocol-level category appropriate for the enrichment step.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "moderate",
+            "high",
+            "very_high",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "wash_buffer_composition",
+          "descr": "Composition of the wash buffer used after antibody capture to remove nonspecific material from the immunoprecipitated complexes; record major components and concentrations.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coip_agent",
+          "descr": "Name of the person, team, or automated platform responsible for performing the co-immunoprecipitation enrichment process; use the operational actor for this process node (example: 'researcher').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "enriched_protein_fraction": {
+      "reasoning": "This node is an Entity, so I included only properties intrinsic to the enriched protein fraction itself after co-IP and before mass spectrometry. I excluded antibody, incubation, and wash protocol details because those belong to the upstream enrichment Process node, and I excluded acquisition settings and file-level descriptors because those belong downstream to Capture and Signal nodes. The fields describe the fraction's composition, concentration, and handling state so downstream users can assess suitability for MS analysis.",
+      "md_schema": [
+        {
+          "field_id": "enriched_fraction_protein_concentration_mg_ml",
+          "descr": "Total protein concentration of the antibody-enriched fraction measured after immunoprecipitation and prior to mass spectrometry loading; report in mg/mL. This is an entity-level quality attribute of the recovered complex fraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enriched_fraction_volume_ul",
+          "descr": "Total recovered volume of the enriched protein fraction available for downstream LC-MS/MS analysis, measured after elution and before instrument loading; report in uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_buffer_composition",
+          "descr": "Composition of the buffer used to elute protein complexes from the antibody matrix into the enriched fraction; record the major reagents and concentrations used to recover the complexes for MS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_ph",
+          "descr": "pH of the elution condition used to recover the enriched complexes into solution; record the pH at the time the fraction was generated.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_assessment",
+          "descr": "Qualitative assessment of the enriched fraction purity at the entity stage before MS, based on expected target enrichment and visible contamination or background material.",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "moderate",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_condition_before_ms",
+          "descr": "Storage condition of the enriched fraction before LC-MS/MS acquisition if not analyzed immediately; record the short-term state of the fraction (example: 'on_ice', '4_celsius', 'frozen_at_minus_80_celsius').",
+          "type": "categorical",
+          "allowed_values": [
+            "on_ice",
+            "4_celsius",
+            "frozen_at_minus_20_celsius",
+            "frozen_at_minus_80_celsius",
+            "used_immediately",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "enriched_fraction_freeze_thaw_cycles",
+          "descr": "Number of freeze-thaw cycles experienced by the enriched protein fraction before mass spectrometry loading; repeated cycles can affect complex integrity and recovery.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fraction_note",
+          "descr": "Free-text note describing the recovered enriched fraction immediately before mass spectrometry, such as clarity, expected yield, or visible precipitate.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "coip_readout": {
+      "reasoning": "This node is a Capture, so I included only the measurement-session and instrument-configuration details for the co-IP readout. I excluded antibody identity, lysate/fraction composition, and downstream file or signal properties because those belong to the upstream Entity/Process nodes or the downstream Signal node. Because the description says this is a readout of the immunoprecipitation step under a specified condition, I focused on actively controlled capture settings and hardware description, including the agent as required for operation nodes.",
+      "md_schema": [
+        {
+          "field_id": "capture_instrument_manufacturer",
+          "descr": "Manufacturer of the hardware used to perform the co-IP capture readout; record the instrument or imaging/reader platform manufacturer that configured the readout session (example: 'Thermo Fisher Scientific', 'Bio-Rad').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_instrument_model",
+          "descr": "Model name or number of the hardware used for the co-IP capture readout; record the specific configured instrument model used during the measurement session (example: 'Q Exactive', 'ChemiDoc MP').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_instrument_serial_number",
+          "descr": "Serial number of the hardware used for the co-IP capture readout, if available; use the manufacturer serial identifier for traceability of the capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_mode",
+          "descr": "Mode of capture used for the immunoprecipitation readout, describing how the bound complexes were measured at the session level rather than as a file output.",
+          "type": "categorical",
+          "allowed_values": [
+            "affinity_capture",
+            "bead_based_readout",
+            "plate_reader_readout",
+            "imaging_readout",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "capture_temperature_celsius",
+          "descr": "Temperature in degrees Celsius maintained during the co-IP readout session, when actively controlled by the operator or instrument; record the measurement condition used for the capture session.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_duration_minutes",
+          "descr": "Duration in minutes of the co-IP capture readout session, measured from initiation to completion of the capture measurement.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_agent",
+          "descr": "Name of the person, team, or automated system responsible for operating the co-IP capture readout session; use the operational actor for this Capture node (example: 'researcher').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "coip_complex_signal": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties of the direct co-IP readout such as file format, file size, dimensionality, storage location, and basic technical quality. I excluded capture settings, antibody/enrichment conditions, and biological interpretation because those belong to upstream Capture/Process/Entity nodes or downstream Derivative nodes. The fields are meant to let a downstream user locate, open, and assess the raw co-IP readout without mixing in procedural details.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_format",
+          "descr": "File format of the raw co-IP complex signal artefact produced by the capture step; record the exact technical format of the stored readout file (example: 'tiff', 'csv', 'mzML', depending on the acquisition modality).",
+          "type": "categorical",
+          "allowed_values": [
+            "tiff",
+            "csv",
+            "mzML",
+            "raw",
+            "txt",
+            "xlsx",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "Size of the raw co-IP signal file in bytes as stored immediately after capture or export; use this to assess completeness and transfer integrity of the artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_data_dimensions",
+          "descr": "Dimensionality of the raw co-IP signal artefact, such as number of channels, rows/columns, or spectra count depending on the capture modality; describe the technical size of the signal dataset rather than biological content.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_storage_uri",
+          "descr": "Storage location or URI of the raw co-IP signal file so it can be retrieved for reanalysis; use a resolvable path or object reference when available (example: 's3://bucket/path/file.raw' or '/data/run1/file.csv').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_quality_flag",
+          "descr": "Technical quality flag assigned to the raw co-IP signal artefact based on acquisition completeness or obvious file integrity issues; this is a raw data status, not a scientific result.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "signal_acquisition_timestamp",
+          "descr": "Date and time when the raw co-IP signal artefact was generated or finalized by the capture system; record the acquisition timestamp associated with the file creation event.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "lc_msms_acquisition": {
+      "reasoning": "This node is a Capture, so I included only LC-MS/MS session and instrument-configuration metadata: the configured hardware, LC and MS settings, scan and fragmentation parameters, and the operator/software agent. I excluded enriched fraction composition because that belongs to the upstream Entity node, and I excluded raw file format, size, and storage because those belong to the downstream Signal node. Because this is the mass spectrometry acquisition step, I emphasized instrument-controlled settings needed to reproduce the run and interpret the resulting spectra.",
+      "md_schema": [
+        {
+          "field_id": "ms_instrument_manufacturer",
+          "descr": "Manufacturer of the LC-MS/MS hardware used for the acquisition session; record the instrument vendor that configured the measurement (example: 'Thermo Fisher Scientific', 'Bruker').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms_instrument_model",
+          "descr": "Model name or number of the mass spectrometer used for LC-MS/MS acquisition; record the configured instrument model at the time of raw spectral generation (example: 'Orbitrap Fusion Lumos', 'Q Exactive Plus').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms_instrument_serial_number",
+          "descr": "Serial number of the mass spectrometer or integrated LC-MS/MS system used for acquisition, if available; record the manufacturer traceability identifier for the instrument session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lc_column_type",
+          "descr": "Type or chemistry of the liquid chromatography column used to separate peptides before tandem mass spectrometry; record the configured column description at acquisition (example: 'C18 reverse-phase').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lc_gradient_duration_minutes",
+          "descr": "Length of the LC solvent gradient in minutes used for peptide separation during the acquisition session; record the chromatographic run time that precedes MS/MS sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms_scan_range_mz",
+          "descr": "Mass-to-charge (m/z) range acquired during the MS1 survey scans or overall acquisition window; report the nominal lower and upper bounds used in the session (example: 350-1500 m/z).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms_resolution",
+          "descr": "Resolution setting used for the mass spectrometer acquisition, typically reported for the MS1 or MS2 scan mode as configured during the run; include the instrument setting that determines mass accuracy and peak separation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Primary fragmentation method used to generate tandem MS spectra from selected precursor ions during acquisition; choose the method configured for the run.",
+          "type": "categorical",
+          "allowed_values": [
+            "cid",
+            "hcd",
+            "etd",
+            "ecd",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "collision_energy",
+          "descr": "Collision energy used for fragmentation in the tandem MS acquisition step, if applicable; record the nominal energy setting used to produce MS/MS spectra.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_mode",
+          "descr": "Overall MS acquisition strategy used for the LC-MS/MS run; record the mode that governed how spectra were collected during the session.",
+          "type": "categorical",
+          "allowed_values": [
+            "dda",
+            "dia",
+            "targeted",
+            "prm",
+            "sim",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "acquisition_software_name",
+          "descr": "Name of the software used to control or acquire the LC-MS/MS run; because this is a Capture node, record the software that configured the instrument during acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_software_version",
+          "descr": "Version of the acquisition software used to control the LC-MS/MS session; record the exact release or build identifier when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_agent",
+          "descr": "Name of the person, team, or automated system that operated the LC-MS/MS acquisition step; use the operational actor for this Capture node (example: 'researcher').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_mass_spectra": {
+      "reasoning": "This node is a Signal, so I included only raw mass spectrometry artefact properties: file format, file size, spectral dimensions, storage location, and basic technical quality. I excluded LC-MS/MS instrument settings, fragmentation parameters, and software because those belong to the upstream Capture node, and I excluded identified peptides/proteins or network interpretation because those belong to downstream Derivative nodes. The fields are chosen to let a user find, verify, and reuse the raw spectral data without mixing in acquisition or analysis details.",
+      "md_schema": [
+        {
+          "field_id": "raw_spectra_file_format",
+          "descr": "File format of the raw mass spectrometry readout produced by LC-MS/MS acquisition; record the exact technical format of the stored spectra file (example: 'mzML', 'raw', 'mgf').",
+          "type": "categorical",
+          "allowed_values": [
+            "mzML",
+            "raw",
+            "mgf",
+            "mzXML",
+            "txt",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "raw_spectra_file_size_bytes",
+          "descr": "Size of the raw mass spectra file in bytes immediately after acquisition or conversion; use this to assess transfer integrity and storage footprint of the artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_scan_count",
+          "descr": "Total number of MS scans or spectra contained in the raw mass spectrometry artefact; record the count in the file as an indicator of dataset extent.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_retention_time_range_minutes",
+          "descr": "Retention time span covered by the raw LC-MS/MS spectra, reported in minutes for the full run represented by the artefact; use the observed lower and upper bounds from the file metadata or run export.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_storage_uri",
+          "descr": "Storage location or URI of the raw mass spectra file so it can be retrieved for downstream processing; use a resolvable path or object reference when available (example: 's3://bucket/run1/file.raw' or '/data/ms/file.mzML').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_signal_quality_flag",
+          "descr": "Technical quality flag for the raw mass spectra artefact based on acquisition completeness, file integrity, or obvious instrument issues; this is a raw-data status only, not a scientific interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "raw_spectra_acquisition_timestamp",
+          "descr": "Date and time when the raw mass spectra artefact was generated by the acquisition system; record the timestamp associated with the raw file creation event.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "spectrum_processing": {
+      "reasoning": "This node is a Process, so I included only the computational processing parameters that transform raw spectra into identified signals: software, version, repository, database, key search settings, and process-level quality indicators. I excluded raw file properties because those belong to the upstream Signal node, and I excluded identified proteins or network outputs because those belong to downstream Derivative nodes. Since this is an operation node, I also included the software agent as required by the schema rules.",
+      "md_schema": [
+        {
+          "field_id": "processing_software_name",
+          "descr": "Name of the software used to process the raw mass spectra, including peak detection, calibration, and database searching; record the exact tool name used in the workflow (example: 'MaxQuant', 'Proteome Discoverer', 'Mascot').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_software_version",
+          "descr": "Version of the spectrum processing software used to generate peptide and protein identifications; record the exact release or build identifier used for the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_software_repository",
+          "descr": "Repository or distribution source for the spectrum processing software, if available; record the code repository, package source, or vendor source used to define the processing environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_database_name",
+          "descr": "Name of the sequence database searched against during spectrum processing to identify peptides and proteins; record the database used for the database-search step (example: 'UniProt human reference proteome').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_database_version",
+          "descr": "Version or release date of the sequence database used for database searching during spectrum processing; record the exact database build when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enzyme_specificity",
+          "descr": "Proteolytic enzyme specificity assumed during database searching for spectrum processing; use the digestion rule configured for peptide identification (example: trypsin, lys-c).",
+          "type": "categorical",
+          "allowed_values": [
+            "trypsin",
+            "lys_c",
+            "arg_c",
+            "chymotrypsin",
+            "glu_c",
+            "non_specific",
+            "semi_specific",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "precursor_mass_tolerance_ppm",
+          "descr": "Precursor mass tolerance in parts per million used during database searching and calibration for spectrum processing; record the search parameter applied to match observed precursor ions to candidate peptides.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_mass_tolerance_da",
+          "descr": "Fragment ion mass tolerance in daltons used during database searching of tandem spectra; record the search parameter applied to MS/MS peaks.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fixed_modifications",
+          "descr": "Fixed peptide or residue modifications assumed during spectrum processing and database searching; record the modification names used in the search setup (example: carbamidomethylation of cysteine).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variable_modifications",
+          "descr": "Variable peptide or residue modifications allowed during spectrum processing and database searching; record the modification names considered in the search setup (example: oxidation of methionine).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "false_discovery_rate_threshold",
+          "descr": "False discovery rate threshold used to filter peptide or protein identifications after spectrum processing; report the cutoff applied at the process stage, typically as a fraction or percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_agent",
+          "descr": "Name of the person, team, or automated pipeline responsible for spectrum processing; use the operational actor for this Process node (example: 'bioinformatics pipeline').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "identified_proteins": {
+      "reasoning": "This node is a Derivative, so I included only computed result fields that describe the identified protein list itself: the identification method, key thresholds, output cardinality, and result-level confidence/quality. I excluded raw spectra properties and processing software/database settings because those belong to the upstream Signal and Process nodes, and I avoided interaction-network interpretation because that belongs to the downstream network inference derivative. I also avoided repeating sample or experiment identifiers. The fields here are the minimum needed to understand what was computed from the spectra and how strong the resulting protein identifications are.",
+      "md_schema": [
+        {
+          "field_id": "identification_algorithm",
+          "descr": "Primary computational method or search algorithm used to derive the protein identifications from processed spectra; record the algorithm or pipeline stage that generated the protein list (example: 'database_search', 'parsimony_inference', 'spectral_matching').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_identification_fdr_threshold",
+          "descr": "False discovery rate threshold applied to the identified protein list after processing; report the cutoff used to accept proteins into the derivative result, typically as a fraction or percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_peptides_per_protein",
+          "descr": "Minimum number of unique peptides required for a protein to be included in the identified protein list; record the derivative-level inclusion rule used to build the result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identified_protein_count",
+          "descr": "Total number of proteins present in the computed output list after filtering and consolidation; report the cardinality of the identified protein derivative for the specific co-IP condition.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identified_interactor_count",
+          "descr": "Number of proteins interpreted as putative interactors specific to the pulled-down complex under the oncogenic mutation condition; this is a derivative-level result count, not a raw identification count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_identification_confidence",
+          "descr": "Overall confidence category assigned to the identified protein result set based on supported spectra, peptide evidence, and filtering thresholds; use a coarse result-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "moderate",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "identified_protein_result_note",
+          "descr": "Free-text note summarizing notable features of the computed protein list, such as enrichment of expected bait partners, unexpected hits, or condition-specific interactors detected in the mutant cancer cells.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "interaction_network_inference": {
+      "reasoning": "This node is a Process, so I included only the computational inference parameters that describe how identified proteins were integrated into altered interaction networks and compared across conditions. I excluded raw spectra, protein list properties, and final network outputs because those belong to upstream Signal/Derivative nodes or downstream Derivative territory. Since this is an operation node, I included the software/pipeline agent and the key settings needed to reproduce the inference step, while avoiding repetition of already-produced identifiers or sample identifiers.",
+      "md_schema": [
+        {
+          "field_id": "network_inference_software_name",
+          "descr": "Name of the software, package, or workflow used to infer protein interaction networks from the identified protein list; record the exact computational tool used at this process step (example: 'Cytoscape', 'igraph pipeline', 'WGCNA').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_inference_software_version",
+          "descr": "Version of the network inference software or pipeline used to construct and compare interaction networks; record the release, commit, or build identifier when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_inference_repository",
+          "descr": "Repository, package source, or code location used for the network inference workflow; record the source controlling the computational environment when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_model_type",
+          "descr": "Type of network model or reconstruction strategy used to infer interactions from identified proteins; record the conceptual model used at this step (for example: correlation-based network, curated PPI overlay, evidence-weighted graph).",
+          "type": "categorical",
+          "allowed_values": [
+            "correlation_based",
+            "curated_ppi_overlay",
+            "evidence_weighted_graph",
+            "coexpression_network",
+            "bayesian_network",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "comparison_design",
+          "descr": "Experimental comparison structure used during network inference to identify altered interaction networks; record how conditions were contrasted at this step (example: mutant_vs_wild_type, treated_vs_untreated).",
+          "type": "categorical",
+          "allowed_values": [
+            "mutant_vs_wild_type",
+            "treated_vs_untreated",
+            "time_course",
+            "dose_response",
+            "multiple_conditions",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "network_score_threshold",
+          "descr": "Score or confidence threshold used to include protein-protein links in the inferred network; report the cutoff applied during network construction or edge filtering.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_inference_edge_count",
+          "descr": "Number of protein-protein edges retained in the inferred interaction network after filtering and comparison across conditions; this is a process output metric used to summarize inference complexity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_inference_agent",
+          "descr": "Name of the person, team, or automated bioinformatics pipeline responsible for performing the network inference process; use the operational actor for this Process node (example: 'bioinformatics pipeline').",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "altered_interaction_network": {
+      "reasoning": "This node is a Derivative, so I included only computed network-result fields that describe the inferred altered interaction map itself: the network file/representation, node and edge counts, condition contrast, scoring summary, and result-level quality. I excluded the inference software and comparison settings because those belong to the upstream Process node, and I excluded raw/protein-list properties because those belong to upstream Signal/Derivative nodes. I also avoided sample and experiment identifiers already reserved for the root Entity layer. The chosen fields help a downstream user understand what the network contains, how large it is, and how confident the derived result is under the oncogenic mutation condition.",
+      "md_schema": [
+        {
+          "field_id": "network_representation_format",
+          "descr": "File or serialization format of the derived interaction network representation; record the exact format used to store or exchange the network result (example: 'graphml', 'json', 'sif', 'csv').",
+          "type": "categorical",
+          "allowed_values": [
+            "graphml",
+            "json",
+            "sif",
+            "csv",
+            "tsv",
+            "cytoscape_session",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "network_node_count",
+          "descr": "Total number of protein nodes present in the derived altered interaction network after inference and filtering; report the final node count for the network result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_edge_count",
+          "descr": "Total number of interaction edges present in the derived altered interaction network after inference and filtering; report the final edge count for the network result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_condition_contrast",
+          "descr": "Condition comparison represented by the derived network, describing which biological states were contrasted to identify altered interactions (example: mutant_vs_wild_type, treated_vs_untreated).",
+          "type": "categorical",
+          "allowed_values": [
+            "mutant_vs_wild_type",
+            "treated_vs_untreated",
+            "time_course",
+            "dose_response",
+            "multiple_conditions",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "network_significance_score",
+          "descr": "Aggregate score or statistical support metric summarizing the strength of the derived altered interaction network; report the result-level network confidence or significance value used by the analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_module_count",
+          "descr": "Number of inferred modules, clusters, or subnetworks detected within the altered interaction network, if applicable; record the derived structural decomposition of the network result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_quality_flag",
+          "descr": "Overall quality flag assigned to the derived interaction network based on completeness, connectivity, and consistency with the underlying protein evidence; this is a result-level assessment, not a process setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "network_result_note",
+          "descr": "Free-text note summarizing notable biological features of the altered interaction network, such as enriched pathways, candidate therapeutic targets, or mutation-associated rewiring patterns.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

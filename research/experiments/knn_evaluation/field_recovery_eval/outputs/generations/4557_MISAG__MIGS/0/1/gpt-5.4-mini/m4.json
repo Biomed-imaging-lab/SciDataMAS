@@ -1,0 +1,705 @@
+{
+  "md_name": "Marine microbial sequencing metadata workflow",
+  "md_description": "This DAG represents the collection, sequencing, processing, and analysis of marine microbial samples from diverse ocean regions. It captures raw genomic data from water-derived microbial entities and links them to sampling metadata including latitude, longitude, depth, temperature, biome, and proximity to hydrothermal vents. The workflow supports downstream analysis of microbial diversity patterns across environmental gradients in marine ecosystems.",
+  "fields_per_node": {
+    "marine_microbial_water_sample": {
+      "reasoning": "This Entity node should capture only the intrinsic identity and origin of the marine water-derived microbial sample, plus the site/environment descriptors explicitly stated in the DAG description. I included sampling-site coordinates and in situ collection context (latitude, longitude, depth, temperature, biome, and hydrothermal-vent proximity) because these are properties of the sample’s provenance, not downstream processing or measurement outputs. I excluded extraction, library prep, sequencing, read, QC, assembly, and analysis fields because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided sample/subject/experiment identifier fields that may already be generated elsewhere in the DAG, per the no-duplication rule.",
+      "md_schema": [
+        {
+          "field_id": "sample_origin_type",
+          "descr": "Origin of the biological material represented by this Entity node; for this workflow the sample is a water-derived marine microbial sample collected from seawater. Use this to distinguish water-derived material from other sample origins such as sediment or host-associated material.",
+          "type": "categorical",
+          "allowed_values": [
+            "water_derived",
+            "sediment_derived",
+            "host_associated",
+            "biofilm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sampling_site_latitude",
+          "descr": "Geographic latitude of the sampling site where the marine microbial water sample was collected, recorded at collection time in decimal degrees (e.g., -33.865143). Typical range: -90 to 90. This is a provenance field for the sample, not an instrument setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_site_longitude",
+          "descr": "Geographic longitude of the sampling site where the marine microbial water sample was collected, recorded at collection time in decimal degrees (e.g., 151.209900). Typical range: -180 to 180. This is a provenance field for the sample, not an instrument setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_depth_meters",
+          "descr": "In situ depth at which the water sample was collected, measured at the sampling point in meters below sea surface (e.g., 5.0, 200.0, 3000.0). Typical marine sampling range: 0 to 11000 m. This describes the sample’s environmental origin.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_temperature_celsius",
+          "descr": "In situ water temperature at the sampling point when the sample was collected, recorded in degrees Celsius (e.g., 2.0, 18.5, 28.0). Typical marine range: approximately -2 to 40 C depending on location and depth. This is a sample provenance variable, not a sequencing or storage temperature.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biome_type",
+          "descr": "Broad marine biome classification describing the habitat context of the sampling site at collection time; use the category that best matches the oceanic environment from which the water sample was obtained.",
+          "type": "categorical",
+          "allowed_values": [
+            "coral_reef",
+            "open_ocean",
+            "coastal",
+            "estuary",
+            "deep_sea",
+            "hydrothermal_vent_area",
+            "polar_marine",
+            "other"
+          ]
+        },
+        {
+          "field_id": "proximity_to_hydrothermal_vents",
+          "descr": "Whether the sampling site was specifically associated with hydrothermal vent influence at collection time. Use this to capture environmental context for the sample, not any later analytical interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "near",
+            "proximal",
+            "direct_vent_association",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "marine_dna_extraction": {
+      "reasoning": "This Process node should describe how DNA extraction was performed on the marine microbial sample, including protocol specifics, reagent/kits, and the quality/yield of the extracted DNA that results from the process. I excluded sample provenance fields (latitude, depth, biome, etc.) because those belong to the Entity node, and I excluded library, sequencing, read, and analysis fields because those belong downstream. I also avoided repeating any sample identifiers or upstream fields already generated for the sample node.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit or in-house protocol name used to lyse microbial biomass and purify DNA from the marine sample; record the exact kit or method identifier used at the extraction step (e.g., DNeasy PowerSoil Kit, phenol-chloroform).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Cell lysis strategy used during DNA extraction at the extraction step, describing the mechanism applied to disrupt microbial cells before DNA purification (e.g., bead beating, enzymatic lysis, chemical lysis, combined).",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "enzymatic_lysis",
+            "chemical_lysis",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dna_extraction_replicate_number",
+          "descr": "Replicate number for the DNA extraction performed on the same marine sample, if multiple extractions were carried out. Use integer indexing starting at 1 for each extraction attempt.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng",
+          "descr": "Mass of purified DNA recovered from the extraction step, measured after cleanup and before library preparation, in nanograms (ng). Typical marine microbial yields may range from sub-ng to hundreds of ng depending on biomass and protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_a260_a280",
+          "descr": "Spectrophotometric DNA purity ratio A260/A280 measured after extraction and cleanup, used as a quick indicator of protein contamination. Typical acceptable range for purified DNA is about 1.7 to 2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_quality_flag",
+          "descr": "Overall outcome flag for the extraction step, indicating whether the extracted DNA met minimal quality requirements for downstream library preparation (e.g., sufficient yield, acceptable purity, no obvious degradation).",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "sequencing_library": {
+      "reasoning": "This Entity node should capture the intrinsic properties of the prepared sequencing library itself, not the extraction process, the sequencing capture settings, or the raw reads. I included library identity and composition fields that describe what the library is (insert size, prep strategy, indexing, amplification status, molarity, and concentration) so downstream users can understand whether the library was suitable for sequencing and reuse. I excluded sample provenance and DNA extraction metrics because they belong upstream, and I excluded instrument/run parameters and file-level read properties because those belong to Capture and Signal nodes. I also avoided fields already generated for the sample and extraction nodes, including any sample identifiers or DNA yield/purity metrics.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_method",
+          "descr": "Method used to construct the sequencing library from extracted marine microbial DNA, recorded as the exact prep strategy or kit workflow used for this library (e.g., ligation-based, tagmentation, PCR-free). This describes the library entity itself, not the extraction step.",
+          "type": "categorical",
+          "allowed_values": [
+            "ligation_based",
+            "tagmentation",
+            "pcr_free",
+            "amplicon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_insert_size_bp",
+          "descr": "Target or observed average insert size of the prepared library in base pairs, measured after library construction and before sequencing (e.g., 350 bp, 550 bp). Typical range for shotgun libraries is approximately 200 to 1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_index_sequence",
+          "descr": "Index or barcode sequence attached to the library for multiplexing, if applicable, recorded exactly as used in the prepared library (e.g., i7/i5 barcode). Use the sequenced adapter/index string when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pcr_amplified",
+          "descr": "Whether PCR amplification was used during library preparation for this sequencing library. Record true if amplification cycles were included, false if the library was prepared without PCR amplification.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_nmol_l",
+          "descr": "Final library molar concentration after preparation and cleanup, measured before loading onto the sequencer, in nanomoles per liter (nM). Typical sequencing library concentrations are often in the low nM range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_quality_flag",
+          "descr": "Overall quality status of the prepared library prior to sequencing, indicating whether it met expected size, concentration, and integrity criteria for loading onto the sequencer.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "shotgun_sequencing_capture": {
+      "reasoning": "This Capture node should describe the sequencing session and instrument configuration used to generate the raw reads, including active run settings and hardware identification. I included the sequencer model/manufacturer-facing identifiers, run chemistry and configured read structure because these are capture settings that determine how the library was read. I excluded sample, extraction, and library properties because they are upstream, and I excluded file-level read outputs such as format, size, or quality metrics because those belong to the downstream Signal node. I also avoided repeating any fields already generated for the sample, extraction, or library nodes.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the shotgun sequencing capture session; in this workflow this should identify the platform vendor operating the instrument that read the marine microbial library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Instrument model used for the sequencing capture session, recorded at the time of the run (e.g., NovaSeq 6000). This identifies the hardware configuration used to generate the raw sequence data.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Serial number or asset identifier of the sequencing instrument used for the capture session, recorded exactly as on the instrument or facility asset record. Use a stable identifier when available (e.g., SN12345).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or reagent kit used during the capture session, recorded as the active chemistry version that determined read generation on the instrument (e.g., S4, 2x150 reagent kit).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each read produced in the sequencing session, typically recorded as the per-read length setting used at run setup (e.g., 150 bp, paired-end 150 bp).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_mode",
+          "descr": "Run mode used by the instrument for this capture session, indicating whether the library was sequenced as single-end or paired-end reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Run identifier assigned to the sequencing session, used to link the raw reads to a specific capture event and instrument run record (e.g., flow-cell/run accession).",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_sequence_reads": {
+      "reasoning": "This Signal node should describe the raw data artifact itself: the read file format, storage, size, dimensionality, and technical quality metrics of the FASTQ-like outputs. I included file-level and read-level technical descriptors that help a downstream user locate, validate, and process the raw reads. I excluded capture settings such as instrument model, read length, and chemistry because those belong to the Capture node, and I excluded preprocessing, assembly, and analysis fields because they belong to downstream Process/Derivative nodes. I also avoided repeating upstream sample/library identifiers or any fields already generated.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "File format of the raw sequencing reads produced directly by the capture session, recorded as the technical container format of the signal artifact (e.g., FASTQ, FASTQ.gz).",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file or files for this signal artifact, measured in bytes at the time of storage or transfer. Typical sequencing run outputs may range from megabytes to terabytes depending on depth and number of lanes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Number of individual sequence reads contained in the raw data artifact, counted after demultiplexing if applicable and before any trimming or filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_bases_bp",
+          "descr": "Total number of nucleotide bases represented across all raw reads in the signal artifact, measured in base pairs before preprocessing. This helps characterize data yield from the sequencing run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Average base-call quality score across the raw reads in this signal artifact, computed from the FASTQ quality strings prior to trimming. Typical values are often in the high 20s to 30s for Illumina data.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_content_fraction",
+          "descr": "Fraction of bases in the raw read set that are G or C, computed on the unprocessed raw signal artifact. Typical values are between 0 and 1 and may reflect sample composition or sequencing bias.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Path, URI, or accession where the raw read file is stored or can be retrieved, recorded as the file location for the signal artifact (e.g., s3://bucket/path/sample_R1.fastq.gz or an archive accession).",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc_trimming": {
+      "reasoning": "This Process node should describe how raw reads were cleaned: the trimming/QC software, its version, key parameters, and a process-level outcome indicating how much data survived preprocessing. I included the software agent because process nodes own software identity/version/repository information, and I included trimming thresholds and output yield because they are active settings and immediate process results. I excluded raw-read file properties because those belong to the Signal node, and I excluded downstream cleaned-read file details beyond the process outcome because those belong to the output Signal node. I also avoided duplicating any upstream sample, library, capture, or raw-read fields already generated.",
+      "md_schema": [
+        {
+          "field_id": "qc_tool_name",
+          "descr": "Software name used to perform adapter removal, low-quality base trimming, and short-read filtering on the raw sequencing reads at the preprocessing step (e.g., fastp). Include the exact tool identity used for this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_tool_version",
+          "descr": "Software version of the read trimming tool used for preprocessing the raw reads, recorded exactly as executed (e.g., v0.23.4). This is part of the process agent description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_repository",
+          "descr": "Repository, package source, or distribution channel for the read trimming software used in preprocessing (e.g., GitHub URL, Bioconda package, or container image reference).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Whether adapter sequence removal was enabled during the trimming process for the raw reads. Record true if adapters were explicitly clipped, false otherwise.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Minimum base quality threshold used during read trimming, expressed as a Phred score and applied at the preprocessing step to remove low-quality bases from raw reads (e.g., 20 or 30).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering, measured in base pairs. Reads shorter than this threshold were removed during preprocessing (e.g., 50 bp, 75 bp).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_retained_fraction",
+          "descr": "Fraction of raw reads retained after QC trimming, computed as retained reads divided by input raw reads for this preprocessing step. Typical values are between 0 and 1 and indicate process efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_data_quality_flag",
+          "descr": "Overall quality outcome of the trimming process, indicating whether the cleaned reads met expected preprocessing standards for downstream assembly or diversity analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "clean_sequence_reads": {
+      "reasoning": "I corrected the clean_sequence_reads Signal schema to avoid all field-name collisions with previously generated DAG steps. Because file format, size, read count, quality score, and storage location were already used elsewhere, I replaced them with non-overlapping Signal-specific fields that still describe the cleaned-read artifact. I kept the scope limited to the output signal itself and excluded process parameters, capture settings, and downstream analysis outputs.",
+      "md_schema": [
+        {
+          "field_id": "cleaned_read_artifact_id",
+          "descr": "Unique identifier for the cleaned sequence-read artifact produced by the read_qc_trimming step, using a stable accession or file identifier format such as a sample-specific filename or archive accession (e.g., sample123_clean_R1.fastq.gz).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_clean_bases_bp",
+          "descr": "Total number of base pairs present in the cleaned read artifact after trimming and preprocessing, measured on the final retained reads before any assembly or analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "median_clean_read_length_bp",
+          "descr": "Median read length in base pairs for the cleaned sequence artifact after trimming and filtering. This describes the output signal’s read-length distribution, not the trimming threshold used by the process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "percent_reads_passing_qc",
+          "descr": "Percentage of input raw reads that survived QC trimming and preprocessing, computed as retained reads divided by input reads multiplied by 100. This is a technical yield metric for the cleaned signal artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cleaned_read_integrity_flag",
+          "descr": "Technical integrity flag for the cleaned read artifact, indicating whether the processed reads are complete and usable for downstream assembly or diversity analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "degraded",
+            "partial",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "assembly_process": {
+      "reasoning": "This Process node should describe how clean reads were assembled and annotated, including the assembly software agent, key assembly parameters, and process-level outcomes such as contig yield and summary quality. I excluded read-level file properties because those belong to upstream Signal nodes, and I excluded the assembled contig artifact details because those belong to the downstream Derivative node. I also avoided reusing any field ids already generated elsewhere in the DAG, including generic file and read metric names flagged in the collision note. The fields below focus on the computational process itself and its immediate performance indicators.",
+      "md_schema": [
+        {
+          "field_id": "assembly_tool_name",
+          "descr": "Software name or pipeline used to assemble clean marine microbial reads into contigs and perform downstream annotation at this process step (e.g., MEGAHIT, metaSPAdes, or a combined assembly/annotation pipeline).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_tool_version",
+          "descr": "Version of the assembly software or pipeline used at this process step, recorded exactly as executed (e.g., v1.2.9). This is part of the process agent description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_tool_name",
+          "descr": "Software name used for contig annotation at this process step, if annotation was performed as part of the assembly workflow (e.g., Prokka).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_tool_version",
+          "descr": "Version of the annotation software used in the assembly/annotation process, recorded exactly as executed (e.g., v1.14.6).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length threshold retained after assembly and filtering, measured in base pairs. Contigs shorter than this threshold were excluded from the assembly output process metrics.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_kmer_size",
+          "descr": "Primary k-mer size or representative k-mer setting used during assembly, if applicable to the assembler configuration. Record the exact value used for the main assembly run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_contig_count",
+          "descr": "Number of contigs produced by the assembly process before downstream derivative curation, reported as a process outcome to summarize assembly yield.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "n50_bp",
+          "descr": "N50 statistic calculated for the assembly process output, expressed in base pairs. This summarizes contig continuity and is typically reported after the assembly step (e.g., 10,000 bp).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_flag",
+          "descr": "Overall quality status of the assembly/annotation process, indicating whether the contig set met expected criteria for downstream diversity or functional analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "assembled_contigs": {
+      "reasoning": "This Derivative node should describe the computed contig set itself: how it was generated, its dimensions, and quality/summary statistics of the assembled output. I included fields that characterize the assembled genomic artifact directly, such as assembly provenance, contig counts, length statistics, and completeness/contamination-style indicators when available. I excluded upstream assembly software settings and process parameters because those belong to the assembly_process node, and I excluded raw/clean read file properties because those belong to Signal nodes. I also avoided repeating any field ids already generated elsewhere in the DAG, including generic file/read metrics and assembly process fields.",
+      "md_schema": [
+        {
+          "field_id": "assembly_method",
+          "descr": "Assembly method or algorithm used to generate the contig set from cleaned reads, recorded at the derivative output level as the computational approach that produced these contigs (e.g., MEGAHIT, metaSPAdes, hybrid assembly).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count",
+          "descr": "Total number of contigs in the assembled genomic output, counted for the derivative artifact after assembly and any post-assembly filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_assembly_length_bp",
+          "descr": "Sum of contig lengths across the assembled output, measured in base pairs for the derivative contig set. This provides a size summary of the assembled genomic sequence content.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp",
+          "descr": "N50 statistic of the assembled contig set, expressed in base pairs, calculated on the final derivative output. This indicates assembly continuity and is a common summary of contig quality.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longest_contig_bp",
+          "descr": "Length of the longest contig in the assembled output, measured in base pairs. This is a derivative-level summary statistic of the final contig set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_contig_gc_fraction",
+          "descr": "Mean GC fraction across the assembled contig set, calculated from the final derivative output. Values range from 0 to 1 and can reflect organismal composition and assembly bias.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent",
+          "descr": "Estimated completeness of the assembled contig set relative to expected genomic content, expressed as a percentage from 0 to 100. Report this if the workflow computes completeness for the final derivative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent",
+          "descr": "Estimated contamination level in the assembled contig set, expressed as a percentage from 0 to 100. Report this if the workflow computes contamination for the final derivative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_derivative_quality_flag",
+          "descr": "Overall quality status of the assembled contig derivative, indicating whether the final contig set is suitable for downstream functional or diversity analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "diversity_profile": {
+      "reasoning": "This Derivative node should describe the computed diversity result itself, including the method used to generate it, the diversity metrics produced, their numerical values, and any output-level quality indicators. I included fields that let downstream users understand which ecological diversity indices were computed and summarize the profile per sample. I excluded sample provenance fields (latitude, depth, biome, vent proximity) because those were already captured on the Entity node, and I excluded raw/clean read properties and analysis process settings because those belong to Signal and Process nodes. I also avoided reusing any field ids already generated elsewhere in the DAG, including generic file/read metrics and assembly-related derivatives.",
+      "md_schema": [
+        {
+          "field_id": "diversity_method",
+          "descr": "Computational method or framework used to derive the microbial diversity profile from cleaned sequence reads, recorded at the derivative output level (e.g., amplicon pipeline, metagenomic diversity inference, or ecological diversity summarization).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_diversity_metric_name",
+          "descr": "Name of the primary alpha diversity metric reported in this diversity profile derivative (e.g., Shannon, Simpson, Observed ASVs). Use the metric actually computed for the sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "shannon",
+            "simpson",
+            "observed_asvs",
+            "chao1",
+            "pielou_evenness",
+            "other"
+          ]
+        },
+        {
+          "field_id": "alpha_diversity_value",
+          "descr": "Numerical value of the primary alpha diversity metric for the sample, reported as the computed derivative output. Typical range depends on the selected metric and sampling depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_diversity_distance_name",
+          "descr": "Name of the beta diversity distance or dissimilarity measure used if this profile includes pairwise community comparison output (e.g., Bray-Curtis, Jaccard, UniFrac).",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "unifrac",
+            "weighted_unifrac",
+            "other"
+          ]
+        },
+        {
+          "field_id": "beta_diversity_value",
+          "descr": "Numeric beta diversity distance or similarity value associated with the sample in the output profile, if computed by the workflow. Report the value on the scale produced by the chosen method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "rareﬁed_sequence_depth",
+          "descr": "Sequencing depth used for rarefaction or normalization when computing the diversity profile, measured as the number of reads retained for comparable ecological profiling. If normalization was not used, record the effective input depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_profile_quality_flag",
+          "descr": "Overall quality status of the computed diversity profile, indicating whether the output met minimum requirements for downstream ecological interpretation and comparison across environmental gradients.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "environmental_association_analysis": {
+      "reasoning": "This Process node should describe the statistical analysis workflow itself: the software agent, model/formula choices, environmental predictors used, and process-level significance settings or fit summaries. I included fields that let a downstream user reproduce the association analysis linking diversity to latitude, longitude, depth, temperature, biome, and vent proximity. I excluded raw/clean read properties and diversity-profile value fields because those belong upstream to Signal/Derivative nodes, and I excluded the final result table details because those belong to the downstream diversity_environment_table derivative. I also avoided reusing any field ids already generated elsewhere in the DAG, including generic file and assembly/read metrics.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Software name used to perform the environmental association analysis at this process step (e.g., R), recorded as the active analysis environment or package host.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software used for the environmental association workflow, recorded exactly as executed (e.g., 4.4.0). This is part of the process agent description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository, package source, or distribution channel for the statistical analysis software or workflow used in this process step (e.g., CRAN package, GitHub repository, or container image reference).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_model_name",
+          "descr": "Name of the statistical model or association framework used to relate microbial diversity to environmental variables at this process step (e.g., linear model, PERMANOVA, redundancy analysis).",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "generalized_linear_model",
+            "permanova",
+            "redundancy_analysis",
+            "correlation_analysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "predictor_variables",
+          "descr": "Environmental predictor variables included in the association analysis at this process step, recorded as the set of site- or sample-level covariates used in the model (e.g., latitude, longitude, depth, temperature, biome, hydrothermal vent proximity).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_variable",
+          "descr": "Diversity metric or diversity profile feature used as the response variable in the association analysis, recorded as the outcome being explained by environmental predictors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold_p",
+          "descr": "P-value threshold used to call associations significant in the environmental analysis workflow, recorded as a process setting (e.g., 0.05).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_adjusted_r2",
+          "descr": "Adjusted R-squared or analogous fit statistic for the fitted association model, recorded as a process-level summary of explanatory power when applicable.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_analysis_quality_flag",
+          "descr": "Overall quality status of the environmental association analysis, indicating whether the fitted results were stable and suitable for downstream reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "diversity_environment_table": {
+      "reasoning": "This Derivative node should describe the final computed result table itself, not the statistical process that produced it. I included output-table properties such as table dimensions, column schema content, the key association summaries, and a result-level significance or quality indicator so downstream users can inspect and reuse the analysis output. I excluded analysis software, model configuration, and predictor selection because those belong to the environmental_association_analysis Process node. I also excluded upstream sample, signal, and diversity-profile fields because they are already represented elsewhere in the DAG. To avoid the earlier collision issue, I used distinct field ids that were not reused by prior nodes.",
+      "md_schema": [
+        {
+          "field_id": "result_table_format",
+          "descr": "Tabular file or table format of the final diversity-environment association output, recorded as the technical format of the derivative artifact (e.g., CSV, TSV, parquet, database table).",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_row_count",
+          "descr": "Number of rows in the final association table, counted after all statistical filtering and before any external reporting. This describes the size of the derivative output table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_column_count",
+          "descr": "Number of columns in the final association table, including identifiers, diversity measures, environmental variables, effect sizes, and significance fields if present.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_effect_direction",
+          "descr": "Direction of the reported relationship between microbial diversity and the associated environmental variable in the final table, recorded for the main summary result or per-row summary when applicable.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "mixed",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "association_effect_size",
+          "descr": "Numerical effect size or summary coefficient reported in the final association table for the primary diversity-environment relationship, as produced by the analysis output. Typical values depend on the model used and may be correlation coefficients, regression coefficients, or distances.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_p_value",
+          "descr": "P-value reported for the main diversity-environment association in the final table, representing statistical evidence for the relationship in the derivative output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_corrected",
+          "descr": "Whether the final table reports p-values or significance values corrected for multiple testing. Record true if correction was applied, false otherwise.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_table_quality_flag",
+          "descr": "Overall quality status of the final diversity-environment association table, indicating whether the output is complete, internally consistent, and suitable for downstream interpretation or reuse.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

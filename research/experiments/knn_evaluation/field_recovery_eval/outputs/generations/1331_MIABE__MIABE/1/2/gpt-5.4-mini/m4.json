@@ -1,0 +1,1472 @@
+{
+  "md_name": "Monoclonal_antibody_screening_workflow",
+  "md_description": "This workflow models the generation of monoclonal antibodies by hybridoma technology, purification of antibody preparations, and their characterization against cancer cell antigens. It captures ELISA and flow cytometry binding measurements as well as cell-based functional assays for apoptosis and proliferation inhibition in cancer cell lines. The resulting processed outputs are integrated to prioritize lead antibody candidates for immunotherapeutic development.",
+  "fields_per_node": {
+    "mouse_splenocytes": {
+      "reasoning": "This is an Entity node, so I included only intrinsic identity/origin fields for the starting biological material: what the splenocytes are, their biological source, donor species/strain context if available, and whether the mice were immunized before collection. I excluded any process fields such as fusion, culture, or selection conditions because those belong to downstream hybridoma_fusion and hybridoma_expansion nodes. I also avoided sample/subject/experiment identifiers because those are typically generated once at the root and may already be present in already_generated. I did not add downstream assay or output descriptors, since this node represents the starting material only.",
+      "md_schema": [
+        {
+          "field_id": "cell_population_type",
+          "descr": "Primary biological material represented by this entity; for this node it should identify the spleen-derived leukocyte population used to start hybridoma generation (example: splenocytes).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "donor_species",
+          "descr": "Species of the donor animal from which the splenocytes were isolated, recorded at collection time; use a standard taxonomic name or common lab-animal species name (example: Mus musculus).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "donor_strain",
+          "descr": "Mouse strain or stock of the donor animal, if known and recorded for the source spleen sample; this is an intrinsic origin descriptor, not a culture condition (example: BALB/c).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "donor_sex",
+          "descr": "Biological sex of the donor mouse, if available in the source record, used to describe the origin of the splenocyte population (allowed values: male, female, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "male",
+            "female",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "donor_age_weeks",
+          "descr": "Age of the donor mouse at the time of spleen collection, measured in weeks and recorded at sampling; typical range in immunization workflows is 4-20 weeks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "immunized_before_collection",
+          "descr": "Whether the donor mouse was immunized prior to spleen harvest, which is the key origin state for this starting material rather than a process parameter (allowed values: true, false).",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_tissue",
+          "descr": "Anatomical tissue from which the cells were isolated; for this node it should indicate spleen-derived origin (example: spleen).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_status",
+          "descr": "High-level status of the starting material at the time it entered the workflow, describing whether the splenocytes were freshly isolated or cryopreserved before use (allowed values: fresh, cryopreserved).",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "cryopreserved"
+          ]
+        }
+      ]
+    },
+    "cancer_cell_lines": {
+      "reasoning": "This is an Entity node, so I included intrinsic properties of the assay substrate cancer cell lines: identity, origin, antigen status, and baseline culture lineage details. I excluded capture/process-style fields such as culture conditions, seeding density, incubation time, or assay settings because those belong to downstream Capture nodes and not to the cell line entity itself. I also avoided repeating any generic sample identifiers because these should already be handled at the root or elsewhere in already_generated. The selected fields are the minimum needed to distinguish target-positive from control lines and to reuse the cell material in binding and functional assays.",
+      "md_schema": [
+        {
+          "field_id": "cell_line_name",
+          "descr": "Name or catalog designation of the cancer cell line used as an assay substrate (example: A549, MCF-7, K562).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cancer_type",
+          "descr": "Cancer lineage represented by the cell line, recorded as the parent tumor type or tissue of origin (example: breast carcinoma, leukemia, lung adenocarcinoma).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "species_of_origin",
+          "descr": "Species from which the cell line was derived, recorded as an origin descriptor at the entity level (example: Homo sapiens).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_antigen_status",
+          "descr": "Whether the cell line expresses the target antigen used in antibody screening, determined from the entity annotation and not from a specific assay readout (allowed values: positive, negative, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cell_line_source",
+          "descr": "Provenance of the cell line stock used in the workflow, such as vendor, repository, or in-house source; use a stable source label if available (example: ATCC, DSMZ, internal_stock).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "authentication_status",
+          "descr": "Status of cell line identity verification at the time the entity was entered into the workflow (allowed values: authenticated, not_authenticated, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "authenticated",
+            "not_authenticated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "mycoplasma_test_status",
+          "descr": "Mycoplasma contamination status of the cell line stock when used as an assay substrate, recorded as a baseline entity-quality attribute rather than an assay condition (allowed values: negative, positive, not_tested, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "negative",
+            "positive",
+            "not_tested",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "hybridoma_fusion": {
+      "reasoning": "This is a Process node, so I included only how the hybridoma generation transformation was performed: fusion method, partner-cell identity, key selection reagent/condition, and the agent/hardware context only if explicitly operating this step. I excluded intrinsic properties of the mouse splenocytes because those belong to the upstream Entity node, and I excluded hybridoma clone properties because those belong to the downstream hybridoma_clones Entity. I also avoided downstream output descriptors and generic identifiers already likely generated at the root. The fields focus on the minimum protocol details needed to reproduce the fusion and selection step.",
+      "md_schema": [
+        {
+          "field_id": "fusion_method",
+          "descr": "Cell-fusion approach used to merge mouse splenocytes with myeloma partner cells for hybridoma generation (example: polyethylene glycol-mediated fusion).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "myeloma_partner_cell_line",
+          "descr": "Identity of the myeloma fusion partner used in this process step, recorded as the specific cell line name or stock designation (example: SP2/0, P3X63Ag8.653).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selection_medium",
+          "descr": "Selective culture medium used immediately after fusion to enrich for hybridoma cells, recorded by standard formulation name (example: HAT medium).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selection_duration_days",
+          "descr": "Length of the post-fusion selection period during which fused cells were cultured under selection, measured in days; typical range is several days to a few weeks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fusion_temperature_celsius",
+          "descr": "Temperature at which the fusion reaction was performed, measured in degrees Celsius at the time of splenocyte-myeloma mixing and fusion; typical range is 20-37 Celsius depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fusion_result_quality",
+          "descr": "Operator-assessed outcome of the fusion step used to summarize whether stable hybridoma generation was successful (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "hybridoma_clones": {
+      "reasoning": "This is an Entity node, so I included intrinsic clone identity and biological properties that describe what the hybridoma clones are, not how they were made. I focused on clone designation, antibody secretion status, isotype, stability, and secretion phenotype because these are properties of the resulting clone entity used downstream for expansion and purification. I excluded fusion protocol details and culture/selection conditions because those belong to the upstream hybridoma_fusion process, and I avoided downstream expansion or assay properties because those belong to later nodes. I also did not repeat generic sample identifiers that should already exist elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "clone_id",
+          "descr": "Unique identifier or clone designation assigned to the hybridoma line after selection (example: clone 2B7).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_secretion_status",
+          "descr": "Whether the hybridoma clone actively secretes antibody at the time it is entered into the workflow (allowed values: secreting, non_secreting, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "secreting",
+            "non_secreting",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "antibody_isotype",
+          "descr": "Antibody heavy/light-chain isotype secreted by the hybridoma clone, recorded as an entity property when known (example: IgG1, IgG2a, IgM).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clone_stability_status",
+          "descr": "Observed stability of antibody secretion and growth phenotype for the hybridoma clone during post-selection handling (allowed values: stable, unstable, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "stable",
+            "unstable",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "clone_passage_number",
+          "descr": "Passage number of the hybridoma clone when the entity record was created or banked, indicating how many subcultures it had undergone; typical range is 0-20 for early characterization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cryopreserved_stock_status",
+          "descr": "Whether a frozen master or working stock was prepared for this hybridoma clone at the time of entity recording (allowed values: prepared, not_prepared, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "prepared",
+            "not_prepared",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "hybridoma_expansion": {
+      "reasoning": "This is a Process node, so I included only culture-expansion operation details: expansion method, culture vessel/system, medium, duration, split/passaging strategy, and a run-level outcome indicator. I excluded clone identity and secretion properties because those belong to the upstream hybridoma_clones Entity, and I excluded antibody harvest/purification properties because they belong downstream to antibody_purification and purified_antibodies. I also avoided any agent/hardware details beyond the process itself unless directly relevant to the operation, since this step is primarily about how the clone was grown to generate enough material for purification.",
+      "md_schema": [
+        {
+          "field_id": "expansion_culture_system",
+          "descr": "Culture system used to expand the selected hybridoma clone before antibody harvest (example: flask culture, spinner culture, bioreactor).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expansion_medium",
+          "descr": "Growth medium used during clone expansion, recorded by standard medium name and major supplements if applicable (example: RPMI-1640 with 10% FBS and selection supplement).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expansion_duration_days",
+          "descr": "Total duration of the expansion phase from inoculation to harvest-ready culture, measured in days; typical range is 1-21 days depending on growth rate.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "initial_cell_density_cells_per_ml",
+          "descr": "Starting cell density used when inoculating the expansion culture, measured in cells per milliliter at process start; typical hybridoma range is about 1e4 to 1e6 cells/ml.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subculture_frequency_days",
+          "descr": "Interval between routine subculturing or feeding events during expansion, measured in days; this describes the process schedule used to maintain viable growth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expansion_outcome",
+          "descr": "Operator-level outcome of the expansion step used to indicate whether sufficient biomass or supernatant was obtained for downstream purification (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "expanded_hybridomas": {
+      "reasoning": "This is an Entity node, so I included only intrinsic attributes of the expanded hybridoma population as a maintained biological material: clone identity linkage, culture state, viability, passage level, and whether it is the production stock intended for antibody harvest. I excluded expansion protocol details because those belong to the upstream hybridoma_expansion process, and I excluded antibody purification details because those belong downstream. I also avoided repeating generic identifiers already generated elsewhere. The fields are meant to let downstream users understand what maintained cell stock was used to produce antibody and how usable it was as a production entity.",
+      "md_schema": [
+        {
+          "field_id": "parent_hybridoma_clone_id",
+          "descr": "Identifier of the original hybridoma clone from which the expanded cell population was derived; use the same clone label recorded for the source entity (example: clone 2B7).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_state",
+          "descr": "Current state of the expanded hybridoma population at the time it is represented in the workflow (allowed values: actively_cultured, banked, thawed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "actively_cultured",
+            "banked",
+            "thawed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cell_viability_percent",
+          "descr": "Estimated fraction of viable cells in the expanded hybridoma culture at the point it was prepared for downstream use, reported as percent viable cells; typical range is 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "passage_number",
+          "descr": "Passage number of the expanded hybridoma culture when this entity was recorded, indicating the number of subcultures since the clone was selected; typical range is 0-50.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "production_readiness",
+          "descr": "Whether the expanded hybridoma culture was considered ready for antibody harvest or further scale-up at the time of recording (allowed values: ready, not_ready, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "not_ready",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Storage or maintenance condition of the expanded hybridoma population, if banked or held before purification (example: 37C incubator, liquid nitrogen, 4C short-term hold).",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "antibody_purification": {
+      "reasoning": "This is a Process node, so I included only purification-operation details: method, capture resin/column type, elution conditions, buffer exchange, and a run-level yield/purity outcome. I excluded hybridoma culture properties and supernatant characteristics because those belong to upstream entities/processes, and I excluded purified antibody identity or downstream assay traits because those belong to the output entity and later nodes. I also avoided software/hardware agent details unless essential; the key reproducible information here is how the antibody was isolated and what the purification achieved.",
+      "md_schema": [
+        {
+          "field_id": "purification_method",
+          "descr": "Primary purification strategy used to isolate monoclonal antibodies from hybridoma supernatant (example: protein_a_affinity, protein_g_affinity, ion_exchange_chromatography, size_exclusion_chromatography).",
+          "type": "categorical",
+          "allowed_values": [
+            "protein_a_affinity",
+            "protein_g_affinity",
+            "ion_exchange_chromatography",
+            "size_exclusion_chromatography",
+            "other"
+          ]
+        },
+        {
+          "field_id": "binding_matrix",
+          "descr": "Affinity resin, column chemistry, or capture matrix used during purification, recorded as the specific commercial or generic matrix name (example: Protein A resin, Protein G column, DEAE resin).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_buffer",
+          "descr": "Buffer formulation used to release bound antibody from the purification matrix, recorded by standard composition or pH if available (example: glycine-HCl pH 2.7).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_exchange_method",
+          "descr": "Method used after capture purification to remove elution buffer or exchange into storage buffer (allowed values: dialysis, desalting_column, ultrafiltration, none, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "dialysis",
+            "desalting_column",
+            "ultrafiltration",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "purification_yield_mg",
+          "descr": "Amount of purified antibody recovered from the purification step, measured in milligrams after completion of the process; typical range is 0-1000 mg depending on scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_percent",
+          "descr": "Estimated purity of the antibody preparation after purification, reported as percent of target antibody in the final preparation; typical range is 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purification_outcome",
+          "descr": "Overall outcome of the purification run as assessed at completion of the process (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "purified_antibodies": {
+      "reasoning": "I corrected the collision by removing the duplicated antibody_isotype field, since that field was already generated for an earlier DAG step and must not be repeated. I kept only entity-level properties specific to the purified antibody stock: source linkage, concentration, purity, formulation, storage, and aliquoting status. I excluded process details from purification and assay-setting details from downstream nodes, preserving this node’s role as the finalized physical reagent entity.",
+      "md_schema": [
+        {
+          "field_id": "source_hybridoma_clone_id",
+          "descr": "Identifier of the hybridoma clone that produced this purified antibody lot; use the clone label carried forward from the source entity (example: clone 2B7).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_concentration_mg_per_ml",
+          "descr": "Concentration of the purified antibody stock used in downstream assays, measured in milligrams per milliliter after purification and formulation; typical range is 0-50 mg/ml.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "final_purity_percent",
+          "descr": "Estimated percentage of target antibody in the final purified preparation, measured after purification and before assay use; typical range is 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "formulation_buffer",
+          "descr": "Buffer or formulation in which the purified antibodies were stored or diluted for downstream characterization (example: PBS, Tris-buffered saline, PBS with glycerol).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Storage temperature of the purified antibody preparation at the time it was held before downstream assay use, measured in degrees Celsius (example: 4, -20, -80).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_status",
+          "descr": "Whether the purified antibody preparation was aliquoted to prevent repeated freeze-thaw cycles before use (allowed values: aliquoted, not_aliquoted, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "aliquoted",
+            "not_aliquoted",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "antigen_coated_elisa": {
+      "reasoning": "This is a Capture node, so I included only the measurement-session and instrument-configuration fields: plate reader identity, assay format, coated antigen identity, incubation and wash settings, detection chemistry, and readout wavelength. I excluded sample properties of the purified antibodies because those belong to the upstream purified_antibodies entity, and I excluded file-level information because that belongs to the downstream ELISA absorbance signal. I also avoided previously generated field names such as antibody_isotype, since that was already created elsewhere in the DAG. The fields focus on the active setup needed to reproduce how the ELISA binding capture was performed.",
+      "md_schema": [
+        {
+          "field_id": "plate_reader_manufacturer",
+          "descr": "Manufacturer of the plate reader instrument used for the ELISA capture session, recorded as the hardware vendor responsible for the configured instrument (example: BioTek, Molecular Devices, Tecan).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plate_reader_model",
+          "descr": "Model name or number of the plate reader used for this ELISA measurement session, recorded as the configured instrument model (example: Synergy H1, SpectraMax iD5).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plate_reader_serial_number",
+          "descr": "Serial number of the plate reader used for this capture session, recorded as the instrument identifier printed on the hardware or service record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elisa_plate_format",
+          "descr": "Physical format of the ELISA plate used for antibody binding capture, recorded as the well configuration of the assay plate (example: 96_well, 384_well).",
+          "type": "categorical",
+          "allowed_values": [
+            "96_well",
+            "384_well",
+            "other"
+          ]
+        },
+        {
+          "field_id": "coated_antigen_name",
+          "descr": "Name of the antigen immobilized on the ELISA plate for this capture session, recorded at the time of assay setup (example: EGFR, HER2, CD20).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Temperature at which the antibody incubation on the antigen-coated plate was performed during the capture session, measured in degrees Celsius; typical ELISA range is 20-37 Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_duration_minutes",
+          "descr": "Length of the antibody incubation on the antigen-coated plate, measured in minutes from sample addition to wash initiation; typical range is 15-240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_cycles",
+          "descr": "Number of wash cycles performed during the ELISA capture session after antibody incubation and before readout, reflecting the configured assay stringency; typical range is 0-20.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detection_reagent",
+          "descr": "Detection chemistry or labeled secondary reagent used to generate the ELISA readout in this capture session (example: HRP-conjugated anti-mouse IgG, TMB substrate).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "readout_wavelength_nm",
+          "descr": "Absorbance wavelength used by the plate reader for the ELISA measurement, recorded in nanometers at the capture stage; typical values include 450, 492, or 570 nm depending on substrate.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "elisa_absorbance_signal": {
+      "reasoning": "This is a Signal node, so I included only raw data-artefact properties: file format, file size, matrix dimensions, storage location, and technical quality flags tied to the raw plate-reader output. I excluded ELISA capture settings and antigen/antibody properties because those belong upstream to the Capture and Entity nodes, and I excluded quantified binding metrics because those belong downstream to ELISA quantification and the derivative node. I also avoided repeating already_generated field names such as antibody_isotype and plate-reader configuration fields. The selected fields are the minimum needed to locate, parse, and judge the raw absorbance dataset.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_format",
+          "descr": "Digital format of the raw ELISA absorbance output file produced by the plate reader (example: csv, xlsx, txt, xml).",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "xlsx",
+            "txt",
+            "xml",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "Size of the raw absorbance data file captured from the plate reader, measured in bytes at the time of storage; typical range is 0 to many megabytes depending on plate count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_row_count",
+          "descr": "Number of rows in the raw absorbance dataset, typically corresponding to wells, plates, or records in the exported plate-reader file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_column_count",
+          "descr": "Number of columns in the raw absorbance dataset file, reflecting the exported measurement and annotation structure used by the plate reader.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_storage_path",
+          "descr": "Filesystem path, URI, or repository location where the raw ELISA absorbance file is stored, recorded as a string identifier for downstream retrieval (example: s3://bucket/path/file.csv).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_quality_flag",
+          "descr": "Technical quality status of the raw ELISA absorbance artefact based on file integrity and completeness checks at ingestion time (allowed values: pass, warning, fail, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "elisa_quantification": {
+      "reasoning": "This is a Process node, so I included only the computation/summary operation used to convert raw ELISA absorbance into binding metrics: background correction method, replicate aggregation, normalization, concentration handling, and software version. I excluded raw file properties because those belong to the upstream signal, and I excluded the final binding metric itself because that belongs to the downstream derivative node. I also avoided duplicating fields already generated earlier in the DAG, especially any antibody identity or capture/instrument settings. The fields here are the minimum needed to understand how the ELISA absorbance was transformed into a quantitative result.",
+      "md_schema": [
+        {
+          "field_id": "background_correction_method",
+          "descr": "Method used to subtract baseline or nonspecific signal from raw ELISA absorbance values before summarization (example: blank subtraction, local background subtraction, no correction).",
+          "type": "categorical",
+          "allowed_values": [
+            "blank_subtraction",
+            "local_background_subtraction",
+            "no_correction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "replicate_aggregation_method",
+          "descr": "Statistical rule used to combine replicate ELISA wells or runs into a single summary per antibody-antigen condition (example: mean, median, trimmed_mean).",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "trimmed_mean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization applied to background-corrected ELISA values before downstream metric calculation (example: percent_of_control, z_score, min_max, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "percent_of_control",
+            "z_score",
+            "min_max",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "concentration_response_fitting_method",
+          "descr": "Curve-fitting or modeling approach used when summarizing ELISA responses across concentrations (example: four_parameter_logistic, linear_fit, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "four_parameter_logistic",
+            "linear_fit",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software package or analysis environment used for ELISA quantification, recorded at the processing step (example: analysis_software_v1.0, GraphPad Prism, R).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the software used to process ELISA absorbance values into binding summaries, recorded as a version string (example: 1.0, 9.5.1, R-4.3.0).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_replicate_count",
+          "descr": "Number of replicates combined for each ELISA condition during quantification, measured as the count of wells or repeats contributing to each summarized binding value; typical range is 1-12.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_outcome",
+          "descr": "Overall processing outcome for the ELISA quantification step after fitting and summarization (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "elisa_binding_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-result fields: the metric type, fitted value, unit/scale, confidence or error estimate, and the source summary basis. I excluded raw absorbance, plate-reader settings, and quantification-processing parameters because those belong upstream to Signal, Capture, and Process nodes. I also avoided reusing already generated fields such as antibody_isotype and instrument/analysis settings. The fields below describe the computed ELISA binding result itself and the minimum quality context needed to interpret it.",
+      "md_schema": [
+        {
+          "field_id": "binding_metric_type",
+          "descr": "Type of ELISA-derived result computed from processed plate-reader data, recorded as the output metric name used in the workflow (allowed values: kd, ec50, relative_binding_units, percent_binding, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "kd",
+            "ec50",
+            "relative_binding_units",
+            "percent_binding",
+            "other"
+          ]
+        },
+        {
+          "field_id": "binding_metric_value",
+          "descr": "Numeric value of the ELISA-derived binding result after quantification, reported in the scale implied by binding_metric_type; for example, a Kd in molar units or a relative response unit score.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_metric_unit",
+          "descr": "Unit associated with the binding_metric_value, recorded explicitly for the computed derivative when applicable (example: nM, µM, RU, percent, none for unitless scores).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_metric_error",
+          "descr": "Estimated uncertainty around the computed ELISA binding metric, measured in the same scale as the reported value or as a percent error depending on the analysis method; typical range is nonnegative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binding_metric_confidence",
+          "descr": "Confidence or support level assigned to the computed binding metric based on the underlying fit or replicate consistency (allowed values: high, medium, low, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "derivation_basis",
+          "descr": "Short description of the processed input basis used to compute the ELISA binding metric, such as the number of concentrations or replicates summarized; this should reference the processed ELISA outputs rather than raw file properties.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "flow_binding_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement-session and instrument-configuration fields: flow cytometer identity, acquisition settings, compensation setup, staining panel details, and acquisition gating/threshold configuration. I excluded cell-line identity and antibody properties because those belong to the upstream Entity nodes, and I excluded raw event files and computed specificity metrics because those belong to the downstream Signal and Derivative nodes. I also avoided duplicating already_generated capture fields from the ELISA step. The fields here describe the active flow cytometry setup needed to reproduce the binding capture session.",
+      "md_schema": [
+        {
+          "field_id": "flow_cytometer_manufacturer",
+          "descr": "Manufacturer of the flow cytometer used for the binding capture session, recorded as the hardware vendor responsible for the configured instrument (example: BD Biosciences, Beckman Coulter, Thermo Fisher).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cytometer_model",
+          "descr": "Model name or number of the flow cytometer used in this capture session, recorded as the configured instrument model (example: FACSCanto II, LSRFortessa, CytoFLEX).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cytometer_serial_number",
+          "descr": "Serial number of the flow cytometer used for the acquisition session, recorded as the instrument identifier printed on the hardware or service record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "laser_wavelength_nm",
+          "descr": "Excitation laser wavelength used for the antibody-staining acquisition, measured in nanometers and recorded for the configured instrument channel set; typical values include 405, 488, 561, or 640 nm.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorophore_channel",
+          "descr": "Fluorescence detection channel or detector used for the antibody signal in this capture session, recorded by instrument channel designation or fluorophore name (example: FITC, PE, APC).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_mode",
+          "descr": "Operating mode used during flow acquisition (allowed values: analysis, sorting, enrichment, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "analysis",
+            "sorting",
+            "enrichment",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "compensation_applied",
+          "descr": "Whether fluorescence compensation was applied during acquisition or immediately prior to gating for this flow capture session (allowed values: true, false).",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "events_targeted_per_sample",
+          "descr": "Target number of events the operator aimed to acquire per sample during this capture session, measured as count of events; typical range is 1,000 to 1,000,000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_voltage_setting",
+          "descr": "Configured detector voltage or analogous signal gain setting used for the primary fluorescence channel at acquisition time; record the instrument-specific setting value as used in this session.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "flow_cytometry_signal": {
+      "reasoning": "This is a Signal node, so I kept only raw flow-event artefact fields and renamed them to avoid collisions with previously generated signal metadata from other steps. I excluded capture settings, cell properties, and downstream gating/derivation outputs because those belong to adjacent nodes, not the raw event file. The remaining fields describe the raw flow dataset in a way that supports retrieval, parsing, and basic technical QC without repeating earlier field names.",
+      "md_schema": [
+        {
+          "field_id": "flow_event_file_format",
+          "descr": "Digital format of the raw flow cytometry event file produced by the instrument for this capture session (example: fcs, csv, txt, other exported format).",
+          "type": "categorical",
+          "allowed_values": [
+            "fcs",
+            "csv",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "flow_event_file_size_bytes",
+          "descr": "Size of the raw flow cytometry event file at storage time, measured in bytes; typical range is 0 to large multi-gigabyte files depending on event count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_event_count",
+          "descr": "Total number of acquired cytometry events contained in the raw signal file, measured as the count of recorded events in this dataset.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_parameter_count",
+          "descr": "Number of recorded parameters or channels in the raw flow cytometry file, reflecting scatter and fluorescence dimensions exported by the instrument.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_event_storage_path",
+          "descr": "Filesystem path, URI, or repository location where the raw flow cytometry file is stored, recorded as a string identifier for downstream retrieval (example: s3://bucket/path/file.fcs).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_event_quality_flag",
+          "descr": "Technical quality status of the raw flow cytometry artefact based on integrity and acquisition completeness checks at ingestion time (allowed values: pass, warning, fail, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "flow_gating_process": {
+      "reasoning": "This is a Process node, so I kept only the gating-specific computation details and removed duplicated software fields that were already generated elsewhere in the DAG. I included compensation, gating, control definition, the summary statistic, gated-event retention, and a process outcome flag. I excluded raw signal properties and downstream specificity metrics because they belong to the Signal and Derivative nodes, respectively. The remaining fields describe how the flow cytometry events were transformed into a summarized binding-selectivity result without repeating prior metadata.",
+      "md_schema": [
+        {
+          "field_id": "compensation_method",
+          "descr": "Method used to compensate fluorescence spillover in the flow cytometry analysis, recorded as the applied algorithm or matrix approach (example: automatic_matrix, manual_matrix, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "automatic_matrix",
+            "manual_matrix",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "gating_strategy",
+          "descr": "Primary gating workflow used to isolate the cell population of interest before specificity summarization (example: singlets_live_cells_positive_gate, singlets_only, custom).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "control_type",
+          "descr": "Type of control samples used to define background or nonspecific binding during gating and summarization (allowed values: isotype_control, unstained_control, secondary_only, antigen_negative_cells, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "isotype_control",
+            "unstained_control",
+            "secondary_only",
+            "antigen_negative_cells",
+            "other"
+          ]
+        },
+        {
+          "field_id": "summary_statistic",
+          "descr": "Statistic used to summarize gated flow cytometry binding across events or replicates (example: median_fluorescence_intensity, percent_positive_cells, geometric_mean_fluorescence).",
+          "type": "categorical",
+          "allowed_values": [
+            "median_fluorescence_intensity",
+            "percent_positive_cells",
+            "geometric_mean_fluorescence",
+            "other"
+          ]
+        },
+        {
+          "field_id": "gated_event_fraction",
+          "descr": "Fraction of total raw events retained after compensation and gating, measured as a proportion from 0 to 1 and used as a technical summary of the process output; typical range is 0.0-1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_analysis_outcome",
+          "descr": "Overall outcome of the flow gating and summarization step after processing raw events (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "flow_specificity_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-result fields describing the specificity metric itself: metric type, value, unit, normalization basis, confidence, and the basis of the gated input used to compute it. I excluded raw flow file properties, gating software details, and instrument settings because those belong to upstream Signal, Process, and Capture nodes. I also avoided duplicate analysis-software fields already generated elsewhere. The fields here are the minimum needed to interpret the computed cell-binding specificity output.",
+      "md_schema": [
+        {
+          "field_id": "specificity_metric_type",
+          "descr": "Type of flow-derived specificity result computed from gated events, recorded as the output metric used in this workflow (allowed values: percent_specific_binding, signal_to_background, specificity_index, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "percent_specific_binding",
+            "signal_to_background",
+            "specificity_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "specificity_metric_value",
+          "descr": "Numeric value of the computed cell-binding specificity result after gating and summarization, reported in the scale implied by specificity_metric_type; typical range depends on metric choice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "specificity_metric_unit",
+          "descr": "Unit associated with the specificity_metric_value, recorded explicitly when applicable (example: percent, ratio, a.u., none for unitless scores).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_basis",
+          "descr": "Basis used to normalize the flow-derived specificity value, such as control-subtracted, percent_of_control, or unnormalized, recorded as part of the derivative definition.",
+          "type": "categorical",
+          "allowed_values": [
+            "control_subtracted",
+            "percent_of_control",
+            "unnormalized",
+            "other"
+          ]
+        },
+        {
+          "field_id": "specificity_metric_confidence",
+          "descr": "Confidence or support level assigned to the computed specificity metric based on gating quality and control separation (allowed values: high, medium, low, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "gated_input_basis",
+          "descr": "Short description of the gated flow population and control basis used to compute the specificity metric, such as singlets live cells compared with antigen-negative controls.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "specificity_metric_error",
+          "descr": "Estimated uncertainty around the computed specificity metric, reported in the same scale as the value or as an absolute/relative error depending on the analysis method; typical range is nonnegative.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "apoptosis_assay_capture": {
+      "reasoning": "This is a Capture node, so I included only measurement-session and instrument-configuration fields for the apoptosis assay: instrument identity, assay format, treatment incubation settings, detection chemistry, and acquisition/readout settings. I excluded cell-line identity and antibody properties because those belong to upstream Entity nodes, and I excluded raw signal files and computed apoptosis effect metrics because those belong to downstream Signal and Derivative nodes. I also avoided repeating previously generated capture/software fields where those were already used in earlier nodes. The fields below describe the active assay setup needed to reproduce the apoptosis capture session.",
+      "md_schema": [
+        {
+          "field_id": "apoptosis_detecting_instrument_manufacturer",
+          "descr": "Manufacturer of the instrument used to record the apoptosis assay readout, recorded as the hardware vendor responsible for the configured device (example: Thermo Fisher, BioTek, Molecular Devices).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_detecting_instrument_model",
+          "descr": "Model name or number of the instrument used for apoptosis readout, recorded as the configured device model (example: SpectraMax iD5, IncuCyte S3, FlexStation 3).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_detecting_instrument_serial_number",
+          "descr": "Serial number of the instrument used in this apoptosis capture session, recorded as the hardware identifier on the device record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assay_platform",
+          "descr": "Assay platform used to detect apoptosis in treated cancer cells (allowed values: plate_reader, imaging_system, flow_cytometer, luminometer, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "plate_reader",
+            "imaging_system",
+            "flow_cytometer",
+            "luminometer",
+            "other"
+          ]
+        },
+        {
+          "field_id": "treatment_incubation_temperature_celsius",
+          "descr": "Temperature at which cancer cells were incubated with purified antibodies before apoptosis readout, measured in degrees Celsius; typical cell-culture range is 20-37 Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_incubation_duration_hours",
+          "descr": "Length of antibody exposure before apoptosis measurement, measured in hours from treatment start to readout; typical range is 1-96 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_detection_reagent",
+          "descr": "Reagent or labeling chemistry used to detect apoptotic response in this capture session (example: Annexin V-FITC, caspase substrate, TUNEL kit).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "readout_endpoint",
+          "descr": "Type of readout collected at the end of the apoptosis capture session (allowed values: fluorescence, luminescence, imaging, flow_event, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "fluorescence",
+            "luminescence",
+            "imaging",
+            "flow_event",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cell_seeding_density_cells_per_well",
+          "descr": "Number of cancer cells plated per well or assay unit before antibody treatment, measured as cells per well at the start of the capture session; typical range is 1e3 to 1e6 cells/well.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "apoptosis_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the apoptosis readout and avoided reusing generic signal fields that were already generated elsewhere in the DAG. Specifically, I kept format, file size, record count, and added assay-specific technical fields for the raw apoptosis file such as channel count, content type, and ingestion status. I excluded capture conditions and downstream apoptosis effect metrics because those belong to the upstream Capture node and downstream Derivative node, respectively. The fields here are limited to the raw data object itself and its technical integrity, while preventing field-id collisions across steps.",
+      "md_schema": [
+        {
+          "field_id": "apoptosis_signal_file_format",
+          "descr": "Digital format of the raw apoptosis readout file produced by the instrument (example: csv, xlsx, txt, other exported format).",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "xlsx",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "apoptosis_signal_file_size_bytes",
+          "descr": "Size of the raw apoptosis signal file at storage time, measured in bytes; typical range is 0 to large files depending on plate size or imaging output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_record_count",
+          "descr": "Number of raw apoptosis records contained in the signal file, typically corresponding to wells, images, or events depending on the assay platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_parameter_count",
+          "descr": "Number of recorded parameters or channels in the raw apoptosis file, reflecting the dimensionality of the exported assay output (example: fluorescence channels, imaging metrics).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_signal_content_type",
+          "descr": "High-level content type of the raw apoptosis file, describing the primary measurement representation captured in the artefact (allowed values: well_based, image_based, event_based, mixed, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "well_based",
+            "image_based",
+            "event_based",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "apoptosis_ingestion_status",
+          "descr": "Status assigned when the raw apoptosis file was imported or validated for downstream use (allowed values: ingested, pending, rejected, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "ingested",
+            "pending",
+            "rejected",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "apoptosis_analysis": {
+      "reasoning": "This is a Derivative node, so I included only computed apoptosis effect-result fields: metric type, value, unit, error, confidence, and the basis of the normalized input. I excluded raw signal properties, capture settings, and analysis-software identifiers because those belong upstream or were already generated elsewhere in the DAG. I also avoided any field names previously flagged as collisions. The fields here describe the final apoptosis effect size that downstream ranking can use.",
+      "md_schema": [
+        {
+          "field_id": "apoptosis_metric_type",
+          "descr": "Type of computed apoptosis result produced from the processed assay data, recorded as the output metric used in this workflow (allowed values: percent_apoptosis, fold_change_apoptosis, apoptosis_index, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "percent_apoptosis",
+            "fold_change_apoptosis",
+            "apoptosis_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "apoptosis_metric_value",
+          "descr": "Numeric value of the computed apoptosis effect metric after processing, reported in the scale implied by apoptosis_metric_type; typical range depends on metric choice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_metric_unit",
+          "descr": "Unit associated with the apoptosis_metric_value, recorded explicitly when applicable (example: percent, fold, a.u., none for unitless scores).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_metric_error",
+          "descr": "Estimated uncertainty around the computed apoptosis metric, reported in the same scale as the value or as an error measure depending on the analysis method; typical range is nonnegative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_metric_confidence",
+          "descr": "Confidence or support level assigned to the computed apoptosis metric based on replicate consistency and control separation (allowed values: high, medium, low, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "apoptosis_derivation_basis",
+          "descr": "Short description of the processed basis used to compute the apoptosis metric, such as untreated controls, background-corrected signals, and replicate counts; this should reference the processed assay outputs rather than raw file properties.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "apoptosis_derivative": {
+      "reasoning": "This is a Derivative node, so I avoided the previously colliding apoptosis_metric_* field names and kept only derivative-specific context fields that describe how the apoptosis outcome was computed and how it should be interpreted. I included the normalization basis, whether the metric is relative or absolute, the directionality of the effect, and the processed-input basis. I excluded raw signal, capture, and process parameters because those belong upstream, and I excluded any repeated metric identity fields already generated elsewhere. The fields are intended to preserve enough context for downstream ranking or reuse without duplicating prior derivative field names.",
+      "md_schema": [
+        {
+          "field_id": "apoptosis_result_scale",
+          "descr": "Scale on which the apoptosis derivative is reported, indicating whether the output is an absolute response, a relative response, or a normalized effect summary (allowed values: absolute, relative, normalized, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "absolute",
+            "relative",
+            "normalized",
+            "other"
+          ]
+        },
+        {
+          "field_id": "apoptosis_effect_direction",
+          "descr": "Direction of the antibody-associated apoptosis effect relative to untreated control, indicating whether the metric reflects increased apoptosis, decreased apoptosis, or no clear change (allowed values: increased, decreased, no_change, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "increased",
+            "decreased",
+            "no_change",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "apoptosis_control_reference",
+          "descr": "Reference condition used as the comparator when deriving the apoptosis metric, such as untreated cells, vehicle control, or baseline sample; record the control basis used for interpretation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_input_summary",
+          "descr": "Short description of the processed assay summaries used to derive the apoptosis outcome, for example baseline-corrected replicate well values or control-normalized response summaries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "apoptosis_metric_support",
+          "descr": "Support level for the derived apoptosis result based on replicate agreement and control separation, recorded as a qualitative interpretation label (allowed values: strong, moderate, weak, uncertain).",
+          "type": "categorical",
+          "allowed_values": [
+            "strong",
+            "moderate",
+            "weak",
+            "uncertain"
+          ]
+        }
+      ]
+    },
+    "proliferation_assay_capture": {
+      "reasoning": "This is a Capture node, so I retained only proliferation-specific instrument and assay chemistry fields that were not previously generated elsewhere in the DAG. I excluded generic capture/session fields that collided with prior steps, and I kept out entity properties (cell line, antibody) and downstream signal/derivative content. The remaining fields describe the active readout configuration needed to reproduce this proliferation assay capture without duplicating earlier metadata.",
+      "md_schema": [
+        {
+          "field_id": "proliferation_assay_format",
+          "descr": "Proliferation assay configuration format used for the capture session, recorded as the experimental readout layout or assay implementation variant (example: endpoint, kinetic, high_content_screening).",
+          "type": "categorical",
+          "allowed_values": [
+            "endpoint",
+            "kinetic",
+            "high_content_screening",
+            "other"
+          ]
+        },
+        {
+          "field_id": "proliferation_detection_reagent",
+          "descr": "Reagent or labeling chemistry used to detect proliferation response in this capture session (example: resazurin, MTT, EdU, ATP-luminescence reagent).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_environment",
+          "descr": "Controlled culture environment used during the antibody treatment period before proliferation readout, recorded as the environment designation rather than sample identity (example: CO2_incubator, hypoxia_chamber, ambient).",
+          "type": "categorical",
+          "allowed_values": [
+            "CO2_incubator",
+            "hypoxia_chamber",
+            "ambient",
+            "other"
+          ]
+        },
+        {
+          "field_id": "plate_reader_wavelength_nm",
+          "descr": "Detection wavelength used by the plate reader for the proliferation readout, measured in nanometers and recorded for the configured acquisition channel; typical values depend on the reagent used (example: 450, 560, 600).",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_plate_type",
+          "descr": "Microplate or imaging plate type used for the proliferation capture session, recorded as the physical assay vessel format (example: 96_well_clear, 96_well_black, 384_well_clear).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "background_subtraction_applied",
+          "descr": "Whether a background subtraction step was applied in the instrument capture workflow for the proliferation assay readout (allowed values: true, false).",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "proliferation_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the proliferation readout: file format, file size, record count, storage location, and a technical quality flag. I excluded treatment settings, detection reagents, and platform configuration because those belong to the upstream Capture node, and I excluded computed inhibition metrics because those belong downstream to the Derivative node. I also avoided repeating previously generated generic signal fields where collisions were reported; the fields here are limited to the raw data object itself and its technical integrity.",
+      "md_schema": [
+        {
+          "field_id": "proliferation_signal_file_format",
+          "descr": "Digital format of the raw proliferation readout file produced by the instrument (example: csv, xlsx, txt, other exported format).",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "xlsx",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "proliferation_signal_file_size_bytes",
+          "descr": "Size of the raw proliferation signal file at storage time, measured in bytes; typical range is 0 to large files depending on plate size or imaging output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_record_count",
+          "descr": "Number of raw proliferation records contained in the signal file, typically corresponding to wells, images, or events depending on the assay platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_signal_storage_path",
+          "descr": "Filesystem path, URI, or repository location where the raw proliferation signal file is stored, recorded as a string identifier for downstream retrieval (example: s3://bucket/path/file.csv).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_signal_quality_flag",
+          "descr": "Technical quality status of the raw proliferation artefact based on file integrity and completeness checks at ingestion time (allowed values: pass, warning, fail, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "proliferation_analysis": {
+      "reasoning": "This is a Process node, so I retained only proliferation-analysis fields that do not collide with previously generated metadata: control normalization, dose-response fitting, dose count, and overall outcome. I excluded replicate aggregation and software fields because they were already generated elsewhere in the DAG, and I excluded raw signal and derivative outputs because those belong to upstream/downstream nodes respectively. The resulting fields describe the computation used to convert raw proliferation signals into inhibition summaries without duplicating existing metadata.",
+      "md_schema": [
+        {
+          "field_id": "control_normalization_method",
+          "descr": "Method used to normalize raw proliferation signals to control conditions before inhibition metric calculation (example: percent_of_control, fold_change, z_score, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "percent_of_control",
+            "fold_change",
+            "z_score",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dose_response_fitting_method",
+          "descr": "Curve-fitting or modeling approach used when summarizing proliferation inhibition across doses (example: four_parameter_logistic, linear_fit, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "four_parameter_logistic",
+            "linear_fit",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dose_count",
+          "descr": "Number of concentration levels included in the proliferation inhibition analysis, measured as the count of distinct doses summarized for a sample; typical range is 1-20.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_outcome",
+          "descr": "Overall outcome of the proliferation analysis step after normalization and fitting (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "proliferation_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-result fields for proliferation response: metric type, value, unit, normalization basis, confidence, and the processed-input basis used to derive it. I excluded capture settings, raw signal properties, and process parameters because those belong upstream to Capture, Signal, and Process nodes. I also avoided duplicate software or replicate fields that have already been generated elsewhere in the DAG. The fields below describe the computed proliferation outcome itself and the minimum context needed to interpret it.",
+      "md_schema": [
+        {
+          "field_id": "proliferation_metric_type",
+          "descr": "Type of proliferation-derived result computed from processed assay data, recorded as the output metric used in this workflow (allowed values: percent_inhibition, fold_change, effect_size, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "percent_inhibition",
+            "fold_change",
+            "effect_size",
+            "other"
+          ]
+        },
+        {
+          "field_id": "proliferation_metric_value",
+          "descr": "Numeric value of the computed proliferation inhibition result after analysis, reported in the scale implied by proliferation_metric_type; typical range depends on metric choice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_metric_unit",
+          "descr": "Unit associated with the proliferation_metric_value, recorded explicitly when applicable (example: percent, fold, a.u., none for unitless scores).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_normalization_basis",
+          "descr": "Basis used to normalize the proliferation metric, such as untreated control, baseline corrected, or control subtracted, recorded as part of the derivative definition.",
+          "type": "categorical",
+          "allowed_values": [
+            "untreated_control",
+            "baseline_corrected",
+            "control_subtracted",
+            "other"
+          ]
+        },
+        {
+          "field_id": "proliferation_metric_confidence",
+          "descr": "Confidence or support level assigned to the computed proliferation metric based on replicate consistency and control separation (allowed values: high, medium, low, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "derived_from_processed_input",
+          "descr": "Short description of the processed assay basis used to compute the proliferation metric, such as control-normalized replicate dose-response values.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proliferation_metric_error",
+          "descr": "Estimated uncertainty around the computed proliferation metric, reported in the same scale as the value or as an absolute/relative error depending on the analysis method; typical range is nonnegative.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "lead_candidate_integration": {
+      "reasoning": "This is a Process node, so I included only the integration/ranking logic used to combine derivative outputs into a lead-candidate score or ranking: the weighting scheme, ranking criteria, input derivative basis, software context, and a run-level outcome. I excluded raw assay settings and all individual assay outputs because those belong to upstream Capture/Signal/Process/Derivative nodes for ELISA, flow, apoptosis, and proliferation. I also avoided reusing any already-generated software or generic signal fields unless necessary. The fields below describe how the multi-assay evidence was combined into a candidate prioritization result.",
+      "md_schema": [
+        {
+          "field_id": "integration_method",
+          "descr": "Strategy used to combine the binding and functional derivative outputs into a single prioritized ranking (example: weighted_sum, multi_criteria_decision_analysis, rule_based_filter, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "weighted_sum",
+            "multi_criteria_decision_analysis",
+            "rule_based_filter",
+            "other"
+          ]
+        },
+        {
+          "field_id": "ranking_criteria",
+          "descr": "Primary criteria applied during candidate prioritization, describing which features drove rank assignment (example: affinity, specificity, apoptosis, proliferation, combined_activity).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "criteria_weighting_scheme",
+          "descr": "Relative weighting applied to the contributing metrics when integrating assay derivatives into the final ranking, recorded as a human-readable scheme or coefficient description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_derivative_count",
+          "descr": "Number of derivative metrics integrated for this ranking step, measured as the count of upstream summary values considered in the decision process; in this workflow typically 4.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ranking_model_name",
+          "descr": "Name of the model, rule set, or decision framework used to rank antibody candidates at this step (example: analysis_software_v1.0, weighted_ranker_v2).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ranking_threshold",
+          "descr": "Threshold or cutoff used to select or prioritize lead candidates from the integrated ranking, recorded as the decision boundary in the chosen scoring scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_outcome",
+          "descr": "Overall outcome of the lead-candidate integration step after combining all assay derivatives (allowed values: successful, partial, failed, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "lead_candidate_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-table properties describing the ranked output itself: candidate rank, composite score, selection status, decision tier, and the provenance of the integrated inputs. I excluded all assay-specific capture, signal, and process fields because those belong to upstream nodes, and I excluded antibody identity/isotype fields already generated elsewhere in the DAG. The fields below are the minimum needed for a downstream user to interpret the lead-candidate table as a ranked summary ready for follow-up development.",
+      "md_schema": [
+        {
+          "field_id": "rank_position",
+          "descr": "Ordinal rank assigned to each monoclonal antibody candidate in the final lead-candidate table, with 1 indicating the highest-priority candidate.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "composite_score",
+          "descr": "Integrated score used to order antibody candidates in the final table, computed from binding and functional derivatives; the exact scale is workflow-specific and should be recorded as output of the ranking step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selection_status",
+          "descr": "Whether the candidate was selected for further immunotherapeutic development based on the final ranking (allowed values: selected, not_selected, reserve, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "selected",
+            "not_selected",
+            "reserve",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "decision_tier",
+          "descr": "Final prioritization tier assigned to the candidate after ranking, used to group antibodies with similar development priority (allowed values: top_tier, secondary_tier, exploratory, unknown).",
+          "type": "categorical",
+          "allowed_values": [
+            "top_tier",
+            "secondary_tier",
+            "exploratory",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of antibody candidates represented in the final ranked table, measured as the count of output rows in the derivative artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_metric_provenance",
+          "descr": "Short description of the upstream integrated metrics used to produce the table, such as ELISA binding, flow specificity, apoptosis induction, and proliferation inhibition derivatives.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_generation_method",
+          "descr": "Method used to construct the final ranked table from integrated scores (example: sorted_list, thresholded_rank_table, manual_curation, other).",
+          "type": "categorical",
+          "allowed_values": [
+            "sorted_list",
+            "thresholded_rank_table",
+            "manual_curation",
+            "other"
+          ]
+        }
+      ]
+    }
+  }
+}

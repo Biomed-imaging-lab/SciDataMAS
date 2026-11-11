@@ -1,0 +1,929 @@
+{
+  "md_name": "Soil microbiome sequencing workflow across farm practices",
+  "md_description": "This workflow covers soil sampling from agricultural plots under organic farming, conventional tillage, and no-till management, followed by microbial DNA extraction, genome sequencing, and computational analysis. It produces raw sequencing signals and derived microbial feature tables used to compare diversity and function across differing farming practices and environmental conditions such as soil pH, moisture, temperature, and crop type.",
+  "fields_per_node": {
+    "soil_sample_from_plot": {
+      "reasoning": "For the soil_sample_from_plot Entity node, I included only intrinsic sample identity and origin/context fields: plot provenance, farming practice, crop type, and field measurements attached at collection (soil pH, moisture, temperature, collection date/time, and geographic/plot identifiers if needed). I excluded any downstream processing details such as homogenization, DNA extraction, sequencing, file formats, or computed outputs because those belong to later Process/Capture/Signal/Derivative nodes. I also avoided duplicating any identifier fields that may already be generated elsewhere in the DAG, especially sample-level IDs, by keeping the schema focused on sample-origin descriptors rather than generic experiment IDs. The field set is limited to what downstream users need to interpret the biological and environmental context of each collected soil specimen.",
+      "md_schema": [
+        {
+          "field_id": "soil_sample_id",
+          "descr": "Unique identifier for the collected soil specimen from a specific farm plot; use a stable string such as SAMPLE_0001 or plotA_soil_03. This is assigned at collection and should link the specimen to downstream aliquots and extracts.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plot_id",
+          "descr": "Identifier of the farm plot where the soil specimen was collected; use a stable string example such as PLOT_12 or FARM7_NORTH. Recorded at collection and used to group samples by field location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "farming_practice",
+          "descr": "Agricultural management practice associated with the plot at the time of collection. Record the practice used for the plot from which the soil sample was taken.",
+          "type": "categorical",
+          "allowed_values": [
+            "organic_farming",
+            "conventional_tillage",
+            "no_till"
+          ]
+        },
+        {
+          "field_id": "crop_type",
+          "descr": "Primary crop grown in the plot at the time of soil collection. Record the crop present in the sampled plot, for example corn, soybean, wheat, or a crop mix if applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date when the soil specimen was collected from the plot. Record in ISO format (YYYY-MM-DD), measured at the time of field sampling.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_ph",
+          "descr": "Soil pH measured on the collected field specimen at sampling or immediately after collection using the project standard method. Typical range for agricultural soils is about 4.0 to 9.0; record as a numeric pH value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_moisture_percent",
+          "descr": "Soil moisture content of the collected specimen at sampling, expressed as percent by mass or project-defined equivalent. Typical range is 0 to 100 percent; record the value measured for the field sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_temperature_celsius",
+          "descr": "Soil temperature measured in the field at or near the time of collection, in degrees Celsius. Typical range for agricultural soil samples is roughly -5 to 45 C, depending on season and site conditions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_depth_cm",
+          "descr": "Depth interval from which the soil specimen was collected, in centimeters below the soil surface. Record the actual sampling depth used in the field, for example 0-10 cm or as a midpoint value if standardized.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collector_id",
+          "descr": "Identifier for the person or field team member who collected the soil specimen; use a stable string example such as operator_01 or technician_A. Recorded at sampling to support provenance and traceability.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_homogenization": {
+      "reasoning": "For the soil_homogenization Process node, I included only parameters describing how the collected soil sample was mixed, subdivided, and prepared into a representative aliquot for downstream extraction. This includes protocol choice, mixing/sieving method, subsampling amount, homogenization duration, operator, and a simple output quality indicator tied to the process (e.g., whether the aliquot was visually uniform). I excluded sample-origin fields such as plot, crop, pH, and moisture because those belong to the soil sample Entity node, and I excluded DNA/library/read fields because they belong to downstream Entity, Capture, Signal, and Derivative nodes. I also avoided repeating generic sample identifiers already used at the entity level.",
+      "md_schema": [
+        {
+          "field_id": "homogenization_method",
+          "descr": "Method used to mix and homogenize the soil specimen before aliquoting, such as manual mixing, sterile spatula mixing, or mechanical stirring. Record the protocol actually applied to the collected sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sieving_mesh_size_mm",
+          "descr": "Mesh size used if the soil was sieved during homogenization, in millimeters. Record the pore size used for the sample preparation step, for example 2.0 mm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_duration_minutes",
+          "descr": "Total time spent homogenizing the soil sample before subdividing it into an aliquot, measured in minutes. Record the actual duration for the preparation step, typically from 1 to 30 minutes depending on sample volume and texture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_mass_grams",
+          "descr": "Mass of the homogenized soil portion retained for downstream DNA extraction, in grams. Record the amount transferred after homogenization, typically within 0.1 to 10 g depending on extraction protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_replication_count",
+          "descr": "Number of independent mixing or subdivision iterations performed on the same soil specimen during preparation. Record as an integer count for the process step, typically 1 or more.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_operator",
+          "descr": "Identifier of the researcher or technician who performed the homogenization step; use a stable string such as operator_01. Recorded at the time of preparation for traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_uniformity_passed",
+          "descr": "Whether the soil aliquot met the project criterion for being sufficiently homogeneous after mixing and subdivision. Record true if the aliquot was accepted for downstream extraction, false if it required repeat preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "homogenized_soil_aliquot": {
+      "reasoning": "I corrected the homogenized_soil_aliquot Entity schema by removing the colliding field aliquot_mass_grams, since that field was already generated for an earlier DAG step and must not be repeated. I kept only fields that remain specific to the aliquot as an entity: its identifier, linkage to the parent soil sample, container, storage conditions, and extraction readiness. I excluded process details from soil_homogenization and any downstream extraction or sequencing attributes to stay within the entity’s semantic territory and avoid overlap with other nodes.",
+      "md_schema": [
+        {
+          "field_id": "homogenized_soil_aliquot_id",
+          "descr": "Unique identifier for the prepared soil aliquot standardized for nucleic acid extraction; use a stable string such as ALIQUOT_0001 or sampleA_aliquot_2. Assigned after homogenization and used to track the aliquot into extraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_soil_sample_id",
+          "descr": "Identifier of the original soil sample from which this aliquot was prepared; use the same stable sample identifier assigned at collection, for example SAMPLE_0001. Links the aliquot back to the source specimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_container_type",
+          "descr": "Container used to hold the homogenized soil aliquot prior to extraction, such as 2 ml microcentrifuge tube, cryovial, or extraction bead tube. Record the actual vessel type used for storage and transfer.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Storage temperature of the prepared aliquot after homogenization and before DNA extraction, in degrees Celsius. Record the temperature at which the aliquot was held, such as 4 C or -20 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_hours",
+          "descr": "Time the homogenized aliquot was stored before nucleic acid extraction, in hours. Record the elapsed interval from aliquot preparation to extraction, typically 0 to several days depending on workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_ready_for_extraction",
+          "descr": "Whether the prepared soil aliquot met acceptance criteria for downstream nucleic acid extraction. Record true if the aliquot was accepted and routed to extraction, false if it was discarded or reprocessed.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "For the dna_extraction Process node, I included only parameters describing how microbial nucleic acids were isolated from the homogenized soil aliquot. This covers extraction kit/protocol, lysis chemistry, bead-beating or incubation settings, elution conditions, extraction input amount, output DNA yield, purity, and an extraction pass/fail quality indicator. I excluded soil origin, farming practice, pH, and aliquot identity because those belong to upstream Entity nodes, and I excluded library, sequencing, read, and analysis details because those belong downstream. I also avoided repeating any already_generated field names or semantically equivalent mass fields that may have been used earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Name of the microbial DNA extraction kit or in-house protocol used to isolate nucleic acids from the soil aliquot, such as DNeasy PowerSoil Pro. Record the exact kit/protocol applied for the extraction step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_lot_number",
+          "descr": "Lot or batch number of the extraction kit or key consumable used in the DNA extraction step. Record the manufacturer batch identifier for traceability when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used to break cells and release microbial nucleic acids from the soil aliquot, such as mechanical bead beating, chemical lysis, or combined lysis. Record the method actually used in this extraction step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bead_beating_duration_minutes",
+          "descr": "Duration of bead-beating or other mechanical disruption applied during extraction, in minutes. Record the actual lysis time used for the soil aliquot, typically within 0.5 to 20 minutes depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final volume of elution buffer used to recover purified DNA from the extraction column or matrix, in microliters. Record the volume applied at the end of the extraction step, typically 20 to 200 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_soil_mass_grams",
+          "descr": "Mass of homogenized soil loaded into the DNA extraction protocol, in grams. Record the extraction input amount used for this process step, typically around 0.05 to 2 g depending on kit and soil type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_nanograms",
+          "descr": "Total amount of DNA recovered from the extraction, measured after purification and reported in nanograms. Record the yield for the extract at the end of the process; typical values may range from below 1 ng to several hundred ng depending on soil biomass.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_260_280_ratio",
+          "descr": "Spectrophotometric 260/280 absorbance ratio for the DNA extract, used as a crude purity indicator after extraction. Typical values for relatively pure DNA are around 1.7 to 2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_passed_quality_check",
+          "descr": "Whether the DNA extract met project quality criteria for downstream library preparation. Record true if the extract was accepted, false if it failed quality control and required re-extraction or was discarded.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_dna_extract": {
+      "reasoning": "For the soil_dna_extract Entity node, I included properties intrinsic to the purified DNA material: extract identifier, parent aliquot linkage, concentration, total yield, purity/contamination indicators, fragment integrity, storage conditions, and readiness for library preparation. These describe what the DNA extract IS after extraction, not how extraction was performed. I excluded extraction kit, lysis, bead-beating, and elution settings because those belong to the dna_extraction Process node, and I excluded library construction, sequencing, and read-file properties because those belong downstream. I also avoided repeating any field names already generated elsewhere in the DAG, especially input mass or other process-specific quantities.",
+      "md_schema": [
+        {
+          "field_id": "soil_dna_extract_id",
+          "descr": "Unique identifier for the purified soil microbial DNA extract; use a stable string such as DNAEX_0001 or sampleA_dna_1. Assigned after extraction and used to track the nucleic acid material into library preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_homogenized_soil_aliquot_id",
+          "descr": "Identifier of the homogenized soil aliquot from which this DNA extract was obtained; use the same stable aliquot identifier assigned after homogenization. Links the extract to its source material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Concentration of the purified DNA extract measured after extraction and before library preparation, in nanograms per microliter. Typical values can range from below 1 to several hundred ng/µL depending on soil biomass and extraction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_nanograms",
+          "descr": "Total mass of purified DNA recovered in the extract, reported in nanograms. Record the final yield of the extract, typically from below 1 ng to several micrograms depending on sample biomass and protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_260_280_ratio",
+          "descr": "Spectrophotometric 260/280 absorbance ratio measured on the purified DNA extract as a purity indicator. Typical values for relatively pure DNA are around 1.7 to 2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_260_230_ratio",
+          "descr": "Spectrophotometric 260/230 absorbance ratio measured on the purified DNA extract as a contamination indicator. Typical values for clean DNA are roughly 1.8 to 2.2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_fragment_size_bp",
+          "descr": "Approximate predominant fragment size of the purified DNA extract, in base pairs, measured after extraction and before library construction. Record the observed size or size range, commonly from several kilobases down to a few hundred base pairs depending on soil DNA integrity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_storage_temperature_celsius",
+          "descr": "Storage temperature of the purified DNA extract prior to library preparation, in degrees Celsius. Record the actual storage condition used, such as 4 C or -20 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_ready_for_library_prep",
+          "descr": "Whether the purified DNA extract met acceptance criteria for sequencing library construction. Record true if the extract was accepted for downstream library preparation, false if it was rejected or re-extracted.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "For the library_preparation Process node, I included only parameters that describe how the purified soil DNA extract was converted into a sequencing-ready metagenomic library. This covers library prep kit, fragmentation approach, size-selection window, adapter/barcode details, amplification cycle count, and process-level QC such as library yield and size distribution. I excluded the DNA extract’s intrinsic properties such as concentration and purity because those belong to the soil_dna_extract Entity node, and I excluded instrument configuration and raw read output because those belong to the downstream Capture and Signal nodes. I also avoided any fields already generated elsewhere in the DAG, especially any sample or aliquot identifiers and mass-like input quantities.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Name of the library preparation kit or in-house protocol used to convert extracted DNA into a sequencing-ready library, such as Nextera DNA Flex. Record the exact kit or workflow applied for this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_dna_mass_nanograms",
+          "descr": "Amount of purified DNA input into the library preparation step, in nanograms. Record the quantity used to start library construction, typically from 0.1 to 1000 ng depending on protocol and sample concentration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Method used to fragment DNA during library preparation, such as enzymatic tagmentation, sonication, or transposase-based fragmentation. Record the actual method applied in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_insert_size_bp",
+          "descr": "Target insert size or fragment size selected for the library, in base pairs. Record the intended size range after fragmentation and/or size selection, typically about 200 to 800 bp for shotgun metagenomics.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_barcode_scheme",
+          "descr": "Adapter and barcode design used during ligation for the sequencing library, such as dual-index adapters or single-index adapters. Record the library indexing scheme actually used to label samples for multiplexing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used to enrich the adapter-ligated library. Record the actual cycle count applied during library amplification, commonly 4 to 15 cycles depending on input DNA amount.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_yield_nanograms",
+          "descr": "Total mass of sequencing-ready library obtained after preparation, measured in nanograms. Record the process output yield after clean-up and amplification, typically from a few ng to hundreds of ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_size_distribution_bp",
+          "descr": "Observed library fragment size distribution after preparation, reported as a representative fragment size or size range in base pairs. Record the post-prep QC result used to confirm library suitability for sequencing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_passed",
+          "descr": "Whether the prepared library met quality criteria for sequencing instrument loading. Record true if the library was accepted, false if it failed QC or required re-preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_library": {
+      "reasoning": "For the metagenomic_library Entity node, I included intrinsic properties of the finalized sequencing library itself: library identifier, parent DNA extract linkage, indexing/barcode identity, concentration, fragment size distribution, pooling status, storage, and load readiness. These describe what the library IS after preparation, not the preparation protocol or the downstream sequencing instrument settings. I excluded library construction parameters such as fragmentation, adapter ligation, and PCR cycle count because those belong to the library_preparation Process node, and I excluded raw read properties and sequencing run configuration because those belong to the Capture and Signal nodes. I also avoided repeating any fields already generated elsewhere, especially input DNA mass and other process-only quantities.",
+      "md_schema": [
+        {
+          "field_id": "metagenomic_library_id",
+          "descr": "Unique identifier for the sequencing library prepared from soil microbial DNA; use a stable string such as LIB_0001 or sampleA_lib_2. Assigned after library construction and used for sequencing instrument loading.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_soil_dna_extract_id",
+          "descr": "Identifier of the purified DNA extract used to construct this library; use the same stable DNA extract identifier assigned after extraction. Links the library back to its source nucleic acid material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_index_id",
+          "descr": "Barcode or index identifier assigned to the library for multiplex sequencing, such as i7/i5 dual index code or sample barcode name. Record the exact index combination used for this library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the finalized sequencing library measured before instrument loading, in nanograms per microliter. Typical values can range from below 0.1 to tens of ng/µL depending on preparation and cleanup efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Representative fragment size or size distribution peak of the finalized library, in base pairs, measured after preparation and before sequencing. Typical shotgun metagenomic libraries often fall around 300 to 800 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pooled",
+          "descr": "Whether this library was pooled with other indexed libraries before sequencing instrument loading. Record true if multiplexed in a pool, false if loaded individually.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_temperature_celsius",
+          "descr": "Storage temperature of the finalized library before sequencing, in degrees Celsius. Record the actual storage condition used, such as 4 C or -20 C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_ready_for_loading",
+          "descr": "Whether the finalized library met acceptance criteria for loading onto the sequencing instrument. Record true if it passed QC and was submitted for sequencing, false otherwise.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "shotgun_sequencing": {
+      "reasoning": "For the shotgun_sequencing Capture node, I included only instrument-session and actively configured acquisition settings: sequencer identity details, flow cell/run configuration, read length, sequencing chemistry, loading concentration, lane/read group information, run duration, and a capture-level run QC indicator. Because the node agent is a specific instrument, I also included manufacturer/model/serial number style fields per the instructions. I excluded biological sample properties such as plot, farming practice, pH, moisture, and crop type because those belong to the soil sample Entity node, and I excluded file format, file size, and read count because those belong to the raw_fastq_reads Signal node. I also excluded any computational analysis or derived metrics because those belong downstream to Process and Derivative nodes.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the shotgun sequencing capture session. Record the hardware vendor for the platform that measured the metagenomic library, such as Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model of the sequencing instrument used for the shotgun sequencing capture session. Record the exact platform model, for example NovaSeq 6000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the capture session. Record the hardware serial identifier for traceability; use the instrument's official serial string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Type of flow cell loaded on the sequencing instrument for this capture session. Record the actual consumable used, for example S4 or SP, as configured for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_version",
+          "descr": "Sequencing chemistry or reagent version used during the capture session. Record the chemistry set actually run on the instrument, such as v1.5 or a platform-specific chemistry designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length generated by the sequencing run, in base pairs per read. Record the planned or achieved read length for this capture session, commonly 75, 150, or 250 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end",
+          "descr": "Whether the sequencing run was configured to produce paired-end reads. Record true if both ends of each fragment were sequenced, false if single-end acquisition was used.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pm",
+          "descr": "Final library loading concentration applied to the sequencing instrument for this run, in picomolar. Record the concentration used at loading, typically within a low-nanomolar to picomolar dilution range depending on platform and library quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_duration_hours",
+          "descr": "Total duration of the sequencing capture session, in hours. Record the elapsed time from run start to run completion or termination, typically from several hours to multiple days depending on platform and read configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_qc_passed",
+          "descr": "Whether the sequencing capture session met basic run-quality acceptance criteria for generating usable raw data. Record true if the run was accepted, false if the run failed or was aborted.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "For the raw_fastq_reads Signal node, I included only technical properties of the raw data artifact itself: file identifier, format, storage location, file size, read count, base count, read structure, and raw-data quality metrics. These describe the FASTQ artefact produced by sequencing, not how the instrument was configured or how the library was prepared. I excluded capture settings such as flow cell, chemistry, and read length because those belong to the shotgun_sequencing Capture node, and I excluded trimming, assembly, and taxonomic analysis details because those belong to downstream Process and Derivative nodes. I also avoided repeating any fields already generated elsewhere in the DAG, especially sample/library identifiers and instrument-related fields.",
+      "md_schema": [
+        {
+          "field_id": "raw_fastq_file_name",
+          "descr": "Name of the raw FASTQ file produced by the sequencing run; use a stable string such as sampleA_R1.fastq.gz or lane1_001.fastq.gz. This identifies the raw data artifact created by the capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_fastq_file_format",
+          "descr": "File format used for the raw sequencing reads, typically FASTQ or compressed FASTQ. Record the exact format of the raw data artifact as stored after sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_fastq_file_size_bytes",
+          "descr": "Size of the raw FASTQ file on disk, in bytes, measured after sequencing and file generation. Record the storage size of the artifact, typically ranging from megabytes to many gigabytes depending on run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_count",
+          "descr": "Total number of reads contained in the raw FASTQ file or files, counted after sequencing and before any trimming or filtering. Record the observed read count for the artifact, typically from thousands to billions depending on sequencing depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_base_count_bp",
+          "descr": "Total number of sequenced bases in the raw FASTQ artifact, reported in base pairs. Record the aggregate base count before trimming or other processing, often derived from read count and read length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_pairing_structure",
+          "descr": "Read structure of the raw sequencing data, indicating whether reads are single-end or paired-end and how mates are stored. Record the structure of the FASTQ artifact as produced by the run.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "interleaved"
+          ]
+        },
+        {
+          "field_id": "raw_data_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the raw FASTQ file is stored. Record the primary access location for the raw data artifact, for example /data/run1/sampleA_R1.fastq.gz or s3://bucket/run/sampleA/",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_base_quality_passed",
+          "descr": "Whether the raw FASTQ artifact met basic post-run file integrity or quality checks before downstream processing. Record true if the file passed checks such as checksum validation and expected read structure, false otherwise.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_trimming": {
+      "reasoning": "For the read_trimming Process node, I included only trimming-operation parameters and process-level QC: trimming software, version, adapter sequence policy, quality threshold, minimum read length after trimming, read retention rate, and whether the trimming step passed. These describe how raw FASTQ reads were transformed, not the raw file properties themselves and not the downstream trimmed-read artifact details. I excluded raw file size, read count, storage path, and file format because those belong to the raw_fastq_reads Signal node, and I excluded any derived taxonomic or assembly outputs because those belong to later Process and Derivative nodes. I also avoided repeating any already_generated field names or semantically equivalent capture/library/sample identifiers.",
+      "md_schema": [
+        {
+          "field_id": "trimming_tool_name",
+          "descr": "Name of the software used to trim adapters and low-quality bases from the raw FASTQ reads, such as fastp. Record the exact tool used for this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_tool_version",
+          "descr": "Version of the trimming software used for the read trimming process, such as v0.23. Record the installed software version applied to this workflow step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_sequence_policy",
+          "descr": "Adapter sequence handling policy used during trimming, such as auto-detect, explicit adapter list, or platform default. Record the actual policy or adapter specification applied to the raw reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_score_threshold",
+          "descr": "Base quality score threshold used to trim low-quality sequence from read ends, typically on a Phred scale. Record the numeric cutoff applied during trimming, commonly in the range 15 to 30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_post_trim_read_length_bp",
+          "descr": "Minimum read length retained after trimming, in base pairs. Reads shorter than this threshold are discarded during the trimming process; typical values may range from 30 to 100 bp depending on downstream requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_retention_rate",
+          "descr": "Fraction or percentage of reads retained after trimming relative to the raw FASTQ input, measured at the end of the trimming process. Record the observed retention rate as a decimal fraction or percent according to project convention.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_passed_qc",
+          "descr": "Whether the trimming step produced reads that met downstream processing criteria. Record true if the trimmed reads were accepted for assembly/profiling, false if the trimming output failed quality criteria.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "trimmed_reads": {
+      "reasoning": "I would remove the duplicated field trimmed_read_retention_rate and keep the trimmed_reads node focused on intrinsic file-level properties of the post-trimming Signal artifact. The remaining fields cover the cleaned read file identity, format, size, counts, structure, storage location, and QC status, which are specific to the trimmed data object and do not overlap with the trimming process parameters or upstream/downstream nodes.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_reads_file_name",
+          "descr": "Name of the trimmed read file produced by the read trimming step; use a stable string such as sampleA_trimmed.fastq.gz or sampleA_R1.trimmed.fastq.gz. This identifies the post-trimming data artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_reads_file_format",
+          "descr": "File format of the trimmed sequencing reads, typically FASTQ or compressed FASTQ. Record the exact stored format of the cleaned read artifact after trimming.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_reads_file_size_bytes",
+          "descr": "Size of the trimmed read file on disk, in bytes, measured after adapter removal and quality trimming. Record the storage size of the post-processing artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_count",
+          "descr": "Total number of reads retained after trimming and filtering, counted in the trimmed FASTQ artifact. Record the output read count at the end of the trimming step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_base_count_bp",
+          "descr": "Total number of bases remaining in the trimmed read artifact, reported in base pairs. Record the aggregate base count after trimming and filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_structure",
+          "descr": "Read structure of the cleaned sequencing data, indicating whether the output is single-end, paired-end, or interleaved. Record the organization of the trimmed artifact after processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "interleaved"
+          ]
+        },
+        {
+          "field_id": "trimmed_reads_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the trimmed read file is stored. Record the primary access location for the post-trimming data artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_reads_qc_passed",
+          "descr": "Whether the trimmed read artifact met post-trimming acceptance criteria for downstream assembly and profiling. Record true if the cleaned reads were accepted, false if they failed file integrity or quality checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembly_and_profiling": {
+      "reasoning": "For the assembly_and_profiling Process node, I included only computation-level parameters and outputs of the analysis step: software/tool names and versions, assembly strategy, key assembly/profiling settings, output contig/bin summary, profiling summary metrics, and an analysis quality indicator. I excluded trimmed-read properties because those belong to the upstream trimmed_reads Signal node, and I excluded the downstream computed feature table itself because that belongs to the microbial_feature_table Derivative node. I also avoided repeated identifier fields and any already-generated semantically equivalent fields, focusing instead on the algorithmic choices and summary outcomes of this process.",
+      "md_schema": [
+        {
+          "field_id": "assembly_tool_name",
+          "descr": "Name of the assembly software used to build contigs from the trimmed reads, such as MEGAHIT. Record the exact tool applied in this analysis step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_tool_version",
+          "descr": "Version of the assembly software used in the assembly_and_profiling step, such as v1.2. Record the installed software version actually used for the computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_tool_name",
+          "descr": "Name of the profiling software used to infer taxonomic or functional composition from the trimmed reads or assembled contigs, such as MetaPhlAn. Record the exact profiling tool applied in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_tool_version",
+          "descr": "Version of the profiling software used in the assembly_and_profiling step, such as v4. Record the installed software version actually used for the profiling computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_strategy",
+          "descr": "Overall analysis strategy used in this process, such as assembly_only, profiling_only, or assembly_plus_profiling. Record the mode actually run for the trimmed reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "assembly_only",
+            "profiling_only",
+            "assembly_plus_profiling"
+          ]
+        },
+        {
+          "field_id": "min_contig_length_bp",
+          "descr": "Minimum contig length retained from the assembly output, in base pairs. Record the filtering threshold applied to assembled contigs, typically in the range of 500 to 1000 bp or higher.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_contig_count",
+          "descr": "Number of contigs produced and retained after assembly filtering. Record the summary count of assembled sequences generated by the process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_bin_count",
+          "descr": "Number of genome bins or equivalent genomic groupings inferred during the assembly/profiling workflow, if binning was performed. Record the count of recovered bins or grouped genomic units, or zero if not applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_coverage_percent",
+          "descr": "Approximate fraction of the microbial community represented by the profiling result, expressed as percent. Record the summary coverage estimate or mapped fraction produced by the analysis, typically between 0 and 100 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_profile_qc_passed",
+          "descr": "Whether the assembly and profiling computation met project acceptance criteria for downstream interpretation and table generation. Record true if the analysis output was accepted, false if it failed quality checks or had insufficient support.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microbial_feature_table": {
+      "reasoning": "For the microbial_feature_table Derivative node, I included only computed-result properties of the table itself: table identifier, source analysis linkage, table format, dimensions, feature categories represented, normalization/transformation applied, sparsity, file/storage location, and a result-level QC indicator. These describe the derived matrix produced by assembly/profiling, not the algorithm parameters that created it and not the downstream comparative analysis. I excluded assembly and profiling software/settings because those belong to the assembly_and_profiling Process node, and I excluded ecological comparisons, statistical tests, and effect sizes because those belong to the comparative_ecology_analysis Process and the final results derivative. I also avoided repeating any already_generated fields or semantically equivalent sample/plot identifiers.",
+      "md_schema": [
+        {
+          "field_id": "microbial_feature_table_id",
+          "descr": "Unique identifier for the computed microbial feature table; use a stable string such as MFT_0001 or sampleA_features_v1. Assigned when the derivative table is created and used for downstream comparative analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_analysis_id",
+          "descr": "Identifier of the upstream assembly_and_profiling computation that generated this table; use the stable analysis/run identifier produced for that process step. Links the table back to its immediate computational source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_format",
+          "descr": "File or table format of the computed microbial feature table, such as csv, tsv, parquet, or biom. Record the storage/serialization format used for the derived matrix.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "biom",
+            "hdf5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_table_n_samples",
+          "descr": "Number of samples or plot-level observations represented as columns/rows in the feature table, measured at the time the derivative was produced. Record the table dimension corresponding to sample count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_n_features",
+          "descr": "Number of microbial features represented in the table, such as taxa, genes, contigs, or functional terms, measured when the derivative was created. Record the table dimension corresponding to feature count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_categories_included",
+          "descr": "Kinds of microbial features represented in the table, such as taxa, genes, pathways, or functional abundance estimates. Record the categories actually present in the computed table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_normalization_method",
+          "descr": "Normalization or transformation applied to raw counts in the feature table, such as relative abundance, centered log-ratio, or rarefaction. Record the method used to make the derived values comparable across samples.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_sparsity_percent",
+          "descr": "Percentage of entries in the feature table that are zero or empty at creation time, expressed as percent. Record this summary metric to indicate how sparse the computed matrix is; typical values may be high for metagenomic data.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the computed feature table is stored. Record the primary access location for the derivative artifact, such as a TSV, BIOM, or parquet file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_qc_passed",
+          "descr": "Whether the computed feature table met project criteria for downstream ecological comparison. Record true if the derivative was accepted for analysis, false if it failed completeness, dimensionality, or integrity checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "comparative_ecology_analysis": {
+      "reasoning": "For the comparative_ecology_analysis Process node, I included only analysis-level parameters and outputs of the statistical comparison: analysis software and version, modeling approach, grouping variables, environmental covariates, multiple-testing correction, number of tests, effect-size summary, and an analysis QC flag. I excluded the feature-table storage and dimensional properties because those belong to the microbial_feature_table Derivative node, and I excluded the final plotted/statistical output artifacts because those belong to the microbial_diversity_results Derivative node. I also avoided repeating any already_generated identifiers or any semantically equivalent sample/plot IDs, focusing instead on the comparative analysis configuration and summary performance.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or package used for comparative ecological analysis, such as phyloseq or a related R package. Record the exact analysis tool applied to the microbial feature table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the comparative ecology analysis software or package used in this process step, such as 1.44 or an R package version string. Record the installed version actually used for the computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_framework",
+          "descr": "General statistical framework used to compare microbial feature tables across plots, such as differential abundance testing, multivariate ordination, mixed-effects modeling, or correlation analysis. Record the primary analysis approach used in this step.",
+          "type": "categorical",
+          "allowed_values": [
+            "differential_abundance",
+            "ordination",
+            "mixed_effects_modeling",
+            "correlation_analysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "grouping_variable",
+          "descr": "Primary categorical variable used to compare samples in the ecological analysis, such as farming practice. Record the main grouping factor used for the comparisons performed in this step.",
+          "type": "categorical",
+          "allowed_values": [
+            "organic_farming",
+            "conventional_tillage",
+            "no_till",
+            "other"
+          ]
+        },
+        {
+          "field_id": "covariates_included",
+          "descr": "Environmental variables included as covariates or predictors in the comparative analysis, such as soil pH, moisture, temperature, and crop type. Record the variables actually adjusted for or modeled in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction",
+          "descr": "Method used to correct for multiple comparisons in the ecological analysis, such as FDR or Bonferroni. Record the correction applied to p-values or test statistics in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_test_count",
+          "descr": "Number of statistical tests, comparisons, or model terms evaluated during the comparative analysis. Record the count produced by the analysis run, typically a non-negative integer.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_effect_size",
+          "descr": "Representative effect size or summary association strength from the comparative analysis, such as an R2, coefficient, or log fold-change summary. Record the main numeric summary reported by the workflow, with the specific metric defined in the analysis report.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_qc_passed",
+          "descr": "Whether the comparative ecology analysis met acceptance criteria for downstream interpretation. Record true if the analysis completed successfully and produced interpretable results, false if it failed or was rejected.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microbial_diversity_results": {
+      "reasoning": "For the microbial_diversity_results Derivative node, I kept only fields that describe the final computed result artifact itself and removed the colliding summary_effect_size field. The schema now focuses on result identity, linkage to the upstream comparative analysis, result type and format, size of the result set, significance threshold, direction of association, visualization location, and QC status. I excluded comparative-analysis parameters because those belong to the upstream process node, and I excluded raw/feature-table properties because those belong to earlier nodes. Where the previous attempt used a generic effect-size field, I replaced it with a non-colliding result-summary field that captures a different aspect of the output.",
+      "md_schema": [
+        {
+          "field_id": "microbial_diversity_results_id",
+          "descr": "Unique identifier for the final derived comparative result set; use a stable string such as MDR_0001 or analysisA_results_v1. Assigned when the ecological comparison output is finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_comparative_analysis_id",
+          "descr": "Identifier of the upstream comparative_ecology_analysis computation that generated these results; use the stable analysis/run identifier produced for that process step. Links the result artifact to its immediate computational source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_type",
+          "descr": "Primary type of comparative result contained in this derivative, such as diversity_summary, functional_profile_comparison, association_analysis, or combined_report. Record the main result category produced by the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "diversity_summary",
+            "functional_profile_comparison",
+            "association_analysis",
+            "combined_report",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_format",
+          "descr": "Serialization or report format used to store the derived results, such as csv, tsv, json, html, or pdf. Record the primary stored format of the comparative results artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "html",
+            "pdf",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_n_samples",
+          "descr": "Number of samples or plot-level observations represented in the derived comparative result. Record the count of observations included in the final analysis output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_n_tests",
+          "descr": "Number of statistical tests or comparisons summarized in the final results artifact. Record the count of hypothesis tests or model comparisons reported by the derivative.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold",
+          "descr": "Significance threshold used to summarize or highlight results in the final derivative, such as 0.05 for p-values or adjusted p-values. Record the cutoff applied when labeling notable associations.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_summary_statistic",
+          "descr": "Primary summarized statistic reported for the final comparative result, such as an R2, coefficient, odds ratio, or fold-change summary. Record the representative numeric summary presented by the output without reusing a generic effect-size field name.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "direction_of_association",
+          "descr": "Directional interpretation of the main result, indicating whether microbial diversity or function increased, decreased, or showed mixed association across farming practices and soil conditions. Record the summarized direction reported in the final output.",
+          "type": "categorical",
+          "allowed_values": [
+            "increase",
+            "decrease",
+            "mixed",
+            "no_clear_association",
+            "other"
+          ]
+        },
+        {
+          "field_id": "results_visualization_path",
+          "descr": "Filesystem path, object-store URI, or report location where plots, figures, or summary visualizations for the final results are stored. Record the primary access location for the derivative artifact if visual outputs were generated.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "results_qc_passed",
+          "descr": "Whether the final comparative results met project acceptance criteria for reporting and reuse. Record true if the derivative was accepted, false if it failed validation or interpretability checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

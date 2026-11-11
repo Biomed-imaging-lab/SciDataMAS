@@ -1,0 +1,910 @@
+{
+  "md_name": "clip_seq_rna_binding_protein_embryo_interaction_workflow",
+  "md_description": "This workflow represents CLIP-seq data generation for RNA-binding protein interaction studies in vertebrate embryonic development. It starts from embryonic samples collected at specific developmental stages, proceeds through crosslinking and immunoprecipitation enrichment, captures sequencing reads, and computes interaction evidence. The resulting dataset supports metadata annotation of developmental stage, target RNA-binding protein, and interaction detection method to study regulatory roles during embryogenesis.",
+  "fields_per_node": {
+    "vertebrate_embryo_sample": {
+      "reasoning": "For the vertebrate_embryo_sample entity, I included only intrinsic sample metadata: developmental stage, vertebrate species/taxon context, embryo source/tissue/region if specified, and collection provenance that defines what the sample is. I excluded any processing details such as crosslinking, immunoprecipitation, library prep, sequencing, alignment, or interaction calling because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided sample/experiment identifier repetition if those would have been generated elsewhere in the DAG; no already_generated fields were provided, so I still kept the schema focused on non-duplicative entity attributes that a user needs to understand and reuse the embryo sample context for CLIP-seq.",
+      "md_schema": [
+        {
+          "field_id": "developmental_stage",
+          "descr": "Embryonic developmental stage of the vertebrate sample at collection, recorded as the biologically defined stage used for the CLIP-seq experiment (for example: stage 12, HH10, 24 hpf). Use the project’s staging system consistently; typical values are embryo-stage labels rather than continuous measurements.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "species_name",
+          "descr": "Vertebrate species from which the embryo sample was obtained, recorded as a taxonomic name at collection time (for example: Danio rerio, Mus musculus, Xenopus laevis, Gallus gallus). This identifies the biological origin of the entity and is not the sequencing reference species.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxon_id",
+          "descr": "NCBI Taxonomy identifier for the vertebrate species of the embryo sample, recorded as a stable species identifier (format example: taxon:7955 for Danio rerio). Useful for cross-study normalization and metadata interoperability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "embryo_source",
+          "descr": "Origin of the embryo sample within the organism or collection context, such as whole embryo, dissected tissue, or embryonic region. Record the biological source material before any enrichment or processing; typical values depend on the study design.",
+          "type": "categorical",
+          "allowed_values": [
+            "whole_embryo",
+            "dissected_tissue",
+            "embryonic_region",
+            "mixed_embryo_pool"
+          ]
+        },
+        {
+          "field_id": "sample_collection_timepoint",
+          "descr": "Collection time relative to fertilization or developmental progression, recorded in the unit used by the study at the moment the embryo sample was taken (for example: hours post fertilization, days post fertilization). Use when the experiment defines sample timing more specifically than the stage label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "embryo_developmental_context",
+          "descr": "Short free-text description of the biological developmental context of the embryo sample, such as organogenesis, gastrulation, neurulation, or segmentation. This captures the developmental process context without describing any downstream protocol or measurement.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crosslinked_rna_protein_complex": {
+      "reasoning": "For the crosslinked_rna_protein_complex entity, I included only intrinsic properties of the enriched complex itself: complex composition, crosslinking status, enrichment target, and source material linkage. I excluded protocol parameters such as UV wavelength, antibody amount, incubation time, wash conditions, and any downstream library or sequencing details because those belong to the crosslink_and_ip process or later nodes. I also avoided repeating embryo sample identity fields already handled at the root entity node or the upstream sample entity, and focused on what distinguishes this intermediate biological material from the original embryo sample and from later sequencing libraries.",
+      "md_schema": [
+        {
+          "field_id": "source_sample_type",
+          "descr": "Biological source material from which the complex was derived, recorded as the upstream sample category before enrichment (for example: vertebrate embryo, whole embryo, dissected embryonic tissue). This links the complex to its originating entity without duplicating sample identifiers.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_rna_binding_protein",
+          "descr": "Name of the RNA-binding protein specifically enriched in this crosslinked complex, recorded as the biological target of the immunoprecipitation (for example: ELAVL1, PTBP1, FMRP). This is the protein whose associated RNA fragments are retained in the complex.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crosslinked_status",
+          "descr": "Indicates whether RNA-protein interactions in this entity were covalently crosslinked prior to enrichment. Record the state at the time this complex is produced; typical interpretation is that the complex contains crosslinked RNA-protein associations suitable for CLIP-seq.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrichment_method",
+          "descr": "High-level enrichment strategy used to isolate the RNA-protein complex, recorded as the biological enrichment category rather than operational settings. For this node, the method is the immunoprecipitation-based enrichment used in CLIP-seq workflows.",
+          "type": "categorical",
+          "allowed_values": [
+            "immunoprecipitation",
+            "crosslinking_and_immunoprecipitation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "complex_purity_notes",
+          "descr": "Brief qualitative annotation of the biological enrichment quality of the complex, such as expected specificity or contamination concerns observed after enrichment. This is a downstream-useful entity attribute, not a protocol parameter or QC metric of the raw signal.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "clip_seq_library": {
+      "reasoning": "For the clip_seq_library entity, I included only library-level intrinsic properties that describe what the library is as a physical sequencing-ready construct: library type, insert/source material, adapter/barcode composition, and amplification state. I excluded all preparation protocol details such as ligation temperatures, PCR cycle counts, enzyme brands, and size-selection settings because those belong to the prepare_sequencing_library process. I also excluded sequencing instrument settings and raw file characteristics because those belong to the downstream Capture and Signal nodes. No already_generated fields were provided here, so I avoided repeating sample or complex identifiers by keeping the schema focused on the library’s own identity and composition.",
+      "md_schema": [
+        {
+          "field_id": "library_type",
+          "descr": "Sequencing library category for this entity, recorded as the construct type generated from CLIP-enriched RNA fragments. Use the library class appropriate to the workflow; for this DAG the library is CLIP-seq-derived and sequencing-ready.",
+          "type": "categorical",
+          "allowed_values": [
+            "clip_seq_library",
+            "other"
+          ]
+        },
+        {
+          "field_id": "insert_source_material",
+          "descr": "Biological material represented by the library inserts, recorded as the RNA fragment source carried into the sequencing library (for example: crosslinked immunoprecipitated RNA fragments, size-selected RNA-protein-derived fragments). This describes the material content of the library rather than how it was prepared.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_barcode_presence",
+          "descr": "Whether sequencing adapters and/or sample barcodes are present on the library molecules at the time this entity is defined. Record the status after library construction; typical values indicate if the library is ready for platform-specific sequencing and multiplexing.",
+          "type": "categorical",
+          "allowed_values": [
+            "adapter_ligated",
+            "adapter_and_barcode_ligated",
+            "adapter_not_ligated"
+          ]
+        },
+        {
+          "field_id": "library_amplification_state",
+          "descr": "Qualitative state of PCR or other amplification applied to the library before sequencing, recorded as the final construct state rather than the amplification protocol. This helps downstream users assess redundancy or potential amplification bias in the CLIP-seq library.",
+          "type": "categorical",
+          "allowed_values": [
+            "unamplified",
+            "amplified",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "library_size_fraction",
+          "descr": "Approximate fragment size range retained in the sequencing-ready library, measured after library construction and before sequencing, typically reported in base pairs (for example: 80-150 bp). This is an intrinsic property of the library insert distribution, not a size-selection procedure.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_compatibility",
+          "descr": "Sequencing platform compatibility of the library, describing whether the construct is appropriate for short-read high-throughput sequencing or another platform. Record the compatibility as a library property, not the instrument used later in capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "short_read_high_throughput",
+            "long_read",
+            "other"
+          ]
+        }
+      ]
+    },
+    "crosslink_and_ip": {
+      "reasoning": "For the crosslink_and_ip process, I included only process-level operational details: the crosslinking modality, immunoprecipitation target, reagent/antibody identity, key conditions, and a process QC outcome. I excluded sample identity and biological origin fields because those belong to the upstream Entity node, and I excluded downstream complex/library/file properties because those belong to the produced Entity/Signal nodes. Per the node rules, I also included agent-related hardware/software only when relevant to operation, but for this wet-lab process the main agent detail is the immunoprecipitation reagent/antibody rather than a computational tool. No already_generated fields were provided, so I avoided repeated sample identifiers by focusing on how the enrichment was performed rather than what the sample is.",
+      "md_schema": [
+        {
+          "field_id": "crosslinking_method",
+          "descr": "Method used to covalently stabilize RNA-protein interactions during this enrichment step, recorded at the time crosslink_and_ip is performed. Typical values include UV crosslinking or chemical crosslinking; capture the method actually used for the embryo sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "uv_crosslinking",
+            "chemical_crosslinking",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "crosslinking_wavelength_nm",
+          "descr": "UV wavelength used for crosslinking, if UV crosslinking was performed, measured in nanometers at the moment of the enrichment step (for example: 254 nm or 365 nm). Record as an instrument setting for the process, not a property of the sample.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "immunoprecipitation_target_protein",
+          "descr": "RNA-binding protein target captured by the immunoprecipitation in this process, named as the protein being enriched from the crosslinked embryo material (for example: ELAVL1, PTBP1, FMRP). This is the operational target of the pull-down step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_name",
+          "descr": "Antibody used for immunoprecipitation in the crosslink_and_ip process, recorded by vendor name or clone designation as applied during the enrichment step (for example: anti-ELAVL1 clone 7A9). This is a process reagent detail, not a sample property.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibody_host_species",
+          "descr": "Host species in which the immunoprecipitation antibody was raised, recorded for the pull-down reagent used in this process (for example: rabbit, mouse, goat). Useful for assessing reagent specificity and compatibility.",
+          "type": "categorical",
+          "allowed_values": [
+            "rabbit",
+            "mouse",
+            "goat",
+            "rat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "immunoprecipitation_incubation_duration_minutes",
+          "descr": "Duration of antibody binding or immunoprecipitation incubation for the enrichment step, measured in minutes during the process execution (for example: 60, 120, 240). Report the actual time used for the embryo sample.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_stringency_level",
+          "descr": "Qualitative wash stringency applied after immunoprecipitation, recorded as the process condition that controls enrichment specificity. Typical values reflect low, medium, or high stringency and should match the actual wash regime used.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        {
+          "field_id": "process_yield_status",
+          "descr": "Overall qualitative outcome of the crosslinking and immunoprecipitation step, recorded immediately after enrichment and before downstream library preparation. Use this to indicate whether the enriched material was sufficient and of acceptable quality for the next step.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial_yield",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "prepare_sequencing_library": {
+      "reasoning": "For prepare_sequencing_library, I included only process-level fields describing how the enriched RNA fragments were converted into a sequencing-compatible construct: end repair/adapter ligation strategy, reverse transcription, PCR amplification, size-selection window, and a preparation QC outcome. I excluded the source embryo sample, crosslinked complex identity, and final library intrinsic properties because those belong to upstream Entity nodes and the downstream clip_seq_library entity. I also excluded sequencing instrument details, file characteristics, and alignment/analysis settings because those are outside this process’s territory. No already_generated fields were provided here, so I focused on the minimum operational details needed to reproduce the library preparation workflow.",
+      "md_schema": [
+        {
+          "field_id": "adapter_ligation_method",
+          "descr": "Method used to ligate sequencing adapters onto the enriched RNA-derived material during library preparation, recorded for the actual CLIP-seq construct generation step. Typical values distinguish direct ligation, tailed adapters, or other ligation-based workflows.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_ligation",
+            "tailed_adapter_ligation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reverse_transcription_enzyme",
+          "descr": "Reverse transcriptase used to convert RNA fragments into cDNA during sequencing library preparation, recorded by enzyme name or kit designation as used in this process (for example: SuperScript III, TGIRT). This is a process reagent detail.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used to complete the CLIP-seq library preparation, measured as the actual cycle count applied to the enriched material. Typical values are low tens of cycles and should reflect the final preparation conditions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_size_selection_range_bp",
+          "descr": "Fragment size window selected during library preparation, measured in base pairs after adapter ligation and amplification but before sequencing (for example: 80-150 bp, 120-250 bp). This describes the process selection criterion, not the final library’s intrinsic size distribution.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "end_repair_status",
+          "descr": "Whether fragment end repair was performed as part of the library preparation workflow, recorded at the process level immediately before adapter ligation or cDNA conversion. Use to indicate the preparation strategy applied to the enriched RNA fragments.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_preparation_qc_status",
+          "descr": "Qualitative outcome of sequencing library preparation, recorded after construction and before sequencing. Use to indicate whether the library met basic requirements for downstream capture, such as adapter presence, amplifiable template, and expected fragment profile.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "high_throughput_sequencer": {
+      "reasoning": "For the high_throughput_sequencer Capture node, I included only instrument/session configuration fields: manufacturer, model, serial number, run mode, read length, and flowcell/platform settings that are actively configured during the sequencing session. I excluded sample biology, library construction details, and raw file properties because those belong to upstream Entity nodes or the downstream raw_clip_reads Signal node. I also avoided downstream analysis settings such as trimming, alignment, and peak calling since they are not part of the capture session. This node is specifically about the sequencer configuration and identity, not the output files or the upstream library content.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the high-throughput sequencing instrument used to capture the CLIP-seq reads, recorded as part of the sequencing session configuration (for example: Illumina, Oxford Nanopore, PacBio). This identifies the hardware responsible for generating the raw reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Sequencer model used for the capture session, recorded at the time the CLIP-seq library was sequenced (for example: NovaSeq 6000, HiSeq 4000, NextSeq 2000). Include the specific model because performance and read characteristics depend on it.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number or unique hardware identifier of the sequencing instrument used for the capture session, recorded as an operational traceability field (format example: SN12345678). This is the physical instrument identity, not a sample identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_mode",
+          "descr": "Run mode or sequencing configuration selected on the instrument for this capture session, such as single-end or paired-end sequencing. Record the actual mode used when reading the CLIP-seq library.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_cycles",
+          "descr": "Configured read length in sequencing cycles for this capture session, measured as the number of cycles used to read each fragment end (for example: 50, 75, 100). Record the setting used on the sequencer rather than the observed read length after processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flowcell_type",
+          "descr": "Flowcell or sequencing consumable type used during the capture session, recorded as the instrument-compatible platform cartridge or lane format (for example: S4, SP, 8-lane flowcell). This describes the configured sequencing hardware environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_session_quality_flag",
+          "descr": "Qualitative assessment of the sequencing session immediately after capture, indicating whether the run produced usable raw reads before downstream processing. Typical values are pass, warn, fail, or unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_clip_reads": {
+      "reasoning": "For the raw_clip_reads Signal node, I included only raw data artefact fields: file format, file size, read count, read length, lane/index provenance, storage location, and raw technical quality metrics. I excluded instrument configuration because that belongs to the Capture node, and I excluded trimming, alignment, and interpretation because those belong to downstream Process and Derivative nodes. I also avoided sample or library identity fields because those are upstream Entity nodes. No already_generated fields were provided here, so I focused on what a downstream user needs to locate, validate, and parse the raw FASTQ-like data produced by the sequencer.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "On-disk format of the raw CLIP-seq read file produced by sequencing capture, recorded as the archival representation of the raw signal (for example: FASTQ, gzipped FASTQ). This describes the raw data artefact itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file in bytes, measured for the stored FASTQ-like artefact immediately after sequencing transfer or archiving. Use the actual file size to support data integrity checks and storage planning.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Number of raw sequencing reads contained in this file, counted from the FASTQ-like artefact before any trimming or filtering. This is a raw signal property and should reflect the contents of the stored file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_nt",
+          "descr": "Length of reads in nucleotides reported by the raw sequencing file, typically the nominal read length generated by the sequencer before processing (for example: 50, 75, 100). Record the observed raw read length distribution or dominant length as appropriate for the file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lane_or_index_id",
+          "descr": "Sequencing lane, index, or multiplexing identifier associated with the raw file, recorded to trace the provenance of the FASTQ-like signal within the sequencing run (for example: lane 1, i7 index set A). This is a file-level provenance field, not a sample identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Location of the raw read file in storage, such as a file path, object store URI, or accession link used to retrieve the FASTQ-like artefact (for example: s3://bucket/file.fastq.gz). This identifies where the raw signal is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_base_quality_summary",
+          "descr": "Summary statistic describing base-call quality of the raw sequencing file before any processing, such as mean or median Phred score, recorded at the file level. Use the value appropriate to the dataset’s chosen QC convention.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_qc_flag",
+          "descr": "Qualitative quality assessment of the raw sequencing artefact immediately after capture and storage, indicating whether the file is usable for downstream processing. Typical values are pass, warn, fail, or unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_processing": {
+      "reasoning": "For the read_processing process, I included only transformation-level parameters describing how raw reads were cleaned: trimming tool identity, adapter removal strategy, quality threshold, minimum retained length, and a processing QC outcome. I excluded raw file properties because those belong to the raw_clip_reads Signal node, and I excluded processed file properties because those belong to the downstream processed_clip_reads Signal node. I also avoided alignment and interaction-calling settings because those are downstream process nodes outside the territory of read_processing. No already_generated fields were provided, so I focused on the minimum reproducible parameters for adapter trimming and low-quality read filtering.",
+      "md_schema": [
+        {
+          "field_id": "trimming_software_name",
+          "descr": "Software used to trim adapters and low-quality bases from raw CLIP-seq reads, recorded as the process tool name applied during read_processing (for example: cutadapt, fastp). This is the active processing agent for the transformation step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_software_version",
+          "descr": "Version of the trimming software used during read_processing, recorded as the exact release applied to the raw reads (for example: 4.6, 0.23.4). Version matters because trimming behavior can change across releases.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_removal_strategy",
+          "descr": "Adapter trimming strategy used during read_processing, recorded as the operational approach for detecting and removing adapter sequence from raw reads (for example: known adapter sequence, auto-detection, anchored trimming).",
+          "type": "categorical",
+          "allowed_values": [
+            "known_adapter_sequence",
+            "auto_detection",
+            "anchored_trimming",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quality_threshold_phred",
+          "descr": "Minimum per-base quality score threshold used to filter or trim low-quality sequence during read_processing, measured on the Phred scale (typical values are 15-30). Record the exact cutoff applied to the raw reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_nt",
+          "descr": "Minimum retained read length in nucleotides after trimming and filtering, measured at the end of read_processing before output is passed to the next step. Typical values are short-read compatible lengths such as 15-25 nt or higher depending on the assay.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "discarded_read_fraction",
+          "descr": "Fraction of raw reads removed during trimming and quality filtering, recorded as a process-level quality indicator after read_processing completes. Use a value between 0 and 1 or the dataset’s equivalent summary to indicate how much material was lost.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_quality_flag",
+          "descr": "Qualitative assessment of the read_processing outcome, recorded immediately after trimming and filtering and before alignment. Typical values are pass, warn, fail, or unknown and should reflect whether the processed reads are suitable for downstream mapping.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "processed_clip_reads": {
+      "reasoning": "I corrected the processed_clip_reads schema to avoid collisions with previously generated Signal fields. Because file_format, file_size_bytes, read_count, and read_length_nt were already used earlier in the DAG, I replaced them with semantically related but distinct processed-signal fields that describe provenance and quality of the processed artefact rather than repeating generic file properties. I kept the node in Signal territory by focusing on processed-file identity, derivation, and file-level QC, while excluding upstream trimming parameters and downstream alignment outputs.",
+      "md_schema": [
+        {
+          "field_id": "source_raw_file_uri",
+          "descr": "Storage location or accession of the upstream raw CLIP-seq read file from which this processed file was derived, recorded to preserve provenance between raw and processed signal artefacts (for example: s3://bucket/raw.fastq.gz or an archive accession).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_file_uri",
+          "descr": "Storage location of the processed read file after adapter trimming and quality filtering, such as a local path, cloud object URI, or accession link (for example: s3://bucket/processed.fastq.gz). This identifies where the processed signal artefact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_adapter_presence",
+          "descr": "Whether adapter sequence was still detected in the processed file after read processing, recorded as a file-level post-processing check. Typical interpretation is that adapters should be absent or substantially reduced in the cleaned reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "absent",
+            "trace_present",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "processing_retained_fraction",
+          "descr": "Fraction of raw reads retained in the processed file after adapter trimming and quality filtering, recorded as a file-level provenance and yield metric for the processed signal. Typical values range from 0 to 1 and summarize how much material survived processing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_processing_quality_score",
+          "descr": "Summary quality score for the processed read artefact immediately before alignment, such as a mean processed-read Phred summary or another dataset-defined QC score. Record the metric convention used by the workflow so downstream users can judge whether the file is suitable for mapping.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_level_quality_flag",
+          "descr": "Qualitative quality assessment of the processed read artefact before alignment, indicating whether the file is suitable for mapping. Typical values are pass, warn, fail, or unknown and should reflect the cleaned read file as stored.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_alignment": {
+      "reasoning": "For the read_alignment process, I included only alignment-operation fields: aligner software identity, version, reference target, key mapping parameters, and an alignment QC outcome. I excluded processed-read file properties because those belong to the upstream processed_clip_reads Signal node, and I excluded aligned-read properties because those belong to the downstream aligned_clip_reads Derivative node. I also avoided sequencing capture settings and library preparation details because they are outside this node’s semantic territory. Because earlier DAG steps already used some generic field names, I chose unique snake_case field IDs to avoid collisions while preserving the same alignment-specific meaning.",
+      "md_schema": [
+        {
+          "field_id": "alignment_software_name",
+          "descr": "Software used to align processed CLIP reads to the reference genome or transcriptome, recorded as the mapping tool applied in the read_alignment process (for example: STAR, Bowtie, HISAT2). This is the active computational agent for the alignment step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_software_version",
+          "descr": "Version of the alignment software used during read_alignment, recorded as the exact release applied to the processed reads (for example: 2.7.11a). Version is required because mapping behavior and defaults can change across releases.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_target_type",
+          "descr": "Type of reference target used for alignment, recorded at the time processed reads are mapped (for example: genome or transcriptome). This identifies whether reads were aligned to the vertebrate reference genome or to a transcriptome index.",
+          "type": "categorical",
+          "allowed_values": [
+            "genome",
+            "transcriptome",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reference_assembly_name",
+          "descr": "Reference assembly or index name used for alignment, recorded as the specific genome build or transcriptome reference applied to the processed CLIP reads (for example: GRCh38, GRCz11, GRCm39). This anchors the mapping result to a reproducible coordinate system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mismatch_allowance",
+          "descr": "Maximum number of mismatches or edit distance allowed per read during alignment, recorded as the actual mapping constraint applied in the read_alignment process. Use the value configured for the run; typical values are small integers such as 0, 1, 2, or 3.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_alignment_score",
+          "descr": "Minimum alignment score or equivalent confidence threshold required for a read to be retained by the aligner, measured according to the software’s scoring system at the time of mapping. Record the threshold actually used for the processed CLIP reads.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligned_read_fraction",
+          "descr": "Fraction of processed reads that successfully aligned to the reference target, calculated after the alignment step completes. This is a process-level mapping success indicator and should reflect the proportion retained for downstream interaction calling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_qc_flag",
+          "descr": "Qualitative assessment of the alignment outcome, recorded immediately after mapping and before interaction calling. Typical values are pass, warn, fail, or unknown and should summarize whether the aligned reads are suitable for downstream derivative generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "aligned_clip_reads": {
+      "reasoning": "For the aligned_clip_reads Derivative node, I included only computed alignment-result properties: alignment file format, coordinate system, mapped/unmapped counts, alignment rate, duplicate/unique assignment summary, and alignment-result QC. I excluded aligner name, version, reference assembly, and mapping thresholds because those belong to the upstream read_alignment process. I also excluded interaction peak/call settings and any biological interpretation because those belong to downstream interaction_calling and interaction_sites. Since earlier steps already used some generic file and count field names, I used derivative-specific names to avoid collisions while keeping this node focused on the computed alignment artefact.",
+      "md_schema": [
+        {
+          "field_id": "alignment_file_format",
+          "descr": "On-disk format of the aligned read result produced by the alignment process, recorded as the derivative artefact format (for example: BAM, CRAM, SAM). This describes the computed alignment output rather than the original read file.",
+          "type": "categorical",
+          "allowed_values": [
+            "bam",
+            "cram",
+            "sam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "coordinate_system",
+          "descr": "Reference coordinate system used to represent the aligned reads, recorded after alignment and before downstream interaction calling (for example: genomic coordinates or transcript coordinates). This indicates how read placements are encoded in the derivative file.",
+          "type": "categorical",
+          "allowed_values": [
+            "genomic",
+            "transcriptomic",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mapped_read_count",
+          "descr": "Number of processed reads that were successfully aligned and retained in the aligned read artefact, counted after read_alignment completes. This is a computed property of the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unmapped_read_count",
+          "descr": "Number of processed reads that failed to align and are absent from the aligned read artefact, counted after the alignment step. This complements mapped_read_count for alignment completeness assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_rate",
+          "descr": "Proportion of processed reads that aligned successfully, computed from the alignment result after read_alignment and before interaction calling. Typical values are between 0 and 1 and summarize mapping success at the derivative level.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_alignment_fraction",
+          "descr": "Fraction of aligned reads marked as duplicates or non-unique alignments in the computed alignment output, recorded after alignment and before downstream site calling. Use this to summarize alignment redundancy or ambiguity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aligned_file_uri",
+          "descr": "Storage location or accession for the aligned read artefact, such as a BAM/CRAM path or repository link (for example: s3://bucket/aligned.bam). This identifies where the computed alignment result is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_result_qc_flag",
+          "descr": "Qualitative quality assessment of the aligned read artefact immediately after computation, indicating whether the alignment output is suitable for interaction calling. Typical values are pass, warn, fail, or unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "interaction_calling": {
+      "reasoning": "For the interaction_calling process, I included only peak-calling or site-identification operation fields: caller software identity and version, statistical significance threshold, peak/cluster calling mode, and a process QC outcome. I excluded aligned-read file properties because those belong to the upstream aligned_clip_reads Derivative node, and I excluded the interaction sites themselves because those belong to the downstream interaction_sites Derivative node. I also avoided library, capture, and read-processing details because they are outside this node’s semantic territory. I used unique field IDs to avoid collisions with previously generated fields while preserving the same process-level meaning.",
+      "md_schema": [
+        {
+          "field_id": "site_calling_software_name",
+          "descr": "Software used to identify significant RNA-binding protein interaction sites or peaks from aligned CLIP reads, recorded as the computational tool applied in the interaction_calling process (for example: CLIPper, PARalyzer, Piranha). This is the active analysis agent for site identification.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "site_calling_software_version",
+          "descr": "Version of the interaction-calling software used during site detection, recorded as the exact release applied to the aligned reads (for example: 1.0, 1.3.2). Version is important because peak-calling behavior and defaults can change.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold",
+          "descr": "Statistical threshold used to declare an RNA-protein interaction site significant during interaction_calling, measured according to the caller’s scoring or p-value framework (for example: 0.05, 1e-5, FDR 0.1). Record the actual cutoff applied to the aligned reads.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction_method",
+          "descr": "Method used to correct for multiple hypothesis testing during interaction site calling, recorded as the statistical adjustment strategy applied to candidate sites (for example: Benjamini-Hochberg, Bonferroni, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "benjamini_hochberg",
+            "bonferroni",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "site_detection_mode",
+          "descr": "Operational mode used by the caller to define interaction evidence, such as peak-based clustering, crosslink-site identification, or hybrid site detection. Record the mode actually used in the interaction_calling process.",
+          "type": "categorical",
+          "allowed_values": [
+            "peak_based",
+            "crosslink_site_based",
+            "cluster_based",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "minimum_supporting_reads",
+          "descr": "Minimum number of aligned reads required to support a candidate interaction site during interaction_calling, measured as the caller’s minimum evidence threshold. Typical values are small integers such as 2, 3, 5, or more depending on the assay depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_calling_qc_flag",
+          "descr": "Qualitative assessment of the interaction-calling outcome, recorded after peak/site identification and before downstream derivative annotation. Typical values are pass, warn, fail, or unknown and should summarize whether the identified sites are reliable for further interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "interaction_sites": {
+      "reasoning": "For the interaction_sites Derivative node, I included only computed-result fields that describe the call set itself: output file format, genomic coordinate summary, number of sites, site score/significance summaries, annotation status, and a derivative-level QC flag. I excluded caller software, thresholds, and multiple-testing settings because those belong to the upstream interaction_calling process. I also excluded comparative aggregation fields because those belong to the downstream comparative_integration process. I used derivative-specific field IDs to avoid collisions with previously generated generic file/count terms while keeping the schema focused on the computed interaction evidence artifact.",
+      "md_schema": [
+        {
+          "field_id": "interaction_sites_file_format",
+          "descr": "On-disk format of the interaction-site call set produced by the interaction-calling process, recorded as the derivative artefact format (for example: BED, narrowPeak, TSV, GFF3). This describes how the computed evidence is stored.",
+          "type": "categorical",
+          "allowed_values": [
+            "bed",
+            "narrowpeak",
+            "tsv",
+            "gff3",
+            "other"
+          ]
+        },
+        {
+          "field_id": "site_coordinate_system",
+          "descr": "Coordinate system used to represent interaction sites in the call set, recorded after peak or crosslink-site computation (for example: genomic coordinates, transcript coordinates). This indicates the reference frame of the derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "genomic",
+            "transcriptomic",
+            "other"
+          ]
+        },
+        {
+          "field_id": "interaction_site_count",
+          "descr": "Total number of significant RNA-protein interaction sites reported in the derivative call set, counted after interaction_calling completes. This is a computed summary of the resulting evidence.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "median_site_score",
+          "descr": "Median score or confidence value assigned to the reported interaction sites, computed from the site call set after interaction_calling. Use the caller’s native score scale and report the central tendency appropriate for the dataset.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "site_significance_summary",
+          "descr": "Summary of the significance values associated with reported interaction sites, such as the range, minimum adjusted p-value, or q-value summary used in the derivative output. This captures the strength of evidence in the computed call set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "site_annotation_status",
+          "descr": "Whether interaction sites have been annotated to genes, transcripts, motifs, or genomic features in this derivative artefact. Record the annotation state after site calling; typical values indicate if the call set is raw/unannotated or annotated for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "unannotated",
+            "partially_annotated",
+            "annotated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "interaction_sites_uri",
+          "descr": "Storage location or accession for the interaction-site call set, such as a BED/TSV file path or repository link (for example: s3://bucket/interaction_sites.bed). This identifies where the computed derivative artefact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_sites_qc_flag",
+          "descr": "Qualitative quality assessment of the interaction-site derivative immediately after computation, indicating whether the call set is suitable for downstream comparative integration. Typical values are pass, warn, fail, or unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "comparative_integration": {
+      "reasoning": "For the comparative_integration process, I included only aggregation-level fields: software identity and version, comparison factors, integration strategy, normalization approach, and a process QC flag. I excluded the underlying interaction-site coordinates and counts because those belong to the upstream interaction_sites Derivative node, and I excluded the final table/file properties because those belong to the downstream comparative_interaction_table Derivative node. I also avoided sample or capture details, since this node represents cross-sample computational integration across developmental stages and RNA-binding proteins. Unique field IDs were used to avoid collisions with earlier process fields while preserving the integration-specific meaning.",
+      "md_schema": [
+        {
+          "field_id": "integration_software_name",
+          "descr": "Software or analysis framework used to aggregate interaction evidence across developmental stages and RNA-binding proteins, recorded as the computational agent applied in the comparative_integration process (for example: R/Bioconductor, Python, custom script).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the integration software or package set used during comparative_integration, recorded as the exact release applied to the interaction evidence (for example: 4.3.1, 1.2.0). Version matters because aggregation behavior and defaults can change.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_factor",
+          "descr": "Primary biological factor used to group and compare interaction evidence in the comparative integration step, recorded as the main axis of aggregation (for example: developmental stage, RNA-binding protein, or combined comparison).",
+          "type": "categorical",
+          "allowed_values": [
+            "developmental_stage",
+            "rna_binding_protein",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization strategy used to make interaction evidence comparable across stages or proteins during comparative_integration, recorded as the actual method applied to the input derivative data (for example: library-size scaling, quantile normalization, z-score transformation).",
+          "type": "categorical",
+          "allowed_values": [
+            "library_size_scaling",
+            "quantile_normalization",
+            "z_score",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "aggregation_summary_statistic",
+          "descr": "Statistic used to summarize interaction evidence across groups during comparative_integration, recorded as the chosen summary measure (for example: mean, median, sum, weighted mean). This describes how multiple input site calls were combined into the comparative dataset.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "sum",
+            "weighted_mean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparison_groups_count",
+          "descr": "Number of biological groups or strata included in the comparative integration, such as the number of developmental stages and/or RNA-binding proteins being aggregated. Record the actual group count used in the computation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_integration_qc_flag",
+          "descr": "Qualitative assessment of the integration outcome, recorded immediately after aggregation and before creation of the comparative table. Typical values are pass, warn, fail, or unknown and should reflect whether the comparative dataset is suitable for interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "comparative_interaction_table": {
+      "reasoning": "For the comparative_interaction_table Derivative node, I included only table-level computed output properties: table format, row/column dimensions, grouping axes, annotation completeness, summary-statistic basis, and derivative QC. I excluded integration software, normalization, and aggregation parameters because those belong to the upstream comparative_integration process. I also excluded individual interaction-site coordinates and counts because those belong to the upstream interaction_sites derivative and to the integrated content rather than the table container itself. I used unique table-specific field IDs to avoid collisions with earlier generic file and count fields while keeping the schema focused on the final comparative artifact.",
+      "md_schema": [
+        {
+          "field_id": "table_format",
+          "descr": "On-disk format of the integrated comparative table, recorded as the stored derivative artefact format (for example: CSV, TSV, Parquet, Excel). This describes how the comparative interaction dataset is packaged.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of rows in the comparative interaction table, counted after comparative integration and before downstream interpretation. This is a table-level structural property of the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_column_count",
+          "descr": "Number of columns in the comparative interaction table, counted for the final integrated dataset produced by the workflow. This reflects the schema width of the comparative artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_axes",
+          "descr": "Biological dimensions represented in the table for comparative analysis, recorded as the axes across which interaction evidence is organized (for example: developmental stage, RNA-binding protein, or both).",
+          "type": "categorical",
+          "allowed_values": [
+            "developmental_stage",
+            "rna_binding_protein",
+            "developmental_stage_and_rna_binding_protein",
+            "other"
+          ]
+        },
+        {
+          "field_id": "annotation_completeness",
+          "descr": "Qualitative completeness of metadata annotation in the final comparative table, recorded after integration and before downstream reuse. Use to indicate whether stage, protein, and detection-method fields are fully populated, partially populated, or missing in the table.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "table_summary_statistic_basis",
+          "descr": "Summary statistic basis used to populate the comparative interaction table, such as mean, median, or weighted aggregation from the upstream integration process. This describes the statistical meaning of the table values rather than the integration parameters themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "sum",
+            "weighted_mean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparative_table_uri",
+          "descr": "Storage location or accession for the integrated comparative table, such as a file path, object-store URI, or repository link (for example: s3://bucket/comparative_interaction_table.tsv). This identifies where the final derivative artifact is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_table_qc_flag",
+          "descr": "Qualitative quality assessment of the final comparative table immediately after creation, indicating whether it is suitable for downstream interpretation or reuse. Typical values are pass, warn, fail, or unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

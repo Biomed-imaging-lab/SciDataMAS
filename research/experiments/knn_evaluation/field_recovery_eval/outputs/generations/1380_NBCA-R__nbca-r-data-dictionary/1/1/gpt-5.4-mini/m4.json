@@ -1,0 +1,936 @@
+{
+  "md_name": "Breast Cancer Radiotherapy Registry Workflow",
+  "md_description": "This DAG represents a clinical registry workflow for breast cancer radiotherapy patients. It captures baseline patient characteristics, genetic markers, and prior treatments; records radiotherapy plans including modality, dose, and duration; and logs each treatment session with protocol deviations and acute side effects. The resulting data are transformed into treatment summaries and analysis-ready derivatives used to compare protocol effectiveness across demographic groups and to evaluate disease recurrence and patient recovery.",
+  "fields_per_node": {
+    "breast_cancer_patient_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort identity and origin fields for the breast cancer patient cohort. I excluded treatment, capture, file, and analysis fields because those belong to downstream Capture/Signal/Process/Derivative nodes. I also avoided sample or subject identifiers that could be repeated later, and focused on cohort-level descriptive metadata that a downstream user needs to understand who is in the registry and how the cohort was defined.",
+      "md_schema": [
+        {
+          "field_id": "cohort_name",
+          "descr": "Registry cohort name used to identify this entity in the study metadata; e.g., 'breast cancer patient cohort'. Type string, usually a short human-readable label assigned at cohort creation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique cohort identifier for this registry entity; example format: 'BCRT-COHORT-001'. Type string. Use a stable identifier assigned once at cohort definition and referenced by downstream records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "disease_site",
+          "descr": "Primary disease site represented by the cohort at enrollment; used to define the entity and not a treatment or outcome variable. Expected value for this workflow is breast cancer.",
+          "type": "categorical",
+          "allowed_values": [
+            "breast cancer"
+          ]
+        },
+        {
+          "field_id": "patient_population_description",
+          "descr": "Free-text or controlled description of the included patient population, such as 'registry cohort of breast cancer patients enrolled for longitudinal radiotherapy documentation'. Use to capture inclusion context at the entity level.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_enrollment_start_date",
+          "descr": "Date when the first patient in this cohort was enrolled into the registry; measurement point is cohort inception, not individual treatment start. Format should be ISO date (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_enrollment_end_date",
+          "descr": "Date when cohort enrollment closed or the last patient was added; measurement point is the end of cohort accrual. Format should be ISO date (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cohort_definition_criteria",
+          "descr": "Concise description of the inclusion/exclusion logic used to define membership in this cohort, such as diagnosis status, registry eligibility, and documentation requirements. This should describe what the cohort is, not what was measured later.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longitudinal_follow_up_expected",
+          "descr": "Whether the cohort was intended for longitudinal follow-up across treatment and outcomes, indicating the entity's study design context. Use this to distinguish a cross-sectional registry from a longitudinal registry.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_origin",
+          "descr": "Source context for the cohort entity, describing that it originates from a clinical registry for breast cancer radiotherapy documentation. This should capture origin only, not capture technology or file storage.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "baseline_clinical_registry_capture": {
+      "reasoning": "This is a Capture node, so I included only registry session and instrument/configuration details for the baseline clinical intake, plus the agent’s operational properties as required. I excluded patient attributes like age, genetic markers, and prior treatments because those belong to the upstream Entity/Signal territory, not the capture configuration. I also excluded file-format and storage details because those belong to the downstream Signal node. I avoided repeating cohort identity fields already generated for the entity node.",
+      "md_schema": [
+        {
+          "field_id": "capture_method",
+          "descr": "How the baseline registry information was obtained during the clinical capture session; for example, direct clinician-entered registry form, chart abstraction, or patient interview. Use this to describe the active capture mode, not the patient data itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinician_entered_registry_form",
+            "chart_abstraction",
+            "patient_interview",
+            "mixed_method"
+          ]
+        },
+        {
+          "field_id": "capture_session_date",
+          "descr": "Date the baseline clinical registry capture session was performed for a given patient or cohort record. Format is ISO date (YYYY-MM-DD). This is the point when baseline information was actively entered or abstracted into the registry.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_platform_name",
+          "descr": "Name of the registry platform or capture application used for baseline data entry, such as the EHR-integrated registry or custom clinical database. This describes the configured capture environment, not the stored record format.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_platform_version",
+          "descr": "Version of the registry platform, form, or capture software used during baseline data collection; example: 'v3.1' or '2024.2'. Record the version active at the time of capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_operator_role",
+          "descr": "Role of the person performing or supervising the baseline capture session. For this workflow, the agent is a registry clinician; use the role rather than patient-level information.",
+          "type": "categorical",
+          "allowed_values": [
+            "registry_clinician",
+            "data_manager",
+            "nurse",
+            "physician",
+            "research_assistant"
+          ]
+        },
+        {
+          "field_id": "capture_operator_id",
+          "descr": "Identifier of the registry clinician or other operator who performed the baseline capture; example format: 'OP-1029'. Use a stable staff identifier, not a patient identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_entry_mode",
+          "descr": "Mode of data entry used during baseline capture, indicating whether values were manually entered, imported from another system, or both. This is a configuration of the capture session itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_entry",
+            "imported_from_ehr",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "capture_completeness_percent",
+          "descr": "Percentage of expected baseline fields completed at the end of the capture session, calculated immediately after registry entry. Typical range is 0-100 and reflects capture completeness, not patient biology.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_form_version",
+          "descr": "Version identifier of the baseline clinical registry form used to collect age, genetic markers, prior treatments, and other baseline items; example: 'baseline_form_1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_timestamp",
+          "descr": "Date and time when the baseline clinical registry capture was finalized for the record; use ISO 8601 timestamp if available. This marks the active session end point.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "baseline_clinical_record": {
+      "reasoning": "This is a Signal node, so I included only the raw digital record properties of the baseline clinical dataset: file/record format, size, structure, storage, and technical quality. I excluded the underlying patient characteristics and prior treatment content because those are the scientific payload from the upstream capture/entity layer, not the signal metadata itself. I also excluded downstream processing or analysis fields, since those belong to later Process/Derivative nodes. I avoided duplicating cohort identifiers and capture-session configuration already handled in prior nodes.",
+      "md_schema": [
+        {
+          "field_id": "record_format",
+          "descr": "Digital format of the baseline clinical record produced by the capture step; for example CSV, JSON, or TSV. This describes the raw record representation, not the contained clinical variables.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "xml",
+            "parquet",
+            "database_table"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the baseline clinical record artifact in bytes at the time it was written or exported. Typical values depend on cohort size and should be recorded for the stored raw signal file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient records or rows in the baseline clinical record at the time of export. This is a structural property of the raw data artifact, typically measured after capture and before any processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the baseline clinical record artifact. This reflects the technical structure of the raw record, not the meaning of the variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Location where the raw baseline clinical record is stored, such as a database path, object store key, or file system path. Use a stable technical locator, for example '/data/registry/baseline_clinical_record.csv'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_type",
+          "descr": "Compression applied to the stored baseline record, if any; for example none, gzip, or parquet-native compression. This is a technical property of the raw signal artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "gzip",
+            "bzip2",
+            "lz4",
+            "snappy",
+            "zstd"
+          ]
+        },
+        {
+          "field_id": "checksum",
+          "descr": "Integrity checksum for the baseline clinical record artifact, such as an MD5 or SHA-256 digest string. Use to verify file identity and detect corruption; example format: 'sha256:...'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_version",
+          "descr": "Version identifier of the record schema used in the baseline clinical record, such as '1.0' or 'registry_schema_2024_01'. This specifies the technical layout of the raw signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_quality_flag",
+          "descr": "Technical quality indicator for the raw baseline record, such as whether the export was complete and readable. Use this for signal-level integrity only, not scientific validity.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "read_only"
+          ]
+        }
+      ]
+    },
+    "radiotherapy_planning_process": {
+      "reasoning": "This is a Process node, so I included only how the radiotherapy plan was created and the process agent/software context, plus process-level output quality. I excluded the actual plan contents such as modality, dose, and duration because those belong to the downstream planned protocol Entity/Signal nodes, not the planning operation itself. I also excluded raw patient baseline attributes because they are upstream inputs, and I avoided repeating cohort or record identifiers already established elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "planning_method",
+          "descr": "Clinical planning approach used to define the intended radiotherapy protocol for each patient; for example 3D conformal planning, IMRT planning, or VMAT planning. Record the method applied during the planning operation, not the final protocol values.",
+          "type": "categorical",
+          "allowed_values": [
+            "3d_conformal",
+            "imrt",
+            "vmat",
+            "electron_therapy",
+            "proton_therapy",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "planning_timestamp",
+          "descr": "Date and time when the radiotherapy planning process was completed for a patient. Use an ISO 8601 timestamp if available; this marks the point when the protocol was finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_iterations_count",
+          "descr": "Number of plan revisions or optimization iterations performed before finalizing the protocol. Typical range is 1 to 20 and reflects the intensity of the planning process, not treatment delivery.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dosimetric_review_performed",
+          "descr": "Indicates whether a dosimetric review or quality check was performed as part of planning before the protocol was finalized.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_objective_description",
+          "descr": "Short description of the clinical objective used in the planning process, such as curative intent, adjuvant intent, or palliative intent. This describes the planning rationale rather than the patient outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "curative",
+            "adjuvant",
+            "neoadjuvant",
+            "palliative",
+            "prophylactic"
+          ]
+        },
+        {
+          "field_id": "radiation_oncologist_name",
+          "descr": "Name or identifier of the radiation oncologist responsible for the planning process. This is the operator associated with the process node, not a patient attribute.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "radiation_oncologist_id",
+          "descr": "Stable identifier for the radiation oncologist who performed or approved the planning; example format: 'RO-0042'. Use a staff identifier rather than a patient identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_software_name",
+          "descr": "Software application used to perform the radiotherapy planning; example names include commercial treatment planning systems. This belongs on the process node because it is the active computational/planning tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_software_version",
+          "descr": "Version of the planning software active during protocol definition; example: 'v15.6' or '2024.1'. Record the exact version used for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_software_repository",
+          "descr": "Repository, vendor source, or deployment reference for the planning software used in protocol definition, if applicable. For example, a vendor product line or internal deployment reference.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "planned_radiotherapy_protocol": {
+      "reasoning": "This is an Entity node representing the planned protocol itself, so I included intrinsic protocol identity and planned parameter fields that describe what the plan is. I excluded the planning method, software, and approval details because those belong to the upstream Process node. I also excluded delivery/session fields and downstream records because those belong to later Capture/Signal nodes. I avoided repeating patient cohort identifiers and baseline clinical attributes already defined in earlier nodes.",
+      "md_schema": [
+        {
+          "field_id": "protocol_id",
+          "descr": "Unique identifier for the patient-specific planned radiotherapy protocol; example format: 'RT-PROT-000123'. Use a stable identifier assigned when the plan is finalized.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protocol_name",
+          "descr": "Human-readable name or label for the planned radiotherapy protocol, such as a regimen name used in the registry. This identifies the protocol entity itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "radiation_type",
+          "descr": "Planned type of radiation specified by the protocol; for example external beam, brachytherapy, electron, or proton. Record the intended modality at plan definition time, not what was later delivered.",
+          "type": "categorical",
+          "allowed_values": [
+            "external_beam",
+            "brachytherapy",
+            "electron",
+            "proton",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "total_dose_gy",
+          "descr": "Total planned radiation dose in gray (Gy) for the complete protocol, as specified at plan finalization. Typical values for breast radiotherapy often fall within a clinically relevant range such as 10-70 Gy.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_duration_days",
+          "descr": "Planned overall treatment duration in days from first to last intended session for the protocol. Record the duration specified in the plan, not the actual delivered duration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fraction_count",
+          "descr": "Number of planned treatment fractions or sessions in the protocol. This is part of the planned regimen definition and should reflect the intended course before delivery.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fraction_dose_gy",
+          "descr": "Dose per planned fraction in gray (Gy), if specified by the protocol. Typical values are in the range of about 1.5-3.0 Gy for many regimens, but record the exact planned value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_laterality",
+          "descr": "Anatomical laterality targeted by the protocol, indicating which side of the breast/chest wall is intended for treatment. Record the plan-level target side, not patient identity.",
+          "type": "categorical",
+          "allowed_values": [
+            "left",
+            "right",
+            "bilateral",
+            "midline",
+            "unspecified"
+          ]
+        },
+        {
+          "field_id": "protocol_intent",
+          "descr": "Clinical intent of the planned protocol as specified in the regimen definition. This describes what the protocol is for, not the outcome or response.",
+          "type": "categorical",
+          "allowed_values": [
+            "curative",
+            "adjuvant",
+            "neoadjuvant",
+            "palliative",
+            "prophylactic"
+          ]
+        },
+        {
+          "field_id": "protocol_version",
+          "descr": "Version or revision label for the final planned protocol, such as 'v1', 'v2', or 'final'. Use this to distinguish amended plans from earlier drafts.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protocol_document_capture": {
+      "reasoning": "I corrected the schema by removing all field names that collide with already_generated capture fields from earlier DAG steps. To stay within the Capture node territory, I retained only protocol-documentation-specific registry metadata that describes how the finalized radiotherapy plan was documented and assessed at capture time, while still excluding the planned dose/modality contents themselves because those belong to the upstream protocol entity. The remaining fields focus on the documentation instrument, versioning, sign-off status, and record completeness, which are non-overlapping with prior steps.",
+      "md_schema": [
+        {
+          "field_id": "registry_form_name",
+          "descr": "Name of the registry form or documentation template used to capture the finalized radiotherapy plan and prescribed parameters. This identifies the capture instrument, not the protocol content.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_form_version",
+          "descr": "Version identifier of the protocol documentation form in use at capture time; example: 'protocol_form_1.2'. Record the exact form version used for the finalized plan.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protocol_approval_status",
+          "descr": "Status of the finalized protocol at the time it was captured into the registry, indicating whether the plan had been signed off or remained pending confirmation. This is a documentation status of the capture session, not a prescription field.",
+          "type": "categorical",
+          "allowed_values": [
+            "pending",
+            "approved",
+            "amended",
+            "rejected"
+          ]
+        },
+        {
+          "field_id": "documentation_completeness_percent",
+          "descr": "Percentage of required protocol documentation fields completed at the end of the capture session. Typical range is 0-100 and reflects registry documentation completeness, not plan quality.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "planned_protocol_record": {
+      "reasoning": "This is a Signal node, so I included only raw record/file properties for the prescribed protocol artifact: technical format, size, structure, storage, and integrity. I excluded the protocol content itself (dose, modality, duration) because that belongs to the upstream planned_radiotherapy_protocol entity, and I excluded capture/session fields because those are already used on the Capture node and are now flagged as colliding fields. I also avoided any downstream analysis or summary fields, which belong to later Process/Derivative nodes.",
+      "md_schema": [
+        {
+          "field_id": "planned_protocol_format",
+          "descr": "Digital format of the prescribed radiotherapy protocol record, such as CSV, JSON, TSV, XML, or database table export. This describes the technical representation of the raw protocol record rather than its clinical content.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "xml",
+            "parquet",
+            "database_table"
+          ]
+        },
+        {
+          "field_id": "planned_protocol_file_size_bytes",
+          "descr": "Size of the planned protocol record artifact in bytes at the time it was written or exported. Record the technical file size of the stored signal, typically after capture and before any processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_row_count",
+          "descr": "Number of protocol records or rows present in the planned protocol artifact at export time. This is a structural property of the raw signal file, not a clinical attribute.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_column_count",
+          "descr": "Number of columns or fields present in the planned protocol record. This reflects the technical schema of the raw artifact, not the meaning of the protocol variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_storage_location",
+          "descr": "Location where the raw planned protocol record is stored, such as a file path, object store key, or database location. Example: '/data/registry/planned_protocol_record.csv'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_checksum",
+          "descr": "Integrity checksum for the planned protocol record artifact, such as an MD5 or SHA-256 digest string. Use a stable digest format, for example 'sha256:...'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_schema_version",
+          "descr": "Version identifier of the technical schema used in the planned protocol record, such as '1.0' or 'protocol_schema_2024_01'. This identifies the layout of the raw signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_protocol_data_quality_flag",
+          "descr": "Technical quality indicator for the raw planned protocol record, such as whether the export was complete and readable. Use this for signal-level integrity only, not clinical interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "read_only"
+          ]
+        }
+      ]
+    },
+    "treatment_session_capture": {
+      "reasoning": "This is a Capture node, so I kept only session/instrument configuration and operator properties for radiotherapy delivery capture, plus a quality indicator, while removing any generic field ids that collided with earlier steps. I excluded delivered dose, deviations, and acute side effects because those belong to the downstream session_treatment_log Signal. I also avoided duplicate capture-completeness naming by using a distinct session-specific quality field and retained the instrument-manufacturer/model/serial details required on Capture nodes.",
+      "md_schema": [
+        {
+          "field_id": "delivery_capture_method",
+          "descr": "How treatment session information was captured during radiotherapy delivery; for example console entry from treatment machine, manual clinician entry, or hybrid capture. This describes the active capture mode for the session, not the delivered clinical values.",
+          "type": "categorical",
+          "allowed_values": [
+            "machine_console_entry",
+            "manual_entry",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "session_capture_date",
+          "descr": "Date when the treatment session was recorded in the registry. Format is ISO date (YYYY-MM-DD). This marks the clinical capture date for a delivered session.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_unit_name",
+          "descr": "Name of the radiotherapy unit or treatment room used during the session capture, such as a linear accelerator room identifier. This describes the configured treatment environment, not the patient.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_unit_manufacturer",
+          "descr": "Manufacturer of the radiotherapy delivery hardware used for the session capture; for example the vendor name of the linear accelerator system. This is required as an instrument property for capture nodes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_unit_model",
+          "descr": "Model of the radiotherapy delivery hardware used during the session; for example a linear accelerator model designation. Record the exact model configured for this session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_unit_serial_number",
+          "descr": "Serial number of the radiotherapy delivery hardware used during the session. Use the device serial to uniquely identify the configured instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_operator_role",
+          "descr": "Role of the person operating or supervising the treatment session capture. For this workflow it may be a radiation therapist or registry clinician depending on the capture setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiation_therapist",
+            "registry_clinician",
+            "physician",
+            "nurse",
+            "data_manager"
+          ]
+        },
+        {
+          "field_id": "session_operator_id",
+          "descr": "Identifier of the operator associated with the treatment session capture; example format: 'OP-1029'. Use a stable staff identifier, not a patient identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_documentation_completeness_percent",
+          "descr": "Percentage of expected session capture fields completed at the end of the treatment session capture. Typical range is 0-100 and reflects documentation completeness for this session-level capture event.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_capture_timestamp",
+          "descr": "Date and time when the treatment session capture was finalized in the registry; use ISO 8601 timestamp if available. This is the endpoint of the capture session.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "session_treatment_log": {
+      "reasoning": "This is a Signal node, so I included only raw digital record properties for each treatment session log: file/record format, size, dimensionality, storage, and integrity. I excluded the actual session content fields such as delivered dose, deviations, and acute toxicity observations because those are the scientific payload and belong to the signal data itself, not its technical metadata. I also avoided any capture-session or operator fields, since those were already used on the treatment_session_capture node and generated collisions elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "session_log_format",
+          "descr": "Digital format of the treatment session log artifact, such as CSV, JSON, TSV, XML, or database table export. This describes the technical representation of the raw session log rather than its clinical content.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "xml",
+            "parquet",
+            "database_table"
+          ]
+        },
+        {
+          "field_id": "session_log_file_size_bytes",
+          "descr": "Size of the treatment session log artifact in bytes at the time it was written or exported. Record the technical file size of the stored raw session signal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_row_count",
+          "descr": "Number of session records or rows present in the treatment session log at export time. This is a structural property of the raw log artifact, typically corresponding to treatment sessions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_column_count",
+          "descr": "Number of columns or fields present in the treatment session log artifact. This reflects the technical schema of the raw log file, not the meaning of the variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_storage_location",
+          "descr": "Location where the raw treatment session log is stored, such as a file path, object store key, or database reference. Example: '/data/registry/session_treatment_log.csv'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_checksum",
+          "descr": "Integrity checksum for the treatment session log artifact, such as an MD5 or SHA-256 digest string. Use a stable digest notation like 'sha256:...'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_schema_version",
+          "descr": "Version identifier of the technical schema used in the treatment session log, such as '1.0' or 'session_log_schema_2024_01'. This identifies the raw artifact layout.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_log_data_quality_flag",
+          "descr": "Technical quality indicator for the raw treatment session log, such as whether the export was complete and readable. Use this for signal-level integrity only, not clinical interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "read_only"
+          ]
+        }
+      ]
+    },
+    "session_summary_process": {
+      "reasoning": "This is a Process node, so I included only the aggregation procedure, software/runtime, and process-level output quality for converting session logs into patient-level summaries. I excluded session-level clinical variables from the input logs and excluded the resulting summary-table fields because those belong to the downstream Derivative node. I also avoided repeating any capture or signal file fields that have already been generated and that would collide across the DAG.",
+      "md_schema": [
+        {
+          "field_id": "aggregation_method",
+          "descr": "Computational method used to aggregate treatment session logs into patient-level summaries; for example row-wise grouping with per-patient reduction rules. Record the method used at the processing step, not the original session data.",
+          "type": "categorical",
+          "allowed_values": [
+            "groupby_aggregate",
+            "rule_based_merge",
+            "temporal_rollup",
+            "custom_script"
+          ]
+        },
+        {
+          "field_id": "aggregation_granularity",
+          "descr": "The level at which session data were summarized during processing; for this workflow the expected granularity is patient-level aggregation from session-level inputs. This describes the process output resolution.",
+          "type": "categorical",
+          "allowed_values": [
+            "session_level",
+            "patient_level",
+            "course_level"
+          ]
+        },
+        {
+          "field_id": "processing_timestamp",
+          "descr": "Date and time when the session summary process was executed or completed. Use an ISO 8601 timestamp if available; this marks the processing event for the aggregation step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sessions_aggregated_count",
+          "descr": "Number of treatment session records included in the aggregation run. This is a process execution metric, typically counted after loading the input logs and before writing the summary output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "patients_aggregated_count",
+          "descr": "Number of unique patients represented in the aggregated summaries produced by this process. This indicates the scope of the processing run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_record_count",
+          "descr": "Number of summary records produced by the aggregation process. This is a process-level output metric describing how many patient-level summaries were generated.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_software_name",
+          "descr": "Software package or library used to run the session summary process, such as Python, pandas, or a workflow script name. For process nodes, software identity belongs here.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_software_version",
+          "descr": "Version of the software used for session summary aggregation; example: '2.2.0' or 'R-4.4'. Record the exact runtime version for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_repository",
+          "descr": "Repository, codebase, or script reference used for the session summary process, such as a git URL, commit hash, or internal project path. This identifies the implementation used to aggregate summaries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_success",
+          "descr": "Boolean indicator of whether the session summary process completed successfully and produced a usable output table. This is a process-level quality indicator, not a signal or derivative flag.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treatment_summary_table": {
+      "reasoning": "This is a Derivative node, so I included only computed result metadata for the treatment summary table: derivation method, output shape, summary scope, and result quality. I excluded the underlying session inputs and process execution details because those belong to the upstream Signal and Process nodes. I also avoided reusing generic file or capture fields already generated elsewhere in the DAG, and focused on what a downstream user needs to interpret and reuse the derived summary table.",
+      "md_schema": [
+        {
+          "field_id": "derivation_method",
+          "descr": "Algorithm or rule set used to compute the treatment summary table from session logs; for example a pandas groupby aggregation or a custom summary script. This describes how the derivative was generated, not the original process runtime.",
+          "type": "categorical",
+          "allowed_values": [
+            "groupby_aggregation",
+            "rule_based_summary",
+            "custom_script",
+            "statistical_rollup"
+          ]
+        },
+        {
+          "field_id": "source_session_log_reference",
+          "descr": "Reference to the session_treatment_log input used to generate this summary table; example format could be a file reference, dataset key, or versioned record identifier. Use a stable reference so the derivative can be traced to its raw input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_level",
+          "descr": "Level at which the summary table is computed; for this workflow it should typically be patient-level or treatment-course-level rather than session-level. This describes the granularity of the derived result.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "course_level",
+            "session_level"
+          ]
+        },
+        {
+          "field_id": "summary_row_count",
+          "descr": "Number of rows in the derived treatment summary table. This is a structural property of the computed output measured after derivation and before downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_column_count",
+          "descr": "Number of columns in the derived treatment summary table. This reflects the structure of the computed derivative and helps downstream users interpret the table shape.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adherence_metric_definition",
+          "descr": "Definition of the adherence metric used in the summary table, such as completed sessions divided by planned sessions. Record the computed metric definition embedded in the derivative, not the raw adherence values themselves.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cumulative_dose_unit",
+          "descr": "Unit used for cumulative dose values in the summary table, typically gray (Gy). This is part of the computed output specification and should be consistent across the derived records.",
+          "type": "categorical",
+          "allowed_values": [
+            "Gy"
+          ]
+        },
+        {
+          "field_id": "summary_quality_flag",
+          "descr": "Quality indicator for the derived table, describing whether the computed summary is complete, partially populated, or contains issues requiring review. Use this for derivative-level scientific/technical quality.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "needs_review"
+          ]
+        },
+        {
+          "field_id": "derivative_version",
+          "descr": "Version label for this derived summary table, such as 'v1' or 'summary_2024_01'. Use this to distinguish reruns or updated derivations.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "outcome_analysis_process": {
+      "reasoning": "This is a Process node, so I included only the statistical analysis procedure, model/runtime, and process-level quality for evaluating protocol effectiveness and recovery using baseline, protocol, and treatment summary inputs. I excluded the actual outcome results because those belong on the downstream Derivative node. I also avoided repeating any capture/session or signal file metadata, and kept agent/software properties on the process as required by the schema rules.",
+      "md_schema": [
+        {
+          "field_id": "analysis_method",
+          "descr": "Statistical method used to evaluate radiotherapy effectiveness and recovery, such as survival analysis, regression modeling, or stratified comparison. Record the method used at this processing step, not the resulting effect estimates.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival_analysis",
+            "cox_regression",
+            "logistic_regression",
+            "mixed_effects_model",
+            "stratified_comparison",
+            "custom_statistical_script"
+          ]
+        },
+        {
+          "field_id": "analysis_population_definition",
+          "descr": "Definition of the analysis population used in the outcome analysis, such as all registry-enrolled patients with complete baseline and treatment summary data. This describes the process input subset and not the final results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_timestamp",
+          "descr": "Date and time when the outcome analysis process was executed or completed. Use an ISO 8601 timestamp if available; this marks the analytical processing event.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "records_included_count",
+          "descr": "Number of patient records included in the outcome analysis after applying inclusion criteria and data joins. This is a process execution metric measured at analysis time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "covariates_count",
+          "descr": "Number of baseline or protocol covariates used in the outcome model. This summarizes the process inputs without listing the actual covariate values.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_endpoints_count",
+          "descr": "Number of outcome endpoints evaluated by the analysis process, such as recurrence and recovery. This is a process-level count of modeled endpoints, not the estimated results.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Software package used to run the outcome analysis, such as R, survival analysis libraries, or a named statistical pipeline. For process nodes, software identity belongs here.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the software used for outcome analysis; example: '4.4' or '1.8.1'. Record the exact runtime version for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository, codebase, or script reference used for the outcome analysis, such as a git URL, commit hash, or internal project path. This identifies the implementation used to generate the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_success",
+          "descr": "Boolean indicator of whether the outcome analysis completed successfully and produced a usable result set. This is a process-level quality indicator.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protocol_effectiveness_results": {
+      "reasoning": "This is a Derivative node, so I included only computed analysis-result metadata for the protocol effectiveness output: derivation approach, result scope, comparison structure, and statistical/technical quality indicators. I excluded the underlying analysis process settings and input summary references that would duplicate process or signal territory, and I avoided any patient identifiers or raw outcome values that belong in the actual result content rather than metadata. I also kept field names distinct from earlier capture/signal metadata to prevent DAG-wide collisions.",
+      "md_schema": [
+        {
+          "field_id": "result_method",
+          "descr": "Statistical or computational method used to produce the protocol effectiveness results, such as survival analysis, regression, or stratified comparison. This describes how the derivative was calculated, not the upstream process runtime.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival_analysis",
+            "cox_regression",
+            "logistic_regression",
+            "mixed_effects_model",
+            "stratified_comparison",
+            "custom_statistical_script"
+          ]
+        },
+        {
+          "field_id": "source_analysis_reference",
+          "descr": "Reference to the outcome_analysis_process output used to generate this derivative; for example a versioned run identifier, analysis report key, or pipeline reference. Use a stable traceable reference to the analysis source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_groups_definition",
+          "descr": "Definition of the demographic or protocol comparison groups used in the effectiveness results, such as age strata, genetic subgroups, or protocol categories. This records the grouping scheme used in the derived comparison.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primary_endpoint_name",
+          "descr": "Name of the main outcome endpoint summarized in the results, such as recurrence or recovery. Use a human-readable endpoint label rather than raw patient-level measurements.",
+          "type": "categorical",
+          "allowed_values": [
+            "recurrence",
+            "recovery",
+            "both"
+          ]
+        },
+        {
+          "field_id": "result_table_row_count",
+          "descr": "Number of rows in the derived effectiveness results table. This is a structural property of the computed output measured after analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_table_column_count",
+          "descr": "Number of columns in the derived effectiveness results table. This describes the shape of the derived analysis output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size_metric",
+          "descr": "Primary effect size metric reported by the analysis, such as hazard ratio, odds ratio, or risk difference. Record the metric type used to summarize protocol effectiveness in the derivative.",
+          "type": "categorical",
+          "allowed_values": [
+            "hazard_ratio",
+            "odds_ratio",
+            "risk_difference",
+            "absolute_risk",
+            "relative_risk",
+            "mean_difference"
+          ]
+        },
+        {
+          "field_id": "confidence_interval_level",
+          "descr": "Confidence interval level used to summarize uncertainty around the effect estimates, typically 95%. This is a derivative-level statistical specification.",
+          "type": "categorical",
+          "allowed_values": [
+            "90%",
+            "95%",
+            "99%"
+          ]
+        },
+        {
+          "field_id": "result_quality_flag",
+          "descr": "Quality indicator for the derived results, such as whether the output passed validation and is suitable for downstream interpretation. Use this for derivative-level scientific and technical quality.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "needs_review"
+          ]
+        },
+        {
+          "field_id": "result_version",
+          "descr": "Version label for the protocol effectiveness results derivative, such as 'v1' or 'results_2024_01'. Use this to distinguish reruns or updated result sets.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

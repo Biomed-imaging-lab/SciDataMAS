@@ -1,0 +1,1315 @@
+{
+  "md_name": "Coral Reef 16S Microbiome and Environment Workflow",
+  "md_description": "This DAG represents collection of coral reef water/microbial samples across multiple Great Barrier Reef sites and depths, acquisition of in situ environmental measurements, extraction and 16S rRNA amplicon sequencing, and downstream computational processing into community profiles and integrated ecological analyses. It supports studying spatial heterogeneity of microbial communities and their relationships to temperature, pH, salinity, nutrients, and coral reef resilience.",
+  "fields_per_node": {
+    "reef_site_water_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic sample identity/origin fields for the reef_site_water_sample itself: where it was collected, at what depth, and what kind of reef-water material it is. I excluded capture settings, environmental probe readings, filtration/extraction details, sequencing information, and downstream computed results because those belong to Capture, Process, Signal, or Derivative nodes. I also avoided any sample/experiment identifier duplicates that would typically be defined once at the root entity level in this DAG and not repeated here if already_generated had them.",
+      "md_schema": [
+        {
+          "field_id": "collection_site_name",
+          "descr": "Name of the Great Barrier Reef sampling location where this water sample was collected, e.g. a reef, transect, or station label such as 'Heron Island reef flat'. Use the site name recorded at collection time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_depth_meters",
+          "descr": "Water depth in meters at the point of sample collection, measured in situ at the reef site. Typical values are shallow reef waters to deeper site-specific depths, recorded as a numeric depth such as 2.5 m or 18.0 m.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_location_description",
+          "descr": "Free-text description of the reef microhabitat or geographic context of collection, including any relevant Great Barrier Reef subregion, reef zone, or station context used to distinguish the sample origin. Record at the point of sampling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_material_type",
+          "descr": "Material represented by this entity at collection time. For this workflow it should describe the reef water sample that contains microbial communities prior to any filtration or processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "reef_water",
+            "seawater",
+            "surface_water",
+            "near_bottom_water",
+            "other"
+          ]
+        }
+      ]
+    },
+    "environmental_probe_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement-session and instrument-configuration fields needed to describe how in situ environmental readings were acquired: the probe platform identity, its manufacturer/model/serial, which parameters were actively measured, and the settings used for the field session. I excluded the actual temperature, pH, salinity, and nutrient values because those belong to the downstream Signal node (environmental_readings), and I excluded sample origin/depth because those belong to the Entity node. I also avoided any field names that could duplicate identifiers or sample descriptors already generated for the reef water sample node.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the field multiparameter sonde or coupled nutrient assay platform used to capture in situ environmental readings at the reef site; record the vendor name exactly as configured in the instrument metadata.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or number of the environmental probe system used during field capture, e.g. a multiparameter sonde model or nutrient sensor module designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number or unique hardware identifier of the probe system used for this capture session; use the instrument label recorded in the field log or device metadata, e.g. 'SN12345'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measured_parameter_set",
+          "descr": "Set of environmental variables actively configured for acquisition in this field session. These are the probe outputs intended for the downstream environmental_readings signal, not the reported values themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "temperature_celsius",
+            "ph",
+            "salinity_psu",
+            "nutrient_concentration",
+            "temperature_celsius_ph_salinity_psu",
+            "temperature_celsius_ph_salinity_psu_nutrient_concentration"
+          ]
+        },
+        {
+          "field_id": "sampling_mode",
+          "descr": "Operational mode of the environmental capture session, indicating whether measurements were taken as a single site snapshot or as repeated profiles/replicates at the reef sampling point.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_snapshot",
+            "replicate_measurement",
+            "vertical_profile",
+            "continuous_logging"
+          ]
+        },
+        {
+          "field_id": "probe_calibration_status",
+          "descr": "Calibration state of the probe system immediately before field use, recorded at capture time to document whether the instrument was calibrated, checked, or partially recalibrated before measurements.",
+          "type": "categorical",
+          "allowed_values": [
+            "calibrated",
+            "checked_only",
+            "recalibrated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "environmental_readings": {
+      "reasoning": "This is a Signal node, so I included only raw-data artefact fields: file format, storage location, file size, and basic technical quality/dimension descriptors that characterize the digital output from the environmental probe capture. I excluded the environmental values themselves because they are the content of this raw signal, not metadata for the capture node; however, for a Signal node the raw measurement set can be reflected as dimensions/representation of the file rather than as scientific interpretation. I also excluded sample origin, probe manufacturer/model, and calibration/session settings because those belong to the Entity or Capture node. I avoided overlap with fields already generated for the reef water sample and probe capture by staying strictly on the raw artefact layer.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw environmental measurement output generated at the sampling site, e.g. CSV, TSV, JSON, or instrument-exported proprietary format. Record the format of the stored raw artefact, not the instrument settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "xlsx",
+            "proprietary"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw environmental readings file in bytes, measured after export or transfer to storage. This is a technical property of the file artefact, typically ranging from kilobytes to megabytes depending on the number of stations and repeated readings.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Filesystem path, object-store URI, or database reference where the raw environmental readings file is stored, for example a local path, network path, or cloud URI. Record the location of the raw artefact rather than the sampling site.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_count",
+          "descr": "Number of raw measurement rows or records contained in the environmental readings file. This is measured on the exported artefact and reflects how many timestamped or site-level observations were recorded.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_dimensions",
+          "descr": "Shape of the raw digital output, expressed as rows by columns or samples by variables, for example '1x12' for a single site snapshot with 12 fields or '24x12' for repeated time points. Record the technical table dimensions of the raw file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "technical_quality_flag",
+          "descr": "Basic technical status of the raw environmental file after export, indicating whether the file was complete and readable or had formatting/export issues. This is a file-level quality indicator, not a scientific interpretation of the measurements.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "water_filtration_process": {
+      "reasoning": "This is a Process node, so I included only how the filtration transformation was performed: filter setup, pore size, volumes processed, duration, temperature, and post-filtration output quality/efficiency. I excluded properties of the input reef water sample and the filtered biomass product because those belong to the upstream Entity and downstream Entity nodes, respectively. I also excluded any instrument identifiers that would be redundant with other operation nodes unless they directly describe the filtration setup, and I avoided fields already generated for the sample, capture, and signal layers.",
+      "md_schema": [
+        {
+          "field_id": "filter_type",
+          "descr": "Type of filtration device or membrane used to concentrate microbial biomass from the reef water sample, recorded during the filtration process, e.g. syringe filter, vacuum manifold filter, or capsule filter.",
+          "type": "categorical",
+          "allowed_values": [
+            "syringe_filter",
+            "vacuum_filter",
+            "capsule_filter",
+            "centrifugal_filter",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filter_pore_size_microns",
+          "descr": "Nominal pore size of the filter membrane in microns used during microbial biomass concentration, measured as the process setting at the time of filtration. Typical values are 0.2 µm or 0.45 µm for microbial capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "volume_filtered_liters",
+          "descr": "Total volume of reef water filtered in liters during the process step, recorded as the input volume processed to concentrate biomass. Typical ranges depend on site conditions and collection protocol, e.g. fractions of a liter to several liters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtration_duration_minutes",
+          "descr": "Elapsed time in minutes required to complete the filtration step for the sample, measured from start of loading the water onto the filter until the target volume was processed or the filter was stopped.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtration_temperature_celsius",
+          "descr": "Approximate ambient or processing temperature in degrees Celsius during filtration, recorded at the time the process was performed if temperature control or field heat conditions were relevant. Typical field values may span roughly 15-35 °C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtration_yield_assessment",
+          "descr": "Process-level assessment of whether the filtration produced sufficient microbial biomass for downstream DNA extraction, recorded immediately after filtration as a practical quality indicator.",
+          "type": "categorical",
+          "allowed_values": [
+            "sufficient",
+            "borderline",
+            "insufficient",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "filtered_microbial_biomass": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the retained biomass itself and its origin from filtration, not the filtration parameters or downstream DNA extraction details. The fields focus on what the biomass is, how much material was retained, and whether the retained material is suitable for extraction. I avoided repeating sample-level identifiers already defined for the original reef water entity and excluded any process settings that belong to water_filtration_process.",
+      "md_schema": [
+        {
+          "field_id": "biomass_origin_process",
+          "descr": "Source process that produced this entity, recorded as the filtration step that retained microbial material from the reef water sample. Use this to link the biomass back to the specific process that generated it.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retained_material_description",
+          "descr": "Short description of the retained material entity after filtration, e.g. microbial biomass on filter membrane, concentrated particulate fraction, or filter-retained cells. Record the material identity immediately after filtration and before DNA extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "filter_retained_cells",
+            "microbial_biomass_on_filter",
+            "particulate_microbial_fraction",
+            "mixed_particulate_fraction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "wet_mass_mg",
+          "descr": "Wet mass of the retained microbial biomass in milligrams, measured after filtration and prior to any drying or extraction. Typical values depend on sample volume and biomass density and may be low for oligotrophic reef waters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dry_mass_mg",
+          "descr": "Dry mass of the retained microbial biomass in milligrams, if measured after drying the filter-retained material. Record only when a dry mass determination was performed on the entity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Storage condition of the filtered biomass entity prior to DNA extraction, such as cold storage or preservative use, recorded as an intrinsic handling state for the retained material.",
+          "type": "categorical",
+          "allowed_values": [
+            "frozen",
+            "refrigerated",
+            "ambient_short_term",
+            "preserved",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "extraction_readiness_status",
+          "descr": "Assessment of whether the filtered biomass was suitable to proceed to DNA extraction, recorded after filtration and before extraction. This is an entity-level readiness descriptor, not a process output metric.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "limited_material",
+            "degraded",
+            "contaminated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "dna_extraction_process": {
+      "reasoning": "This is a Process node, so I included only DNA extraction procedure details: extraction kit or method, lysis conditions, input amount, elution settings, and a process-level yield/quality indicator. I excluded properties of the filtered biomass input and the DNA extract output because those belong to the upstream and downstream Entity nodes. I also avoided repeating any sample identifiers or environmental capture metadata already assigned elsewhere in the workflow.",
+      "md_schema": [
+        {
+          "field_id": "extraction_method",
+          "descr": "DNA extraction chemistry or workflow used to isolate genomic DNA from the filtered microbial biomass, recorded as the protocol variant executed at this process step, e.g. kit-based column extraction, phenol-chloroform, or magnetic bead-based method.",
+          "type": "categorical",
+          "allowed_values": [
+            "kit_column",
+            "magnetic_bead",
+            "phenol_chloroform",
+            "bead_beat_lysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit or protocol name used for the DNA extraction process, recorded as the manufacturer-provided kit designation if a kit-based method was used. Example: a microbial DNA extraction kit name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used during DNA extraction to break microbial cells open, recorded at the time of the process, e.g. enzymatic digestion, bead beating, chemical lysis, or combined lysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic",
+            "mechanical",
+            "chemical",
+            "combined",
+            "none"
+          ]
+        },
+        {
+          "field_id": "input_biomass_amount_mg",
+          "descr": "Amount of filtered microbial biomass input to the extraction process in milligrams, measured immediately before DNA isolation. Typical values depend on biomass yield from the filtration step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final elution volume in microliters used to recover purified DNA from the extraction system, recorded as a process parameter at the end of extraction. Typical values are often in the tens to low hundreds of microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_yield_status",
+          "descr": "Process-level assessment of the extraction outcome immediately after completion, indicating whether enough DNA was recovered for downstream amplicon library preparation and whether the extract appeared usable.",
+          "type": "categorical",
+          "allowed_values": [
+            "sufficient",
+            "low_yield",
+            "failed",
+            "contaminated"
+          ]
+        }
+      ]
+    },
+    "microbial_dna_extract": {
+      "reasoning": "I removed the colliding field storage_condition and kept only entity-level DNA extract properties that do not overlap with previously generated fields. The remaining fields still describe intrinsic qualities of the microbial_dna_extract node—quantity, purity, integrity, and readiness for downstream library prep—while avoiding process details from extraction and downstream prep/sequencing semantics. I also kept the schema flat and non-redundant with earlier nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Measured DNA concentration of the purified extract in ng/µL, determined after extraction and before amplicon library preparation. Typical values for reef microbial extracts can range from low single digits to tens of ng/µL depending on biomass yield.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total amount of DNA recovered in nanograms from the extraction, calculated for the purified extract entity after concentration measurement and volume accounting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_260_280",
+          "descr": "Spectrophotometric purity ratio A260/A280 of the purified DNA extract, measured after extraction to assess protein contamination. Typical high-quality DNA values are often near 1.8.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of DNA integrity for the purified extract, recorded after extraction and prior to amplicon library preparation, based on inspection or QC testing.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "moderately_fragmented",
+            "highly_fragmented",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "library_prep_readiness",
+          "descr": "Assessment of whether the purified DNA extract is suitable for amplicon library preparation, recorded as an entity-level readiness indicator immediately before the next process step.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "low_input",
+            "contaminated",
+            "degraded",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "amplicon_library_prep_process": {
+      "reasoning": "This is a Process node, so I included only library-preparation workflow details: primer set, target 16S region, PCR conditions, indexing/barcoding strategy, cycle count, and a process-level library success indicator. I excluded any fields about the resulting indexed library as a product, because those belong to the downstream Entity node, and I avoided repeating the already-generated storage_condition field noted in the error message. I also kept clear of sample and DNA extract intrinsic properties, which are owned by upstream Entity nodes.",
+      "md_schema": [
+        {
+          "field_id": "target_16s_region",
+          "descr": "16S rRNA gene region amplified during library preparation, recorded as the process target locus for the amplicon library. Examples include variable regions commonly used for microbial community profiling such as V3-V4 or V4.",
+          "type": "categorical",
+          "allowed_values": [
+            "v1_v2",
+            "v3_v4",
+            "v4",
+            "v4_v5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "primer_forward_sequence",
+          "descr": "Forward primer sequence used in the amplification step of the 16S library preparation, recorded as the exact oligonucleotide sequence or primer name used at the time of PCR setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primer_reverse_sequence",
+          "descr": "Reverse primer sequence used in the amplification step of the 16S library preparation, recorded as the exact oligonucleotide sequence or primer name used at the time of PCR setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of amplification cycles used during the 16S library preparation PCR. Record the cycle count as executed for the sample, typically in the low-to-mid 20s for amplicon workflows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_strategy",
+          "descr": "Indexing or barcoding strategy used to tag samples during amplicon library preparation so they can be multiplexed for sequencing, recorded as the library-prep process configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "dual_index",
+            "single_index",
+            "inline_barcode",
+            "adapter_ligation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_preparation_success",
+          "descr": "Process-level assessment of whether the amplification and indexing step produced a sequencing-ready library, recorded immediately after completion and before handoff to sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "low_yield",
+            "nonspecific_amplicon",
+            "failed",
+            "contaminated"
+          ]
+        }
+      ]
+    },
+    "indexed_16s_library": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the prepared indexed library itself: library concentration, fragment size, adapter/index content, pooling suitability, and storage condition. I excluded PCR and indexing protocol parameters because those belong to the amplicon_library_prep_process node, and I excluded sequencing instrument settings because those belong to sequencing_capture. I also avoided repeating any already-generated fields, including storage_condition, so I used a distinct library-specific storage field name instead.",
+      "md_schema": [
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the indexed 16S sequencing library in ng/µL after amplicon preparation and before sequencing. Typical values vary with amplification yield and cleanup efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Observed size of the indexed amplicon library fragment in base pairs, measured after cleanup and before sequencing. For 16S amplicons this typically reflects the targeted variable region plus adapters and index sequences.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "index_pair_status",
+          "descr": "Status of the sample index/barcode pair present on the prepared library, indicating whether the library carries the expected multiplexing tags and can be demultiplexed downstream.",
+          "type": "categorical",
+          "allowed_values": [
+            "confirmed",
+            "partial",
+            "missing",
+            "ambiguous"
+          ]
+        },
+        {
+          "field_id": "library_purity_status",
+          "descr": "Assessment of whether the indexed library is free of obvious primer dimers, nonspecific products, or severe contamination after cleanup and prior to sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "clean",
+            "primer_dimer_present",
+            "mixed_products",
+            "contaminated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "sequencing_pool_ready",
+          "descr": "Entity-level readiness indicator stating whether the indexed library is suitable for pooling and loading onto the sequencing instrument, recorded before the sequencing capture step.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "needs_normalization",
+            "low_concentration",
+            "failed_qc"
+          ]
+        },
+        {
+          "field_id": "library_storage_condition",
+          "descr": "Storage condition of the indexed 16S library before sequencing, recorded as the handling state for this library entity after preparation and cleanup. Use this library-specific field rather than the generic storage_condition field already used elsewhere.",
+          "type": "categorical",
+          "allowed_values": [
+            "frozen",
+            "refrigerated",
+            "ambient_short_term",
+            "preserved",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "sequencing_capture": {
+      "reasoning": "This is a Capture node, so I included only sequencing-session and instrument-configuration metadata: the sequencer manufacturer/model/serial, run mode, read length and paired-end configuration, chemistry or flow cell settings, and a run-level quality indicator. I excluded file-level attributes because those belong to the raw_fastq_reads Signal node, and I excluded library properties because those belong to the indexed_16s_library Entity node. I also avoided any fields already generated elsewhere in the DAG, including storage_condition, and kept the scope limited to how the instrument was configured to produce the raw reads.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture step, recorded from the hardware configuration of the platform that read the indexed 16S library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model or platform designation of the sequencing instrument used in this run, e.g. a benchtop short-read sequencer model used for 16S amplicon sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Serial number or unique hardware identifier of the sequencing instrument used for this capture session, recorded from the instrument metadata or run sheet.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_mode",
+          "descr": "Configured sequencing run mode for this capture session, describing the operational setting used to generate raw amplicon reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read generated in this run, measured as the instrument setting at capture time. Typical 16S workflows use short-read lengths suitable for amplicon overlap.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or cartridge/kit configuration used during the run, recorded as the capture-time reagent system associated with the instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_quality_status",
+          "descr": "High-level outcome of the sequencing capture session, indicating whether the run completed successfully and produced usable raw reads or encountered technical issues.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "This is a Signal node, so I kept only raw sequencing artefact properties while renaming fields to avoid collisions with previously generated generic signal fields. I excluded instrument configuration, sample/library provenance, and downstream processing because they belong to other nodes. The revised field names capture the same raw FASTQ-specific meaning without repeating file_format, file_size_bytes, storage_location, or technical_quality_flag from earlier steps.",
+      "md_schema": [
+        {
+          "field_id": "fastq_file_format",
+          "descr": "File format of the raw sequencing output produced by the sequencer for this workflow, recorded as the stored artefact format. Expected values include FASTQ or compressed FASTQ representations.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "fastq_read_orientation",
+          "descr": "Read orientation represented in the raw FASTQ output, indicating whether the data object contains single-end or paired-end amplicon reads. Record the orientation encoded in the raw file set.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "fastq_total_size_bytes",
+          "descr": "Total size of the raw FASTQ file or file set in bytes after export or transfer to storage. This is a technical property of the sequencing artefact, typically ranging from megabytes to gigabytes depending on run size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_read_count",
+          "descr": "Total number of reads represented in the raw FASTQ data object, measured on the exported sequencing artefact before demultiplexing or filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_mean_phred_quality_score",
+          "descr": "Average Phred base quality score across the raw FASTQ reads, calculated from the stored sequencing artefact as a technical quality metric. Typical values vary by run and should reflect the sequencing output quality at capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_storage_uri",
+          "descr": "Filesystem path, object-store URI, or database reference where the raw FASTQ reads are stored, for example a local path or sequencing archive URI. Record the location of the raw data artefact rather than the biological sample source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_integrity_status",
+          "descr": "File-level technical status of the raw FASTQ data after export, indicating whether the reads are complete and readable or if the file set has technical issues.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "demultiplexing_process": {
+      "reasoning": "This is a Process node, so I included only demultiplexing workflow parameters and process-level outcomes: barcode/index scheme, mismatch tolerance, assignment method, and counts/quality of reads retained after splitting. I excluded raw FASTQ file properties because those belong to the upstream Signal node, and I excluded per-sample demultiplexed file properties because those belong to the downstream Signal node. I also avoided field-name collisions with already_generated fields by not reusing generic file metadata terms such as file_format, file_size_bytes, storage_location, or technical_quality_flag.",
+      "md_schema": [
+        {
+          "field_id": "barcode_type",
+          "descr": "Type of barcode or index design used to assign sequencing reads to samples during demultiplexing, recorded as the indexing scheme present on the raw reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "inline_barcode",
+            "other"
+          ]
+        },
+        {
+          "field_id": "barcode_mismatch_tolerance",
+          "descr": "Maximum number of barcode mismatches allowed when assigning reads to samples during demultiplexing, recorded as the process threshold used for index matching.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexing_method",
+          "descr": "Software or algorithmic method used to split raw sequencing reads by sample barcode during the demultiplexing process, recorded as the exact method configuration used for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assigned_read_count",
+          "descr": "Number of reads successfully assigned to samples during demultiplexing, measured after barcode splitting and before downstream quality filtering or denoising.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unassigned_read_count",
+          "descr": "Number of reads that could not be assigned to any sample during demultiplexing because of missing, ambiguous, or failed barcode matching, measured immediately after the split step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexing_success_status",
+          "descr": "Process-level assessment of whether demultiplexing completed successfully and produced usable per-sample read sets, recorded immediately after barcode assignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "demultiplexed_reads": {
+      "reasoning": "This is a Signal node, so I included only raw per-sample read artefact metadata: the demultiplexed file format, per-sample file counts or sizes, read counts, and technical completeness/quality of the separated files. I excluded barcode assignment parameters because those belong to the demultiplexing_process node, and I excluded sample identity or biological interpretation because those belong upstream. I also avoided reusing already-generated generic file fields where possible, while staying on the raw signal layer for the demultiplexed outputs.",
+      "md_schema": [
+        {
+          "field_id": "demultiplexed_file_format",
+          "descr": "File format of the per-sample read files produced after demultiplexing, recorded as the stored artefact format for the separated sequencing reads, e.g. FASTQ or compressed FASTQ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "per_sample_file_count",
+          "descr": "Number of per-sample read files generated by demultiplexing for this sample set, measured as the count of separated read artefacts associated with the sample after barcode assignment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "per_sample_file_size_bytes",
+          "descr": "Size in bytes of the demultiplexed read file(s) for a given sample, measured after barcode separation and storage. Use this as a technical property of the per-sample raw artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_read_count",
+          "descr": "Number of reads assigned to the sample in the demultiplexed read file, measured on the raw per-sample artefact before denoising or trimming.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_storage_location",
+          "descr": "Filesystem path, object-store URI, or database reference where the demultiplexed per-sample read file is stored. Record the location of the raw separated read artefact rather than the sample source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_data_completeness",
+          "descr": "File-level completeness status of the per-sample demultiplexed reads, indicating whether the separated output is complete, partial, or has technical issues after assignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupt",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "denoising_process": {
+      "reasoning": "This is a Process node, so I included only denoising workflow parameters and process outputs in terms of the computation itself: trimming/quality thresholds, merging settings, chimera handling, and counts that summarize how many reads were retained or discarded by the algorithm. I excluded the inferred ASV objects because those belong to the downstream Derivative node, and I excluded raw or demultiplexed read file properties because those belong to upstream Signal nodes. I also avoided any already_generated field collisions by not reusing generic file or storage terms.",
+      "md_schema": [
+        {
+          "field_id": "denoising_algorithm",
+          "descr": "Algorithm or software workflow used to quality-filter, error-correct, merge, and infer exact sequence variants from the demultiplexed amplicon reads, recorded as the method executed for this process step.",
+          "type": "categorical",
+          "allowed_values": [
+            "dada2",
+            "deblur",
+            "otu_clustering",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trim_left_forward_bp",
+          "descr": "Number of bases trimmed from the 5' end of the forward reads before denoising, recorded as the process parameter used for quality control and variant inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_left_reverse_bp",
+          "descr": "Number of bases trimmed from the 5' end of the reverse reads before denoising, recorded as the process parameter used for quality control and variant inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trunc_len_forward_bp",
+          "descr": "Forward-read truncation length in base pairs applied during denoising, measured as the algorithm setting used to remove low-quality read tails.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trunc_len_reverse_bp",
+          "descr": "Reverse-read truncation length in base pairs applied during denoising, measured as the algorithm setting used to remove low-quality read tails.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_removal_mode",
+          "descr": "Chimera detection and removal mode used during denoising, recorded as the process setting controlling whether chimeric amplicons were filtered out of the inferred variants.",
+          "type": "categorical",
+          "allowed_values": [
+            "consensus",
+            "pooled",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reads_retained_count",
+          "descr": "Number of reads retained after quality filtering, error correction, and merging during denoising, measured immediately before ASV inference output is produced.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_discarded_count",
+          "descr": "Number of reads removed during denoising due to low quality, insufficient overlap, chimera detection, or other filtering criteria, measured as the process discard count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "denoising_success_status",
+          "descr": "Process-level assessment of whether denoising produced a usable exact sequence inference result, recorded immediately after algorithm completion and before downstream ASV export.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "asv_sequences": {
+      "reasoning": "This is a Derivative node, so I included only computed-result metadata for the inferred ASV set: inference method, variant counts, sequence length characteristics, abundance summarization, and output-level quality indicators. I excluded denoising parameters because those belong to the upstream Process node, and I excluded raw read properties because those belong to the Signal nodes. I also avoided field-name collisions with already_generated items by not reusing generic file/storage terms or sample identifiers.",
+      "md_schema": [
+        {
+          "field_id": "asv_inference_method",
+          "descr": "Computational method used to infer the amplicon sequence variants, recorded as the algorithm or pipeline used to derive exact sequences from denoised reads, e.g. DADA2-based inference.",
+          "type": "categorical",
+          "allowed_values": [
+            "dada2",
+            "deblur",
+            "otro",
+            "other"
+          ]
+        },
+        {
+          "field_id": "asv_count",
+          "descr": "Number of unique ASV sequences inferred for the sample set, measured in the derivative output after denoising and chimera handling.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_sequence_length_bp",
+          "descr": "Representative length in base pairs of the inferred ASV sequences, typically reported as the modal or consensus amplicon length after trimming and merging.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_abundance_summary",
+          "descr": "Summary statistic describing the abundance distribution of ASVs in the derivative result, such as total counts, nonzero features, or dominance structure, recorded as a compact numeric summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_output_quality_status",
+          "descr": "Scientific/technical quality assessment of the ASV derivative output, indicating whether the inferred variants appear complete, sparse, or affected by excessive filtering or errors.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_confidence",
+            "moderate_confidence",
+            "low_confidence",
+            "warning"
+          ]
+        },
+        {
+          "field_id": "asv_representation_type",
+          "descr": "Type of sequence representation stored for the ASV derivative, indicating whether the output contains nucleotide sequences, consensus representatives, or both.",
+          "type": "categorical",
+          "allowed_values": [
+            "nucleotide_sequences",
+            "consensus_representatives",
+            "both"
+          ]
+        }
+      ]
+    },
+    "taxonomy_assignment_process": {
+      "reasoning": "This is a Process node, so I included only taxonomy-assignment procedure details: the reference database used, classifier method, confidence threshold, taxonomy rank depth targeted, and a process-level assignment success indicator. I excluded the resulting taxonomic labels themselves because those belong to the downstream Derivative node, and I excluded ASV properties because those belong upstream. I also avoided any field collisions with already-generated metadata by not reusing generic storage or file terms.",
+      "md_schema": [
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the reference taxonomy database used to assign microbial taxonomy to the ASVs, recorded as the exact database selection at the time of classification, e.g. SILVA or Greengenes.",
+          "type": "categorical",
+          "allowed_values": [
+            "silva",
+            "greengenes",
+            "rdp",
+            "unite",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the reference database used for taxonomy assignment, recorded to support reproducibility of the classifier result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classification_method",
+          "descr": "Algorithm or classifier used to match ASVs against the reference database and assign taxonomy, recorded as the process method executed for this step.",
+          "type": "categorical",
+          "allowed_values": [
+            "naive_bayes",
+            "blast",
+            "vsearch",
+            "consensus",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomy_confidence_threshold",
+          "descr": "Minimum confidence score or probability required to accept a taxonomy assignment during classification, recorded as the process cutoff used for label acceptance. Typical values are between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_taxonomic_rank",
+          "descr": "Deepest taxonomic rank targeted or reported by the assignment process, recorded as the classification depth used for the run, such as genus or species where supported.",
+          "type": "categorical",
+          "allowed_values": [
+            "domain",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species"
+          ]
+        },
+        {
+          "field_id": "taxonomy_assignment_success",
+          "descr": "Process-level assessment of whether taxonomy classification completed successfully and produced usable labels for the ASV set, recorded immediately after the assignment step.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profile": {
+      "reasoning": "This is a Derivative node, so I included only computed community-profile metadata: taxonomy resolution depth, number of taxa reported, relative abundance summary, representation format, and output confidence/quality. I excluded the classification procedure details and reference database because those belong to the upstream taxonomy_assignment_process, and I excluded ASV sequence properties because those belong upstream to asv_sequences. I also avoided reusing already-generated generic file or storage fields.",
+      "md_schema": [
+        {
+          "field_id": "taxonomy_resolution_depth",
+          "descr": "Deepest taxonomic rank present in the derived community profile, recorded as the level to which ASVs were successfully resolved in the output object, e.g. genus or species.",
+          "type": "categorical",
+          "allowed_values": [
+            "domain",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species"
+          ]
+        },
+        {
+          "field_id": "taxa_count",
+          "descr": "Number of unique taxonomic entries represented in the derived community profile for the sample, measured after taxonomy assignment and aggregation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_abundance_summary",
+          "descr": "Summary of relative abundances in the taxonomic profile, such as the number of taxa with nonzero abundance or a compact abundance distribution descriptor. Record the derived community composition summary rather than raw read counts.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_output_format",
+          "descr": "Data representation used for the derived taxonomic profile, indicating whether the output is a table, hierarchy, or nested taxonomy object produced by the analysis pipeline.",
+          "type": "categorical",
+          "allowed_values": [
+            "table",
+            "hierarchy",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "profile_confidence_status",
+          "descr": "Quality status of the derived taxonomic profile, indicating how confidently the microbial community was resolved based on the upstream assignments and aggregation step.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_confidence",
+            "moderate_confidence",
+            "low_confidence",
+            "warning"
+          ]
+        },
+        {
+          "field_id": "dominant_taxon_label",
+          "descr": "Name of the most abundant taxon in the derived community profile, recorded as a summary of the computed taxonomic composition for the sample.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_table_process": {
+      "reasoning": "This is a Process node, so I included only matrix-construction details: input aggregation rule, abundance units, normalization or sparsity handling, matrix dimensions as produced by the process, and a process-level build status. I excluded the resulting matrix artifact properties because those belong to the downstream Derivative node, and I excluded ASV identity or raw read details because those are upstream. I also avoided any already-generated collisions, especially generic file/storage terms and prior storage_condition-related fields.",
+      "md_schema": [
+        {
+          "field_id": "matrix_construction_method",
+          "descr": "Method used to organize ASV abundances into a sample-by-feature matrix, recorded as the process rule or software behavior used to build the table from the inferred ASVs.",
+          "type": "categorical",
+          "allowed_values": [
+            "count_table",
+            "relative_abundance_table",
+            "presence_absence_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "abundance_unit",
+          "descr": "Unit used for abundances in the community table during matrix construction, measured as the representation chosen for each sample-by-feature cell. Typical units include raw counts or normalized relative abundance.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_count",
+            "relative_abundance",
+            "percentage",
+            "presence_absence"
+          ]
+        },
+        {
+          "field_id": "feature_aggregation_level",
+          "descr": "Feature level used to index the abundance matrix, recorded as the biological sequence unit being tabulated. For this workflow the expected level is ASV, measured at table-construction time.",
+          "type": "categorical",
+          "allowed_values": [
+            "asv",
+            "otu",
+            "species",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sparsity_handling",
+          "descr": "Approach used to handle zero or missing entries while building the sample-by-feature matrix, recorded as the table-construction setting or rule applied during the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "keep_zeros",
+            "impute_missing",
+            "drop_sparse_features",
+            "other"
+          ]
+        },
+        {
+          "field_id": "community_table_dimensions",
+          "descr": "Shape of the community table produced by this process, expressed as samples by features at matrix-construction time, e.g. '24x1823'. Record the dimensions of the table being built, not the downstream derivative file size.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_table_build_status",
+          "descr": "Process-level assessment of whether the ASV abundance matrix was successfully constructed and is ready for downstream ecological analysis, recorded immediately after table assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "asv_count_matrix": {
+      "reasoning": "This is a Derivative node, so I included only computed matrix properties: matrix shape, abundance representation, normalization state, sparsity summary, and output quality. I excluded the table-construction settings because those belong to the upstream community_table_process, and I excluded raw or ASV sequence properties because those belong upstream. I also avoided repeating previously generated generic file/location fields and stayed on the derived abundance-table layer.",
+      "md_schema": [
+        {
+          "field_id": "matrix_shape",
+          "descr": "Dimensions of the derived sample-by-ASV abundance table, expressed as samples by ASVs after community table construction, e.g. '24x1823'. Record the size of the computed matrix, not the raw input files.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_representation",
+          "descr": "Numeric representation used in the derived ASV count matrix, indicating whether values are raw counts, normalized abundances, or transformed values prepared for ecological analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_counts",
+            "relative_abundance",
+            "normalized_counts",
+            "log_transformed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_applied",
+          "descr": "Indicator of whether the derived matrix was normalized or transformed after table construction, recorded as a property of the computed abundance matrix used for analysis.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nonzero_cell_count",
+          "descr": "Number of nonzero cells in the derived sample-by-ASV matrix, measured as a sparsity summary of the computed abundance table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_quality_status",
+          "descr": "Technical/scientific quality assessment of the derived ASV count matrix, indicating whether the table is complete and suitable for downstream ecological analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "moderate_quality",
+            "low_quality",
+            "warning"
+          ]
+        },
+        {
+          "field_id": "dominant_feature_count",
+          "descr": "Count of ASVs dominating the derived matrix, recorded as a compact summary of the abundance structure in the computed table, for example the number of high-abundance features.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_matrix_process": {
+      "reasoning": "This is a Process node, so I included only the matrix-construction settings for consolidating site-level environmental readings: which variables were included, how site and depth were handled, any unit standardization, and a process-level build status. I excluded the actual temperature, pH, salinity, and nutrient values because those belong to the upstream environmental_readings Signal and the downstream environmental_covariate_matrix Derivative will hold the computed matrix. I also avoided already_generated collisions by not using generic file/storage fields or any sample identifiers.",
+      "md_schema": [
+        {
+          "field_id": "included_environmental_variables",
+          "descr": "Environmental variables included in the covariate matrix construction, recorded at the time the site-level readings were consolidated. For this workflow this typically includes temperature, pH, salinity, and nutrient concentrations.",
+          "type": "categorical",
+          "allowed_values": [
+            "temperature",
+            "ph",
+            "salinity",
+            "nutrient_concentration",
+            "temperature_ph_salinity",
+            "temperature_ph_salinity_nutrient_concentration",
+            "other"
+          ]
+        },
+        {
+          "field_id": "site_id_mapping_method",
+          "descr": "Method used to map raw environmental readings to sampling sites before matrix construction, recorded as the consolidation rule applied to site-level observations.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "depth_stratification_rule",
+          "descr": "Rule used to handle depth information when building the environmental matrix, recorded as the process setting that determines whether depths are kept separate, averaged, or grouped.",
+          "type": "categorical",
+          "allowed_values": [
+            "keep_separate",
+            "average_by_site",
+            "bin_by_depth",
+            "ignore_depth",
+            "other"
+          ]
+        },
+        {
+          "field_id": "unit_standardization_method",
+          "descr": "Method used to standardize environmental variable units before matrix construction, recorded as the transformation applied to make variables comparable across sites. Examples include z-scoring or scaling to common units.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "z_score",
+            "min_max_scale",
+            "unit_conversion",
+            "other"
+          ]
+        },
+        {
+          "field_id": "environmental_matrix_dimensions",
+          "descr": "Shape of the covariate matrix produced by this process, expressed as sites by variables or site-depth strata by variables, e.g. '18x4'. Record the matrix dimensions at build time, not the downstream file size.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_matrix_build_status",
+          "descr": "Process-level assessment of whether the environmental covariate matrix was successfully assembled and is ready for integration with community data, recorded immediately after matrix construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "environmental_covariate_matrix": {
+      "reasoning": "This is still the environmental_covariate_matrix Derivative node, so I retained only derived matrix properties but renamed the dimension field again to avoid the new DAG-wide collision. I excluded raw measurements and process settings as before. The schema now focuses on the computed covariate matrix content, standardization, sparsity, and output quality with field names that do not overlap with earlier generated metadata.",
+      "md_schema": [
+        {
+          "field_id": "covariate_matrix_dimensions",
+          "descr": "Dimensions of the derived environmental covariate matrix, expressed as sites (or site-depth strata) by environmental variables, e.g. '18x4'. Record the size of the computed matrix, not the raw measurements.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_variable_list",
+          "descr": "List of environmental variables represented in the derived covariate matrix, recorded as the computed feature set used for downstream analysis. For this workflow this commonly includes temperature, pH, salinity, and nutrient variables.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "standardization_applied",
+          "descr": "Indicator of whether the derived environmental matrix was standardized or transformed after consolidation, recorded as a property of the computed covariate matrix used for modeling.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_count",
+          "descr": "Number of missing entries in the derived environmental covariate matrix, measured after matrix construction as a technical quality summary of the computed output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_matrix_quality_status",
+          "descr": "Technical/scientific quality assessment of the derived environmental covariate matrix, indicating whether the matrix is complete and suitable for integration with community data.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "moderate_quality",
+            "low_quality",
+            "warning"
+          ]
+        },
+        {
+          "field_id": "dominant_variable",
+          "descr": "Environmental variable contributing the most variance or prominence in the derived matrix, recorded as a compact summary of the computed covariate structure if assessed.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_ordination_process": {
+      "reasoning": "This is a Process node, so I included only the analysis settings and outputs of the ordination/modeling step: ordination method, dissimilarity metric, transformation/standardization choices, covariate integration mode, and a process-level success indicator. I excluded the ASV matrix, taxonomic profile, and environmental matrix content because those belong to upstream Derivative nodes, and I excluded the final modeled result because that belongs to the downstream Derivative node. I also avoided field-name collisions by not reusing previously generated generic terms such as matrix_shape or matrix_quality_status.",
+      "md_schema": [
+        {
+          "field_id": "ordination_method",
+          "descr": "Multivariate ordination method used to integrate microbial community profiles with environmental covariates, recorded as the analysis technique executed for this process step, e.g. PCA, PCoA, NMDS, or RDA.",
+          "type": "categorical",
+          "allowed_values": [
+            "pca",
+            "pcoa",
+            "nmds",
+            "rda",
+            "cca",
+            "other"
+          ]
+        },
+        {
+          "field_id": "distance_metric",
+          "descr": "Dissimilarity or distance metric used for the community data in the ordination analysis, recorded as the metric applied before or during integration with environmental covariates.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "euclidean",
+            "aitchison",
+            "other"
+          ]
+        },
+        {
+          "field_id": "community_transformation",
+          "descr": "Transformation applied to the microbial community matrix before ordination, recorded as the process setting used to prepare the data for multivariate analysis, e.g. log, Hellinger, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "log_transform",
+            "hellinger",
+            "clr",
+            "other"
+          ]
+        },
+        {
+          "field_id": "environmental_integration_mode",
+          "descr": "How environmental covariates were incorporated into the community analysis, recorded as the modeling mode used to relate microbial profiles to reef-site variables.",
+          "type": "categorical",
+          "allowed_values": [
+            "fit_environmental_vectors",
+            "constrained_ordination",
+            "joint_model",
+            "correlation_overlay",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_performed_with_depth",
+          "descr": "Indicator of whether depth information was explicitly included in the ordination analysis as a covariate or grouping factor, recorded for the process that assessed spatial heterogeneity across reef depths.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ordination_success_status",
+          "descr": "Process-level assessment of whether the community ordination analysis completed successfully and produced a usable multivariate result, recorded immediately after model fitting.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "warning"
+          ]
+        }
+      ]
+    },
+    "community_environment_model": {
+      "reasoning": "This is a Derivative node, so I included only computed-result metadata for the integrated multivariate model: model type, variance explained or fit statistics, key environmental drivers, significance, and output dimensions/quality. I excluded the ordination or integration settings because those belong to the upstream community_ordination_process, and I excluded the raw matrices and input profiles because those belong to upstream derivative nodes. I also avoided reusing previously generated generic field names such as matrix_shape or matrix_quality_status by using model-specific names instead.",
+      "md_schema": [
+        {
+          "field_id": "model_type",
+          "descr": "Type of integrated multivariate model produced as the final ecological result, recorded as the computed method used to relate microbial community structure to environmental gradients and reef location, e.g. constrained ordination or regression-based model.",
+          "type": "categorical",
+          "allowed_values": [
+            "rda",
+            "cca",
+            "mantel_test",
+            "mixed_effects_model",
+            "structural_equation_model",
+            "other"
+          ]
+        },
+        {
+          "field_id": "model_fit_statistic",
+          "descr": "Primary fit statistic or explanatory measure reported for the community-environment model, recorded as a summary of how well environmental gradients explain community structure. Examples include adjusted R-squared, R-squared, or analogous model fit values.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variance_explained_percent",
+          "descr": "Percentage of community variation explained by the integrated multivariate model, measured from the fitted derivative result as a compact ecological summary.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significant_environmental_predictors",
+          "descr": "List or summary of environmental variables that were identified as significant predictors of microbial community structure in the final model, recorded as the derivative output of the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reef_location_effect_size",
+          "descr": "Effect size or strength of association between reef location/depth and microbial community structure in the final model, recorded as a computed output summarizing spatial heterogeneity across sites.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_output_quality",
+          "descr": "Technical and scientific quality assessment of the integrated multivariate result, indicating whether the model is robust, marginal, or unstable based on the fitted output.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_confidence",
+            "moderate_confidence",
+            "low_confidence",
+            "warning"
+          ]
+        }
+      ]
+    }
+  }
+}

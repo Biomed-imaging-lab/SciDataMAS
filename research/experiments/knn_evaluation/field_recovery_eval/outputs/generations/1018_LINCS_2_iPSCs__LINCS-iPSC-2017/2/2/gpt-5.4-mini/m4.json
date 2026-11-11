@@ -1,0 +1,918 @@
+{
+  "md_name": "iPSC Neuronal Differentiation Phenotyping Dataset",
+  "md_description": "This workflow starts from patient-derived induced pluripotent stem cell cultures carrying known neurodegenerative disease variants and transforms them through differentiation into neuronal cultures. It then captures neuronal morphology and synaptic activity as experimental readouts, processes these measurements into quantitative phenotype derivatives, and integrates them with batch and protocol variables such as passage number, differentiation batch, growth factor schedule, and variant background. The resulting dataset supports analysis of cellular disease phenotypes and evaluation of therapeutic interventions in Alzheimer’s and Parkinson’s disease models.",
+  "fields_per_node": {
+    "patient_derived_ipsc_culture": {
+      "reasoning": "This node is an Entity, so I included only intrinsic properties of the patient-derived iPSC culture: provenance, patient disease context, and the known genetic variant background carried by the starting culture. I excluded any manipulation details, plating/expansion conditions, differentiation protocol variables, imaging/electrophysiology settings, raw data file properties, and computed phenotype outputs because those belong to downstream Process, Capture, Signal, or Derivative nodes. I also avoided sample/subject/experiment identifiers that are typically defined once at the root and may overlap with already_generated fields in the wider DAG. The fields focus on what the culture is, where it came from, and what disease-linked genetic background it carries so downstream users can interpret the differentiation and phenotype readouts.",
+      "md_schema": [
+        {
+          "field_id": "patient_source_type",
+          "descr": "Origin of the iPSC line used as the starting material for this culture; record the donor category at the point the cell line was established. Typical values indicate whether the line came from an individual patient or a control donor.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient",
+            "control",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "patient_disease_context",
+          "descr": "Primary neurodegenerative disease context associated with the donor at the time the iPSC line was created; use the disease label that motivated inclusion of the line in this dataset. Examples include Alzheimer's disease and Parkinson's disease.",
+          "type": "categorical",
+          "allowed_values": [
+            "alzheimer_disease",
+            "parkinson_disease",
+            "mixed_neurodegenerative_risk",
+            "other_neurodegenerative_condition",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "genetic_variant_description",
+          "descr": "Text description of the known disease-linked genetic variant(s) present in the patient-derived iPSC line, as established before any expansion or differentiation. Example: 'SNCA duplication', 'APP missense variant', or 'LRRK2 G2019S'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_zygosity",
+          "descr": "Zygosity of the disease-linked variant(s) in the starting iPSC culture, determined from the donor genotype before downstream processing. Use the most specific available state for the reported variant background.",
+          "type": "categorical",
+          "allowed_values": [
+            "heterozygous",
+            "homozygous",
+            "hemizygous",
+            "compound_heterozygous",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "variant_background_summary",
+          "descr": "Concise summary of the broader genetic background of the starting iPSC line relevant to disease modeling, including whether the line carries one known pathogenic variant, multiple variants, or an unspecified complex background. This is a culture-level intrinsic description, not a computed annotation table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cell_line_origin_format",
+          "descr": "Provenance format for the starting iPSC line, indicating whether the line is patient-derived from a primary donor sample, reprogrammed from a fibroblast source, blood-derived, or another origin as documented at line creation.",
+          "type": "categorical",
+          "allowed_values": [
+            "fibroblast_derived",
+            "blood_derived",
+            "other_patient_source",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "iPSC_expansion_and_plating": {
+      "reasoning": "This node is a Process, so I included only protocol and operation variables that define how the patient-derived iPSC culture was expanded and plated before differentiation. That means batch-level and handling conditions such as passage number, plating density, medium/reagent details, timing, and any process QC tied to this step. I excluded intrinsic culture identity fields because those belong to the upstream Entity node, and I excluded downstream differentiation, neuronal phenotype, imaging, and file/result properties because those belong to later Process, Capture, Signal, or Derivative nodes. I also avoided repeating generic identifiers already reserved elsewhere in the DAG. The fields are centered on reproducible execution of the expansion/plating step and its immediate output quality.",
+      "md_schema": [
+        {
+          "field_id": "passage_number",
+          "descr": "Passage number of the iPSC culture at the moment it is expanded and plated for the pre-differentiation step. Record the integer passage index used in this experiment; typical values are low to mid passage, for example 5 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "batch_identifier",
+          "descr": "Local batch label assigned to this expansion and plating run, used to group cultures handled together before differentiation. Use the experiment's batch code format, for example 'BATCH_01' or a lab-specific alphanumeric label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plating_density_cells_per_cm2",
+          "descr": "Number of iPSCs plated per square centimeter during the expansion/plating step, measured at the time cells are seeded into the culture vessel. Typical values depend on the protocol and may range from low thousands to hundreds of thousands of cells per cm2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_vessel_type",
+          "descr": "Type of vessel used for expansion and plating at this step, recorded when the cells are seeded. Examples include tissue-culture-treated plate, flask, or multiwell plate format.",
+          "type": "categorical",
+          "allowed_values": [
+            "6_well_plate",
+            "12_well_plate",
+            "24_well_plate",
+            "96_well_plate",
+            "t25_flask",
+            "t75_flask",
+            "other"
+          ]
+        },
+        {
+          "field_id": "plating_medium",
+          "descr": "Growth medium used during the expansion and plating step, specified at the time of seeding. Include the medium formulation name or lab-standard designation used for pre-differentiation maintenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Incubation temperature used immediately after plating during the expansion period, measured in the controlled culture environment. Typical mammalian cell culture values are near 37 celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "co2_percent",
+          "descr": "Carbon dioxide concentration used in the incubator during expansion and plating, recorded as the controlled incubator setting at the time of culture maintenance. Typical values are around 5 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pre_differentiation_confluency_percent",
+          "descr": "Estimated percent confluency of the culture at the time it is expanded and plated for downstream differentiation. Record this as a culture-state quality indicator immediately before the differentiation protocol begins; typical values are 30 to 100 percent depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expansion_plating_quality_flag",
+          "descr": "Outcome flag indicating whether the expansion and plating step met the protocol acceptance criteria before differentiation. Use this as a simple process-level quality indicator assessed immediately after plating.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "primed_ipsc_culture": {
+      "reasoning": "This node is an Entity, so I included only intrinsic state of the prepared iPSC culture immediately before differentiation. The fields focus on what makes the culture 'primed' as a biological material: readiness state, any priming marker status, and the pre-differentiation condition of the culture. I excluded process variables such as the differentiation protocol, growth factors, timing, and software/instrument settings because those belong to downstream Process or Capture nodes. I also avoided repeating upstream identity/genetic-background fields already assigned to the patient-derived iPSC culture node, and I did not include downstream neuron phenotype or raw data properties. The selected fields help a downstream user understand the starting state entering neuronal differentiation without duplicating handling details.",
+      "md_schema": [
+        {
+          "field_id": "primed_state_status",
+          "descr": "Readiness status of the iPSC culture immediately before neuronal differentiation begins. Use this field to indicate whether the culture has been successfully primed according to the experiment's pre-differentiation criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready_for_differentiation",
+            "partially_primed",
+            "not_ready",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "priming_marker_summary",
+          "descr": "Summary of any intrinsic marker-based priming state reported for the culture before differentiation, such as lineage-prep marker expression or morphology consistent with a prepared state. Record a concise text description rather than protocol details.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pre_differentiation_cell_health",
+          "descr": "Qualitative assessment of the culture condition immediately before neuronal differentiation, capturing whether the iPSCs appear healthy enough to proceed. Use the lab's pre-start assessment at the time the culture is handed off to the differentiation step.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "fair",
+            "poor",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "culture_morphology_state",
+          "descr": "Observable culture-level morphology of the primed iPSC population at the point it is declared ready for differentiation. Example descriptions may include compact colonies, uniform monolayer, or mixed morphology.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "neuronal_differentiation": {
+      "reasoning": "This node is a Process, so I included only the differentiation protocol variables that govern how primed iPSCs are converted toward neurons. The fields cover schedule/timing, growth factor and reagent composition, media changes, and a process-level outcome quality indicator. I excluded intrinsic properties of the starting primed culture, the resulting neuron culture, and any measurement/capture or file properties because those belong to adjacent Entity, Capture, Signal, or Derivative nodes. I also avoided repeating expansion/plating metadata and any variant-background fields already assigned upstream. The schema is designed to let a downstream user reproduce the differentiation step and understand its immediate execution conditions without describing the output neuron phenotype itself.",
+      "md_schema": [
+        {
+          "field_id": "differentiation_protocol_name",
+          "descr": "Name or short label of the neuronal differentiation protocol applied to the primed iPSC culture. Record the protocol designation used in this experiment, for example a lab-specific neuronal induction recipe or published protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "differentiation_start_day",
+          "descr": "Experiment day or culture day when neuronal differentiation was initiated on the primed iPSC culture. Use the study's internal day numbering system, for example day 0 or day 1 of induction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "differentiation_duration_days",
+          "descr": "Total number of days the culture was maintained under neuronal differentiation conditions before being considered differentiated enough for downstream derivation or capture. Typical values depend on protocol and may span from several days to several weeks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "growth_factor_schedule",
+          "descr": "Text description of the growth factor and small-molecule schedule used during neuronal induction, including the key reagents and the timing of additions or withdrawals. This should summarize the active differentiation recipe without including later capture settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "media_change_frequency_days",
+          "descr": "Number of days between routine medium changes during the differentiation period, recorded as the process cadence used to maintain the culture. Typical values are 1 to 7 days depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "differentiation_temperature_celsius",
+          "descr": "Incubation temperature applied during the neuronal differentiation process, measured in the culture environment while induction is in progress. Typical mammalian culture values are near 37 celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "differentiation_quality_flag",
+          "descr": "Process-level assessment of whether the differentiation run met acceptance criteria before downstream capture or derivation. Use this as a simple indication of protocol success, based on morphology, survival, or marker-based checks at the end of induction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "derived_neuron_culture": {
+      "reasoning": "This node is an Entity, so I included only intrinsic properties of the differentiated neuronal culture itself, not the differentiation protocol that produced it and not any capture or file properties. The fields focus on the resulting neuron culture identity and baseline biological state needed for downstream morphology and activity measurements: neuronal maturity, lineage identity, culture composition, and health/viability at the point the culture is used for readout. I excluded upstream process details such as growth factors, timing, and batch setup, because those belong to the neuronal_differentiation node, and I avoided sample identifiers and upstream genotype fields already assigned to the source iPSC culture. I also did not include imaging or electrophysiology settings, raw data, or computed phenotype outputs because those belong to downstream Capture, Signal, and Derivative nodes. The resulting fields describe what the culture is, at the moment it becomes the experimental neuron sample.",
+      "md_schema": [
+        {
+          "field_id": "neuronal_maturity_stage",
+          "descr": "Developmental stage or maturity class of the derived neuronal culture at the time it is used for phenotypic characterization. Record the culture's intrinsic neuronal maturity state as observed or annotated in this experiment, for example immature, developing, or mature neuron-like state.",
+          "type": "categorical",
+          "allowed_values": [
+            "immature",
+            "developing",
+            "mature",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "neuronal_lineage_identity",
+          "descr": "Primary neuronal lineage identity of the derived culture, recorded as the intrinsic cell identity inferred for the differentiated cells before measurement. Examples include cortical neuron-like, dopaminergic neuron-like, or mixed neuronal lineage.",
+          "type": "categorical",
+          "allowed_values": [
+            "cortical_neuron_like",
+            "dopaminergic_neuron_like",
+            "motor_neuron_like",
+            "mixed_neuronal",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "culture_composition_summary",
+          "descr": "Concise text summary of the cell population composition in the derived neuron culture at the time of characterization, including whether non-neuronal cells are present in notable proportion. This is a culture property, not a protocol description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_viability_percent",
+          "descr": "Estimated percentage of viable cells in the derived neuron culture at the time it is prepared for phenotypic characterization. Typical values are reported as a percent from 0 to 100 and are assessed immediately before capture or assay.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neuronal_marker_summary",
+          "descr": "Summary of intrinsic neuronal marker status for the derived culture, such as expression of MAP2, TUJ1, NeuN, or other lineage markers used to confirm neuronal identity. Report the culture-level marker interpretation rather than the assay method.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microscopy_capture": {
+      "reasoning": "This node is a Capture, so I included only the measurement-session and instrument-configuration fields for the microscopy acquisition itself. The schema covers microscope hardware identity, imaging mode, objective and acquisition settings, and the capture quality/status needed to interpret the raw morphology images. I excluded sample properties of the derived neuron culture because those belong to the upstream Entity node, and I excluded file properties, pixel dimensions of the stored image, and any morphology interpretation because those belong to the downstream Signal and Derivative nodes. I also avoided duplicating general process metadata already assigned to the differentiation step. The selected fields describe how the microscope was configured and operated to obtain the raw image data, which is the semantic territory of Capture.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the microscope system used for the neuron morphology imaging session. Record the hardware vendor that supplied the capture instrument, as configured at the time of image acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or number of the microscope used for microscopy capture. Example format: a vendor model designation such as 'Axio Observer 7' or similar instrument label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the microscope used for the capture session, recorded from the physical instrument at the time of imaging. Use the manufacturer's serial identifier format, for example an alphanumeric hardware serial code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "imaging_mode",
+          "descr": "Microscopy acquisition mode used to record the raw morphology images from the derived neuron culture. Choose the mode that matches the actual capture session, such as brightfield or fluorescence.",
+          "type": "categorical",
+          "allowed_values": [
+            "brightfield",
+            "phase_contrast",
+            "fluorescence",
+            "confocal",
+            "other"
+          ]
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Objective magnification used during image acquisition, recorded as the configured microscope objective at capture time. Typical values for neuronal morphology imaging may include 10x, 20x, 40x, or 60x.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_time_milliseconds",
+          "descr": "Per-frame exposure time used during microscopy capture, measured in milliseconds at the moment of acquisition. Typical values depend on illumination and objective settings and are often in the low milliseconds to seconds range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_temperature_celsius",
+          "descr": "Temperature of the imaging environment during microscopy capture if actively controlled by the instrument or stage enclosure. Record the setpoint used at acquisition time, typically near 37 celsius for live-cell imaging.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_focus_method",
+          "descr": "Autofocus or manual focus strategy used during the microscopy session to obtain the raw morphology images. Record the acquisition configuration that was actually used on the instrument.",
+          "type": "categorical",
+          "allowed_values": [
+            "autofocus",
+            "manual_focus",
+            "hardware_autofocus",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "capture_quality_flag",
+          "descr": "Quality indicator assigned to the microscopy session based on whether the acquisition met the expected image quality for downstream processing. Use this as a capture-level status for focus, illumination, and field coverage.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "raw_morphology_images": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties of the morphology image files themselves: file format, file size, image dimensions, channel count, and storage location/technical integrity. I excluded microscope settings and acquisition conditions because those belong to the Capture node, and I excluded any computed morphology descriptors because those belong to the downstream Derivative node. I also avoided repeating the biological sample properties from the neuron culture or the protocol details from differentiation. The fields here are the minimum technical descriptors needed to locate, validate, and reuse the raw image data.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital image file format of the raw morphology data produced by microscopy capture, recorded for the stored artefact itself. Example values include TIFF or OME-TIFF; report the exact format used in this experiment.",
+          "type": "categorical",
+          "allowed_values": [
+            "tiff",
+            "ome_tiff",
+            "nd2",
+            "czi",
+            "avi",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw morphology image file in bytes, measured for the stored artefact after acquisition and saving. This helps assess data completeness and storage footprint; typical values can range from megabytes to gigabytes depending on field of view and z-stack depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Horizontal dimension of the raw morphology image in pixels, recorded from the stored file. Use the pixel width of the raw image artefact as saved, not the microscope field size in micrometers.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Vertical dimension of the raw morphology image in pixels, recorded from the stored file. Use the pixel height of the raw image artefact as saved, not the microscope field size in micrometers.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channel_count",
+          "descr": "Number of image channels present in the raw morphology image file, measured from the stored artefact. Typical values are 1 for single-channel brightfield or higher for multi-channel fluorescence acquisition.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "File system path, object-store URI, or database location where the raw morphology image is stored. Record the location of the raw signal artefact using the experiment's storage convention, for example a local path or repository URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_integrity_flag",
+          "descr": "Technical integrity status of the raw image file after transfer or storage, indicating whether the artifact is readable and complete. Use this as a raw-data quality check distinct from biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "corrupt",
+            "incomplete",
+            "not_checked"
+          ]
+        }
+      ]
+    },
+    "morphology_quantification": {
+      "reasoning": "This node is a Process, so I included only the computation/analysis parameters used to derive morphology metrics from the raw images, plus a process-level output quality indicator. The fields describe the analysis software identity, version, algorithm or pipeline name, key segmentation/threshold settings, and the fact that the computation was performed on the raw image signal. I excluded raw image file properties because those belong to the Signal node, and I excluded the resulting morphology matrix itself because that belongs to the downstream Derivative node. I also avoided repeating capture settings or culture-level biology from upstream nodes. The goal is to make the image-analysis step reproducible without describing the output phenotype table.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or analysis package used to quantify neuronal morphology from raw images. Record the exact tool used in this process step, for example a Python package or image analysis platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the morphology analysis software used at the time of computation, recorded to support reproducibility of the image-processing pipeline. Example format: '1.2.0' or a vendor-specific version label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository, package registry, or code source used for the morphology quantification workflow, recorded at the time the analysis was run. Use a URL, package reference, or local repository identifier as applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_threshold_value",
+          "descr": "Threshold value or comparable segmentation parameter used to identify neuronal structures in the raw morphology images during analysis. Record the actual numeric setting applied in this experiment; typical range depends on the algorithm and image intensity scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "skeletonization_enabled",
+          "descr": "Whether skeletonization or a similar neurite-tracing step was enabled during morphology quantification. This is a process setting applied to the raw image analysis pipeline, not a property of the images themselves.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_input_data_type",
+          "descr": "Type of input data analyzed by this quantification step. For this node, the input should be the raw morphology image signal used to compute morphology descriptors.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_image",
+            "z_stack",
+            "time_lapse_stack",
+            "other"
+          ]
+        },
+        {
+          "field_id": "morphology_quantification_quality_flag",
+          "descr": "Process-level assessment of whether the morphology quantification run completed successfully and produced usable measurements. Use this as a pipeline QC flag for the analysis step.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "morphology_features": {
+      "reasoning": "This node is a Derivative, so I included only computed-result fields that describe the morphology feature matrix itself: what algorithm/pipeline produced it, the key output dimensions, the feature set summarized, and a result-level quality indicator. I excluded raw image file properties and capture settings because those belong to the Signal and Capture nodes, and I excluded the biological culture properties because those belong to the derived neuron Entity node. I also avoided repeating analysis-software details already assigned to the morphology quantification process unless they are part of the derivative's provenance. The fields are meant to let a downstream user understand and reuse the computed phenotype table without conflating it with the input images or analysis protocol.",
+      "md_schema": [
+        {
+          "field_id": "feature_matrix_format",
+          "descr": "Storage or table format of the computed morphology feature matrix produced by the quantification step. Record the exact derivative representation used for the phenotype table, for example CSV, TSV, Parquet, or a database table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "hdf5",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_row_count",
+          "descr": "Number of sample rows in the computed morphology feature matrix, measured after the quantification step completes. This indicates how many differentiated samples or imaging units are represented in the derivative table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_column_count",
+          "descr": "Number of feature columns in the computed morphology matrix, measured after all morphology descriptors have been assembled. This reflects the dimensionality of the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_set_summary",
+          "descr": "Concise summary of the morphology descriptors included in the computed matrix, such as neurite length, branching metrics, soma size, and shape irregularity. This should describe the contents of the derivative output, not the raw image input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivation_algorithm_name",
+          "descr": "Name of the algorithm or pipeline that produced the morphology feature matrix from the analyzed images. Use the derivative-level method label used for computation, for example a tracing or feature-extraction workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_matrix_quality_flag",
+          "descr": "Quality indicator for the computed morphology feature matrix, reflecting whether the derivative output is complete, internally consistent, and ready for downstream analysis. This is a result-level QC flag for the derived table.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "synaptic_activity_capture": {
+      "reasoning": "I corrected the synaptic_activity_capture schema to avoid field-id collisions with already_generated metadata from earlier DAG steps. I removed the repeated generic instrument identity fields and the repeated capture quality flag, then replaced them with capture-specific session fields that remain within the Capture node's semantic territory and do not overlap with previous nodes. The revised fields still describe instrument configuration and acquisition context, but use distinct names focused on this recording session's setup rather than generic hardware identity. I kept the measurement-mode, sampling, stimulation, and temperature fields because they are specific to this capture and do not duplicate earlier metadata.",
+      "md_schema": [
+        {
+          "field_id": "recording_mode",
+          "descr": "Measurement mode used to capture synaptic or functional activity from the derived neuron culture. Choose the active recording modality used in the session, such as patch clamp or calcium imaging.",
+          "type": "categorical",
+          "allowed_values": [
+            "patch_clamp",
+            "calcium_imaging",
+            "multielectrode_array",
+            "voltage_sensitive_dye",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sampling_rate_hz",
+          "descr": "Sampling rate used during activity capture, measured in hertz at the time of recording. Typical values depend on modality and may range from tens of hertz for imaging to tens of kilohertz for electrophysiology.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recording_duration_minutes",
+          "descr": "Total duration of the activity recording session, measured in minutes from start to stop of acquisition. Typical values depend on assay design and may range from a few minutes to hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulation_applied",
+          "descr": "Whether external stimulation was applied during the synaptic activity recording session. Use this to indicate if the capture included an evoked-response protocol or was purely spontaneous.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stimulation_type",
+          "descr": "Type of stimulation used during recording when stimulation was applied. Use this field only if stimulation_applied is true, for example electrical pulse or chemical stimulation.",
+          "type": "categorical",
+          "allowed_values": [
+            "electrical",
+            "chemical",
+            "optogenetic",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "recording_temperature_celsius",
+          "descr": "Temperature of the recording environment during synaptic activity capture if actively controlled by the instrument or chamber. Record the setpoint used at acquisition time, typically near physiological temperature for live-cell recordings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recording_system_configuration",
+          "descr": "Concise description of the configured recording system used for this capture session, including the active headstage, imaging module, or acquisition setup relevant to the selected modality. Example: 'whole-cell patch clamp rig with low-noise amplifier' or 'live-cell calcium imaging setup'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_acquisition_mode",
+          "descr": "Operational acquisition style for this capture session, indicating how the recording was run on the configured system. Use this to distinguish continuous acquisition from episodic or triggered capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "continuous",
+            "episodic",
+            "triggered",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "pre_recording_equilibration_minutes",
+          "descr": "Time in minutes that the derived neuron culture was allowed to equilibrate in the recording setup before activity acquisition began. Record the actual wait time used immediately prior to capture; typical values are a few to tens of minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recording_session_status",
+          "descr": "Capture-session status indicating whether the synaptic activity recording completed successfully and produced usable data. This is a session-level quality indicator distinct from downstream signal quality or analytical success.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "raw_activity_trace": {
+      "reasoning": "This node is a Signal, so I kept only raw trace artefact descriptors and renamed them to avoid every field-id collision flagged from prior DAG steps. I excluded capture settings, instrument identity, and biological interpretation because those belong to the Capture node or downstream Derivative node. The schema focuses on technical characteristics of the stored activity trace: its data encoding, size, temporal resolution, trace length, storage reference, and a raw-file integrity status. These fields let downstream users locate and validate the raw neuronal activity data without repeating earlier metadata.",
+      "md_schema": [
+        {
+          "field_id": "activity_trace_format",
+          "descr": "Digital file format of the raw neuronal activity trace produced by the synaptic activity capture session, recorded for the stored artefact itself. Example values include ABF, HDF5, NWB, or a vendor-specific export format.",
+          "type": "categorical",
+          "allowed_values": [
+            "abf",
+            "hdf5",
+            "nwb",
+            "csv",
+            "tsv",
+            "other"
+          ]
+        },
+        {
+          "field_id": "activity_trace_file_size_bytes",
+          "descr": "Size of the raw activity trace file in bytes, measured for the stored artefact after acquisition and saving. Typical values range from kilobytes to gigabytes depending on modality, duration, and channel count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_trace_channel_count",
+          "descr": "Number of recorded channels present in the raw activity trace file, measured from the stored artefact. For electrophysiology this may correspond to electrodes or sweeps; for imaging this may correspond to fluorescence channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_trace_sampling_points",
+          "descr": "Number of sampled time points in the raw activity trace, recorded from the stored time-series artefact. Use the length of the saved trace rather than the capture duration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_trace_storage_uri",
+          "descr": "File system path, object-store URI, or database location where the raw activity trace is stored. Record the exact storage reference used for the raw signal artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_trace_integrity_flag",
+          "descr": "Technical integrity status of the raw activity trace after transfer or storage, indicating whether the file is readable and complete. Use this as a raw-data quality check distinct from biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "corrupt",
+            "incomplete",
+            "not_checked"
+          ]
+        }
+      ]
+    },
+    "activity_quantification": {
+      "reasoning": "This node is a Process, so I kept only activity-analysis computation parameters and a process-level quality indicator. I removed software-name/version/repository fields because those collide with previously generated process metadata elsewhere in the DAG, and the user explicitly flagged them. I also excluded raw trace file properties and downstream feature-table properties because those belong to the Signal and Derivative nodes, respectively. The remaining fields capture how the activity quantification was performed, using process-specific algorithm settings rather than input or output properties.",
+      "md_schema": [
+        {
+          "field_id": "event_detection_threshold_value",
+          "descr": "Threshold value used to detect synaptic activity events in the raw trace during analysis. Record the actual numeric setting applied in this experiment; typical range depends on signal scale and algorithm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "burst_detection_enabled",
+          "descr": "Whether burst detection was enabled during activity quantification. This is a process setting applied to the raw trace analysis, not a property of the trace itself.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_analysis_input_type",
+          "descr": "Type of input data analyzed by this quantification step. For this node, the input should be the raw neuronal activity trace used to compute activity metrics.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_trace",
+            "time_series",
+            "event_list",
+            "other"
+          ]
+        },
+        {
+          "field_id": "activity_quantification_quality_flag",
+          "descr": "Process-level assessment of whether the activity quantification run completed successfully and produced usable metrics. Use this as a pipeline QC flag for the analysis step.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "activity_features": {
+      "reasoning": "This node is a Derivative, so I included only computed-result fields describing the activity feature matrix itself. Because you reported collisions for analysis software fields, I avoided any reused analysis-provenance names and focused on derivative-specific properties: output format, table dimensions, feature summary, derivation method name, and output quality. I excluded raw trace properties because those belong to the Signal node, and I excluded activity recording settings and analysis software provenance because those belong to the Capture and Process nodes respectively. The fields are intended to let downstream users understand and reuse the computed synaptic activity phenotype table without duplicating upstream metadata.",
+      "md_schema": [
+        {
+          "field_id": "activity_feature_matrix_format",
+          "descr": "Storage or table format of the computed synaptic activity feature matrix produced by the quantification step. Record the exact derivative representation used for the phenotype table, for example CSV, TSV, Parquet, or a database table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "hdf5",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "activity_feature_row_count",
+          "descr": "Number of sample rows in the computed activity feature matrix, measured after the quantification step completes. This indicates how many differentiated samples or recording units are represented in the derivative table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_feature_column_count",
+          "descr": "Number of feature columns in the computed activity matrix, measured after all synaptic activity descriptors have been assembled. This reflects the dimensionality of the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_feature_set_summary",
+          "descr": "Concise summary of the synaptic activity descriptors included in the computed matrix, such as event rate, amplitude, inter-event interval, and burst structure metrics. This should describe the contents of the derivative output, not the raw trace input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_derivation_algorithm_name",
+          "descr": "Name of the algorithm or pipeline that produced the activity feature matrix from the analyzed traces. Use the derivative-level method label used for computation, for example an event-detection and summarization workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "activity_feature_matrix_quality_flag",
+          "descr": "Quality indicator for the computed activity feature matrix, reflecting whether the derivative output is complete, internally consistent, and ready for downstream analysis. This is a result-level QC flag for the derived table.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "variant_annotation_table": {
+      "reasoning": "This node is a Derivative, and it is also marked external, so I included only the properties of the computed variant annotation table itself rather than any upstream sample identifiers or wet-lab process settings. The fields describe the annotation result format, table size, variant content summary, annotation method/provenance, and an output integrity flag. I excluded capture and process parameters because those are not part of the external computed table, and I did not repeat patient or culture identity fields because those were already assigned to the root entity. The goal is to let downstream users understand what the variant annotation table contains and how it was produced without duplicating upstream metadata.",
+      "md_schema": [
+        {
+          "field_id": "variant_table_format",
+          "descr": "Storage or table format of the computed variant annotation output. Record the exact representation used for the variant table, for example CSV, TSV, VCF-derived table, Parquet, or a database table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "vcf_table",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "variant_table_row_count",
+          "descr": "Number of variant rows in the computed annotation table, measured after annotation is completed. This indicates how many distinct variants or variant entries are represented in the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_table_column_count",
+          "descr": "Number of annotation columns in the computed variant table, measured after all variant descriptors have been assembled. This reflects the dimensionality of the derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_annotation_summary",
+          "descr": "Concise summary of the variant content included in the computed table, such as pathogenicity class, gene names, disease association, or known risk status. This should describe the annotation output, not the raw genotype source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_source_reference",
+          "descr": "Reference to the database, knowledge base, or annotation resource used to assign disease relevance to the variants. Use the source label or repository name that informed the computed table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variant_table_integrity_flag",
+          "descr": "Quality indicator for the computed variant annotation table, reflecting whether the output is complete, consistent, and ready for downstream use. This is a result-level QC flag for the derived table.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "batch_protocol_integration": {
+      "reasoning": "This node is a Process, so I included only the integration workflow settings that govern how phenotype derivatives and contextual variables are merged into the unified analysis table. The fields describe the integration software, version, repository, join keys, merge strategy, and a process-level QC flag. I excluded the contents of the input derivatives themselves, as well as the final dataset properties, because those belong to upstream Derivative nodes and the downstream consolidated derivative node respectively. I also avoided duplicate provenance fields already assigned to earlier process nodes by using integration-specific analysis names rather than generic software metadata where possible. The schema focuses on reproducible table construction and on the exact variables used to combine the phenotype, variant, passage, batch, and protocol information.",
+      "md_schema": [
+        {
+          "field_id": "integration_software_name",
+          "descr": "Name of the software or workflow used to integrate phenotype derivatives with variant, passage, batch, and differentiation protocol variables into a unified table. Record the exact tool used for this data-integration step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the integration software used at the time the unified analysis table was created. Example format: '1.0.0' or a workflow version label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_repository",
+          "descr": "Repository, package registry, or code source used for the batch and phenotype integration workflow, recorded at the time the table was assembled. Use a URL, package reference, or local repository identifier as applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_key_summary",
+          "descr": "Summary of the keys used to merge the phenotype derivatives with the variant and batch/protocol variables. Describe the fields used for integration, for example sample identifier, batch identifier, and variant background key.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "merge_strategy",
+          "descr": "Strategy used to combine the input tables during integration, recorded as the actual table-join behavior applied in this workflow. Examples include inner join, left join, or one-to-one merge.",
+          "type": "categorical",
+          "allowed_values": [
+            "inner_join",
+            "left_join",
+            "right_join",
+            "full_outer_join",
+            "one_to_one",
+            "other"
+          ]
+        },
+        {
+          "field_id": "integration_quality_flag",
+          "descr": "Process-level assessment of whether the table integration completed successfully and produced a usable unified analysis table. Use this as the QC flag for the data-merging step.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    },
+    "neurodegeneration_analysis_dataset": {
+      "reasoning": "This node is a Derivative, so I included only properties of the final consolidated analysis dataset itself: its format, size, dimensions, contents summary, and an output-level quality flag. I excluded the phenotype, variant, batch, and protocol variables because those are already represented upstream and the dataset should not repeat them as separate provenance fields. I also excluded software and merge settings because those belong to the batch_protocol_integration process node. The fields here are meant to tell a downstream user what the final dataset is, how large it is, and whether it is fit for analysis, without duplicating upstream components or process details.",
+      "md_schema": [
+        {
+          "field_id": "dataset_format",
+          "descr": "Storage or file format of the final consolidated neurodegeneration analysis dataset. Record the exact representation used for the deliverable, for example CSV, TSV, Parquet, or a database table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "hdf5",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dataset_row_count",
+          "descr": "Number of rows in the final consolidated analysis dataset, measured after integration is complete. This indicates how many sample-level observations are represented in the deliverable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_column_count",
+          "descr": "Number of columns in the final consolidated analysis dataset, measured after all phenotype, variant, batch, and protocol variables have been assembled. This reflects the dimensionality of the deliverable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_content_summary",
+          "descr": "Concise summary of the information captured in the final dataset, including disease-phenotype measures, variant background, batch context, and differentiation protocol variables used for downstream analysis. This describes the derivative output rather than the upstream inputs individually.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_use_case",
+          "descr": "Primary intended use of the final dataset, recorded as the downstream analysis goal supported by this deliverable. Example purposes include cellular disease phenotyping, therapeutic response analysis, or cohort comparison.",
+          "type": "categorical",
+          "allowed_values": [
+            "cellular_disease_phenotyping",
+            "therapeutic_response_analysis",
+            "cohort_comparison",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dataset_quality_flag",
+          "descr": "Overall quality indicator for the final consolidated analysis dataset, reflecting whether the deliverable is complete, consistent, and ready for downstream use. This is the result-level QC flag for the final derivative.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "not_recorded"
+          ]
+        }
+      ]
+    }
+  }
+}

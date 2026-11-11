@@ -1,0 +1,1527 @@
+{
+  "md_name": "marine_microbial_metagenomics_workflow",
+  "md_description": "This DAG represents sequencing-based data generation from oceanic water, sediment, and marine organism microbiome samples collected across multiple regions. It includes field capture of environmental conditions, physical processing into sequencing libraries, sequencing, read cleanup, and joint computational profiling to relate microbial diversity and functional potential to environmental variation.",
+  "fields_per_node": {
+    "ocean_water_sample": {
+      "reasoning": "The ocean_water_sample node is an Entity, so I included only intrinsic sample identity/origin fields that describe what the seawater sample is: its sample identifier, sample material type, marine origin context, and collection provenance. I excluded any field about environmental measurements, collection protocol, extraction, sequencing, read quality, or downstream computation because those belong to the Capture/Process/Signal/Derivative nodes. I also avoided repeating anything likely to appear in already_generated (none provided), and I did not create generic experiment-wide identifiers more than once because those are intended to live at the root entity level; here I kept only the sample-level identifier and origin descriptors specific to this node.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for this seawater sample instance, used to link the collected specimen to downstream extraction and sequencing records; format example: SWA_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_material_type",
+          "descr": "Material class of the entity at collection time; this node represents a seawater sample containing microbial biomass rather than sediment or host tissue.",
+          "type": "categorical",
+          "allowed_values": [
+            "water"
+          ]
+        },
+        {
+          "field_id": "ocean_region",
+          "descr": "Named oceanic region where the seawater sample was collected, representing the sample's geographic origin at the collection site; example values may include a basin, sea, gyre, or coastal zone name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_time",
+          "descr": "Date or timestamp of when this seawater sample was collected in the field; use local collection time or UTC if standardized across the study, formatted as an ISO-8601 date or datetime string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_matrix_description",
+          "descr": "Free-text description of the seawater matrix and visible collection context, such as surface seawater, euphotic-zone seawater, or nearshore seawater, recorded at the point of sampling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbial_biomass_present",
+          "descr": "Whether the collected seawater sample was intended to contain microbial biomass for metagenomic analysis; recorded at collection as a confirmation of sample suitability.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sediment_sample": {
+      "reasoning": "I removed the colliding generic entity fields that were already generated elsewhere in the DAG, including sample identifier, material type, region, collection time, and matrix description. For the sediment_sample entity, I retained only a sediment-specific intrinsic property that is not duplicated by prior nodes and is still within the node's semantic territory: whether the specimen is consolidated or unconsolidated sediment. I excluded collection, capture, extraction, sequencing, and downstream analysis fields because they belong to other nodes.",
+      "md_schema": [
+        {
+          "field_id": "sediment_consistency_state",
+          "descr": "Physical consistency of the sediment specimen at the time it was collected, describing the intrinsic substrate state of the entity itself; use this to distinguish consolidated/compact sediment from loose or unconsolidated sediment. Recorded at collection as a sample property, not as a processing result.",
+          "type": "categorical",
+          "allowed_values": [
+            "consolidated",
+            "unconsolidated",
+            "mixed"
+          ]
+        }
+      ]
+    },
+    "marine_organism_microbiome_sample": {
+      "reasoning": "The marine_organism_microbiome_sample node is an Entity, so I kept only intrinsic specimen-level fields that describe what the collected host-associated microbiome sample is and where/when it originated. Because the DAG has already generated the shared sample-level fields elsewhere, I avoided colliding names such as sample_id, sample_material_type, ocean_region, collection_time, and sample_matrix_description, and instead used host-associated identifiers and origin descriptors that are specific to this node. I excluded all capture/process/signal/derivative details, as well as generic sample fields already produced in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_sample_id",
+          "descr": "Unique identifier for this host-associated microbiome sample instance, used to link the collected specimen to downstream extraction and sequencing records; format example: HMC_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_organism_name",
+          "descr": "Scientific or common name of the marine host organism from which the microbiome sample was collected; record the host identity at collection, for example fish species, sponge species, coral species, or algal host name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_association_type",
+          "descr": "Type of host association represented by this microbiome sample at collection time; use a controlled term describing how the microbial community was obtained from the marine organism.",
+          "type": "categorical",
+          "allowed_values": [
+            "surface_associated",
+            "gut_associated",
+            "tissue_associated",
+            "mucus_associated",
+            "whole_body_associated",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_timepoint",
+          "descr": "Date or timestamp of when this host-associated microbiome sample was collected in the field; use local collection time or UTC if standardized across the study, formatted as an ISO-8601 date or datetime string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_region",
+          "descr": "Named oceanic region or locality where the marine host organism carrying this microbiome sample was collected; example values may include a sea, basin, reef system, coastal zone, or island region name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_sample_context",
+          "descr": "Free-text contextual note describing the host-derived material sampled from the marine organism, such as mucus swab, gut scrape, tissue biopsy, or surface biofilm, recorded at the point of sampling.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "field_collection_water": {
+      "reasoning": "The field_collection_water node is a Process, so I included only how seawater collection and preservation were performed: collection method, preservation strategy, container type, holding time before preservation, and operator-relevant quality/status indicators for the collection step. I also included the responsible agent's operational details only at the process layer when they describe the procedure context. I excluded intrinsic sample identity/origin fields because those belong to the upstream Entity node, and I excluded downstream extraction, library prep, sequencing, and signal/derivative properties because they are not part of the collection process and would duplicate other nodes. I also avoided repeating any field names already generated for prior entity steps.",
+      "md_schema": [
+        {
+          "field_id": "collection_method",
+          "descr": "Procedure used to obtain the seawater biomass at the field site, recorded during the collection step; for example, direct grab, Niskin bottle retrieval, or filtered seawater collection.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_grab",
+            "niskin_bottle",
+            "filtration",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preservation_method",
+          "descr": "Method used to preserve the seawater material immediately after collection for downstream nucleic acid analysis; record the preservation approach applied during the field process, such as chemical stabilization or freezing.",
+          "type": "categorical",
+          "allowed_values": [
+            "flash_freezing",
+            "chemical_preservative",
+            "cold_storage",
+            "ambient_short_term",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_container_type",
+          "descr": "Type of container or vessel used to hold the seawater sample during or immediately after collection, recorded at the process step; for example, sterile bottle, vacuum filter unit, or centrifuge tube.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_to_preservation_minutes",
+          "descr": "Elapsed time in minutes between seawater collection and application of the preservation step, measured during the field process; typical values are 0-1440 minutes depending on field logistics.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_operator_role",
+          "descr": "Role of the person or team performing the seawater collection and preservation procedure, recorded at the process step; for example, researcher, technician, or field crew.",
+          "type": "categorical",
+          "allowed_values": [
+            "researcher",
+            "technician",
+            "field_crew",
+            "other"
+          ]
+        },
+        {
+          "field_id": "field_collection_success",
+          "descr": "Whether the seawater collection and preservation procedure completed successfully and produced material suitable for downstream nucleic acid extraction.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "field_collection_sediment": {
+      "reasoning": "The previous sediment field-collection schema reused process fields that had already been generated elsewhere in the DAG, so I removed the collisions and kept only sediment-specific process metadata. This node remains a Process, so I included only operational details of the sediment collection and preservation workflow that are unique to this step: how sediment was recovered, how deeply it was sampled, and the immediate field handling context. I excluded upstream entity properties and downstream extraction/sequencing details because they are not part of the process node, and I avoided field names that overlap with already_generated.",
+      "md_schema": [
+        {
+          "field_id": "sediment_sampling_depth_cm",
+          "descr": "Depth in centimeters below the sediment surface from which the sample was collected, recorded during the field collection process; typical values depend on core or grab sampling design and may range from 0 cm at the surface to deeper subsurface intervals.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_subsample_method",
+          "descr": "Method used to isolate the portion of the sediment material taken forward for preservation and downstream nucleic acid analysis; for example, surface scrape, core interval sectioning, or homogenized aliquot.",
+          "type": "categorical",
+          "allowed_values": [
+            "surface_scrape",
+            "core_interval",
+            "homogenized_aliquot",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_redox_condition_at_collection",
+          "descr": "Observed redox state of the sediment at the time of field collection, recorded as an operational field note because it can affect downstream nucleic acid handling; use the nearest categorical description available at sampling.",
+          "type": "categorical",
+          "allowed_values": [
+            "oxic",
+            "suboxic",
+            "anoxic",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "sediment_field_container_sealing",
+          "descr": "How the sediment container was sealed immediately after collection, recorded during the process to document field preservation integrity; for example, capped, heat-sealed, or wrapped.",
+          "type": "categorical",
+          "allowed_values": [
+            "capped",
+            "heat_sealed",
+            "wrapped",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_transport_condition",
+          "descr": "Short description of the field transport condition applied to the sediment sample before laboratory handoff, recorded during the collection process; for example, chilled, dark, or insulated transport.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "field_collection_microbiome": {
+      "reasoning": "The field_collection_microbiome node is a Process, so I included only procedure-level descriptors for collecting and preserving host-associated microbiome material: how the host sample was obtained, how it was preserved, what container was used, and a success/status indicator. Because the DAG already generated shared process fields like time_to_preservation_minutes, collection_operator_role, and field_collection_success, I avoided those collisions and did not repeat them. I also excluded host identity and sample-origin attributes because those belong to the upstream Entity node, and I excluded extraction, library prep, sequencing, and output properties because they are outside the scope of this field collection process.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_collection_method",
+          "descr": "Procedure used to obtain the host-associated microbial material at the field site, recorded during the collection step; for example, swab, tissue biopsy, mucus scrape, gut dissection, or surface rinse.",
+          "type": "categorical",
+          "allowed_values": [
+            "swab",
+            "tissue_biopsy",
+            "mucus_scrape",
+            "gut_dissection",
+            "surface_rinse",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_preservation_method",
+          "descr": "Method used to preserve the host-associated microbial material immediately after collection for downstream nucleic acid analysis; record the preservation approach applied during the field process, such as freezing or chemical stabilization.",
+          "type": "categorical",
+          "allowed_values": [
+            "flash_freezing",
+            "chemical_preservative",
+            "cold_storage",
+            "ambient_short_term",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_collection_container_type",
+          "descr": "Type of container or vessel used to hold the host-associated microbiome sample during or immediately after collection, recorded at the process step; for example, sterile tube, swab transport tube, cryovial, or collection jar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_field_handling_notes",
+          "descr": "Free-text notes describing any special field handling steps for the host-associated microbiome material, such as rinsing, aseptic transfer, or removal of excess seawater, recorded during the collection process.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "collected_water_sample": {
+      "reasoning": "The collected_water_sample node is an Entity, so I included only intrinsic properties of the preserved seawater material after field collection: a link back to the originating field collection event, its preserved state, containerized form, and whether it is ready for extraction. I excluded the collection procedure itself, environmental measurements, and all extraction/sequencing/output properties because those belong to the Process, Capture, or downstream nodes. I also avoided reusing fields that were already generated for the raw water sample entity, keeping this node focused on post-collection specimen state rather than the original sample identity.",
+      "md_schema": [
+        {
+          "field_id": "collected_sample_id",
+          "descr": "Unique identifier for this preserved seawater material instance, used to link the post-collection specimen to downstream extraction records; format example: CSW_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "originating_collection_reference",
+          "descr": "Identifier or reference to the field collection event that produced this preserved seawater sample, recorded on the entity after preservation; format example: FCW_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preserved_material_state",
+          "descr": "State of the seawater material after field preservation and before laboratory extraction; this node represents a preserved sample ready for nucleic acid work.",
+          "type": "categorical",
+          "allowed_values": [
+            "preserved_liquid",
+            "filtered_biomass",
+            "frozen_pellet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_container_type",
+          "descr": "Type of container used to store the preserved seawater material before laboratory extraction, recorded as an intrinsic property of the collected sample entity; for example, sterile bottle, filter cartridge, tube, or cryovial.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_ready",
+          "descr": "Whether the preserved seawater material is suitable and ready for nucleic acid extraction at the time this entity is recorded.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "collected_sediment_sample": {
+      "reasoning": "The collected_sediment_sample node is an Entity, but the DAG has already used the generic preserved-sample fields, so I avoided all previously colliding names and instead added sediment-specific post-collection descriptors that stay within entity territory. I included only intrinsic state and provenance fields for the preserved sediment material and excluded collection procedure, extraction, sequencing, and downstream analysis because those belong to other nodes. I also did not introduce any field that would duplicate the already-generated collected-sample metadata in meaning, choosing sediment-entity properties that a downstream user would still need to understand the preserved specimen.",
+      "md_schema": [
+        {
+          "field_id": "sediment_preservation_event_id",
+          "descr": "Unique identifier for the preservation event that produced this preserved sediment material instance, used to link the post-collection specimen to field handling records; format example: SPD_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_preservation_temperature_celsius",
+          "descr": "Temperature in degrees Celsius at which the sediment material was held during preservation and prior to laboratory extraction; record the value at the time the preserved entity is created, typically within a range of -80 to 25 Celsius depending on storage mode.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_preservation_duration_hours",
+          "descr": "Elapsed time in hours that the sediment material spent in preserved storage before laboratory extraction; measure from preservation onset to the extraction-ready state, with typical values from 0 to several thousand hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_moisture_condition",
+          "descr": "Qualitative description of the sediment's moisture state after preservation and before extraction, recorded as an intrinsic property of the preserved entity; for example, wet, damp, or desiccated.",
+          "type": "categorical",
+          "allowed_values": [
+            "wet",
+            "damp",
+            "desiccated",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_sample_integrity_status",
+          "descr": "Overall integrity assessment of the preserved sediment sample at the time it is logged for extraction readiness, indicating whether the material remained suitable for downstream nucleic acid work.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_compromised",
+            "compromised",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "collected_microbiome_sample": {
+      "reasoning": "The collected_microbiome_sample node is an Entity, so I included only intrinsic properties of the preserved host-associated microbial material after field collection: a link back to the originating collection event, its preserved state, storage form, and whether it is ready for extraction. Because the DAG already generated the equivalent collected-sample fields for other entities, I avoided collisions with collected_sample_id, originating_collection_reference, preserved_material_state, storage_container_type, and extraction_ready by using microbiome-specific field names instead. I excluded host identity, collection procedure, environmental measurements, and all extraction/sequencing/output properties because those belong to other node types or upstream steps.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_collected_sample_id",
+          "descr": "Unique identifier for this preserved host-associated microbial material instance, used to link the post-collection specimen to downstream extraction records; format example: HCS_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_originating_collection_reference",
+          "descr": "Identifier or reference to the field collection event that produced this preserved host-associated microbiome sample, recorded on the entity after preservation; format example: FMC_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_preserved_material_state",
+          "descr": "State of the host-associated microbial material after field preservation and before laboratory extraction; this node represents a preserved sample ready for nucleic acid work.",
+          "type": "categorical",
+          "allowed_values": [
+            "preserved_swab",
+            "preserved_tissue",
+            "preserved_mucus",
+            "preserved_rinse",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_storage_container_type",
+          "descr": "Type of container used to store the preserved host-associated microbiome material before laboratory extraction, recorded as an intrinsic property of the collected sample entity; for example, sterile tube, swab transport tube, cryovial, or collection jar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_extraction_ready",
+          "descr": "Whether the preserved host-associated microbiome material is suitable and ready for nucleic acid extraction at the time this entity is recorded.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "env_conditions_captured": {
+      "reasoning": "The env_conditions_captured node is a Capture, so I included only instrument/session configuration and the controlled measurement details for the environmental condition capture event: temperature, salinity, depth, sensing platform, measurement timing, and brief quality/status descriptors. I did not include sample identity or preservation fields because those belong to the upstream Entity nodes, and I did not include the raw digital record or file properties because those belong to the downstream Signal node. I also kept the fields aligned to the explicitly measured variables in this capture step and the configured CTD sensor package described in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "capture_session_id",
+          "descr": "Unique identifier for this environmental measurement session at the sampling site; use a stable capture-level identifier that links the CTD measurements to the corresponding collected sample, for example ENVCAP_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_platform_manufacturer",
+          "descr": "Manufacturer of the hardware used to measure temperature, salinity, and depth during the sampling event; record the CTD or equivalent platform manufacturer at capture time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_platform_model",
+          "descr": "Model name or number of the CTD sensor package used for environmental measurements, recorded as part of the instrument configuration during the capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_serial_number",
+          "descr": "Serial number of the CTD sensor package used for environmental measurements, recorded at the time of capture for instrument traceability; format example: SN12345.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_temperature_celsius",
+          "descr": "In situ water temperature measured at the sampling location during the capture session, in degrees Celsius; typical marine values are approximately -2 to 35 C depending on region and depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_salinity_psu",
+          "descr": "In situ salinity measured at the sampling location during the capture session, in practical salinity units; typical marine values are approximately 0 to 42 PSU.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_depth_meters",
+          "descr": "Depth at which the environmental conditions were recorded during the capture session, in meters; typical values depend on site and may range from surface water to several thousand meters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_time",
+          "descr": "Date or timestamp when the environmental measurements were recorded during the sampling event; use local collection time or UTC if standardized, formatted as an ISO-8601 date or datetime string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_quality_flag",
+          "descr": "Quality status for the environmental measurement session, recorded immediately after capture; use this to indicate whether the temperature, salinity, and depth record passed basic instrument and completeness checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "environmental_conditions_signal": {
+      "reasoning": "The environmental_conditions_signal node is a Signal, so I included only raw data artefact properties: file identity, format, size, dimensions/record count, technical quality, and storage location. I excluded the sensor configuration and measurement values themselves because those belong to the upstream Capture node, and I excluded interpretation because this node is only the raw digital record. I also avoided repeating any generic capture fields already present elsewhere in the DAG by keeping the schema strictly about the file-level artefact.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_name",
+          "descr": "Name of the raw digital file containing the environmental measurements captured at the sampling event; format example: env_conditions_001.csv or env_conditions_001.bed-like text export.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_file_format",
+          "descr": "File format of the raw environmental record as stored from the capture system, such as CSV, TSV, JSON, or instrument-specific export format.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "Size of the raw environmental signal file in bytes at the time it was saved or transferred; typically ranges from a few hundred bytes to many megabytes depending on instrument verbosity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_record_count",
+          "descr": "Number of measurement records or rows present in the raw environmental data file, measured from the file content rather than the sampling event; for a single cast this may equal the number of depth points recorded.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_storage_path",
+          "descr": "Storage location or relative file path for the raw environmental signal file in the data repository; example format: /raw/env_conditions/2026_01_01/env_conditions_001.csv.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_integrity_flag",
+          "descr": "Technical integrity status of the raw environmental file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "nucleic_acid_extraction_water": {
+      "reasoning": "The nucleic_acid_extraction_water node is a Process, so I included only procedure-level extraction details: the extraction method used, key reagent/kit information, processing conditions, operator role, and a process success/yield indicator. I excluded properties of the input collected water sample and properties of the output sequencing library because those belong to adjacent Entity nodes, and I did not include sequencing or downstream analysis details because they are outside the extraction process. I also avoided repeating generic process fields already generated for collection steps by focusing on extraction-specific parameters.",
+      "md_schema": [
+        {
+          "field_id": "water_extraction_method",
+          "descr": "Named protocol used to extract DNA and RNA from the collected seawater biomass during this process step; record the extraction workflow applied, for example phenol-chloroform, column-based kit, or magnetic bead-based kit.",
+          "type": "categorical",
+          "allowed_values": [
+            "phenol_chloroform",
+            "column_kit",
+            "magnetic_bead_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "water_extraction_kit_name",
+          "descr": "Commercial kit or in-house protocol name used for seawater nucleic acid extraction, recorded during the process step; example format: KitX v2 or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_extraction_reagent_batch",
+          "descr": "Batch or lot identifier for the main extraction reagents used in the seawater nucleic acid extraction process; use a traceable supplier lot or batch code when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_extraction_temperature_celsius",
+          "descr": "Incubation temperature in degrees Celsius used during the seawater nucleic acid extraction process, if controlled; typical values are approximately 4 to 65 C depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_extraction_duration_minutes",
+          "descr": "Total duration of the seawater nucleic acid extraction process in minutes, measured from process start to elution or final recovery; typical values are approximately 15 to 240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_extraction_output_success",
+          "descr": "Whether the seawater nucleic acid extraction process completed successfully and produced material suitable for library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nucleic_acid_extraction_sediment": {
+      "reasoning": "The nucleic_acid_extraction_sediment node is a Process, so I included only extraction-protocol details specific to sediment: extraction method, kit/protocol name, reagent batch, controlled temperature, duration, and whether the extraction succeeded. I excluded input sediment properties and output library properties because those belong to adjacent Entity nodes, and I did not include sequencing or downstream analysis details because they are outside the extraction process. I also kept the fields sediment-specific to avoid duplication with other extraction steps in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "sediment_extraction_method",
+          "descr": "Named protocol used to extract DNA and RNA from the collected sediment during this process step; record the extraction workflow applied, for example phenol-chloroform, column-based kit, or magnetic bead-based kit.",
+          "type": "categorical",
+          "allowed_values": [
+            "phenol_chloroform",
+            "column_kit",
+            "magnetic_bead_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_extraction_kit_name",
+          "descr": "Commercial kit or in-house protocol name used for sediment nucleic acid extraction, recorded during the process step; example format: KitX v2 or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_extraction_reagent_batch",
+          "descr": "Batch or lot identifier for the main extraction reagents used in the sediment nucleic acid extraction process; use a traceable supplier lot or batch code when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_extraction_temperature_celsius",
+          "descr": "Incubation temperature in degrees Celsius used during the sediment nucleic acid extraction process, if controlled; typical values are approximately 4 to 65 C depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_extraction_duration_minutes",
+          "descr": "Total duration of the sediment nucleic acid extraction process in minutes, measured from process start to elution or final recovery; typical values are approximately 15 to 240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_extraction_output_success",
+          "descr": "Whether the sediment nucleic acid extraction process completed successfully and produced material suitable for library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nucleic_acid_extraction_microbiome": {
+      "reasoning": "The nucleic_acid_extraction_microbiome node is a Process, so I included only extraction-protocol details specific to host-associated microbiome material: extraction method, kit/protocol name, reagent batch, controlled temperature, duration, and whether the extraction succeeded. I excluded input sample properties and output library properties because those belong to adjacent Entity nodes, and I did not include sequencing or downstream analysis details because they are outside the extraction process. I also kept the fields microbiome-specific to avoid collisions and semantic overlap with the other extraction nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_extraction_method",
+          "descr": "Named protocol used to extract DNA and RNA from the collected host-associated microbiome material during this process step; record the extraction workflow applied, for example phenol-chloroform, column-based kit, or magnetic bead-based kit.",
+          "type": "categorical",
+          "allowed_values": [
+            "phenol_chloroform",
+            "column_kit",
+            "magnetic_bead_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_extraction_kit_name",
+          "descr": "Commercial kit or in-house protocol name used for host-associated microbiome nucleic acid extraction, recorded during the process step; example format: KitX v2 or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_extraction_reagent_batch",
+          "descr": "Batch or lot identifier for the main extraction reagents used in the host-associated microbiome nucleic acid extraction process; use a traceable supplier lot or batch code when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_extraction_temperature_celsius",
+          "descr": "Incubation temperature in degrees Celsius used during the host-associated microbiome nucleic acid extraction process, if controlled; typical values are approximately 4 to 65 C depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_extraction_duration_minutes",
+          "descr": "Total duration of the host-associated microbiome nucleic acid extraction process in minutes, measured from process start to elution or final recovery; typical values are approximately 15 to 240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_extraction_output_success",
+          "descr": "Whether the host-associated microbiome extraction process completed successfully and produced material suitable for library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_library_water": {
+      "reasoning": "The sequencing_library_water node is an Entity, so I included only intrinsic properties of the prepared water-derived library: the library identifier, library type, insert size, adapter/indexing status, and whether it passed basic pre-sequencing acceptance criteria. I excluded the library preparation procedure itself because that belongs to the upstream Process node, and I excluded sequencing run settings, raw read properties, and downstream analysis because those belong to the Capture, Signal, and Derivative nodes. I also avoided using generic sample identifiers already generated elsewhere in the DAG by keeping the schema library-specific.",
+      "md_schema": [
+        {
+          "field_id": "water_library_id",
+          "descr": "Unique identifier for this prepared sequencing library derived from the water sample; format example: WLIB_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library class for this entity, describing the prepared material intended for shotgun sequencing of water-derived nucleic acids.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun_dna_rna",
+            "shotgun_dna",
+            "shotgun_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate insert size of the prepared water sequencing library in base pairs, measured after library preparation and before sequencing; typical metagenomic library inserts are often in the 150 to 1000 bp range.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_indexed",
+          "descr": "Whether sequencing adapters and sample indices have been successfully ligated or incorporated into the water-derived library before sequencing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_passing_qc",
+          "descr": "Whether the prepared water sequencing library met quality criteria for proceeding to the sequencing capture step, assessed after library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_library_sediment": {
+      "reasoning": "The sequencing_library_sediment node is an Entity, so I kept only sediment-library-specific intrinsic fields and avoided any field names already generated elsewhere in the DAG, including the shared library descriptors that caused collisions. I excluded preparation protocol details because those belong to the upstream Process, and I excluded sequencing, signal, and downstream analysis properties because they belong to later nodes. The revised schema therefore focuses on unique identity and specimen-level library state for the sediment-derived library without reusing global library field names.",
+      "md_schema": [
+        {
+          "field_id": "sediment_library_sample_id",
+          "descr": "Unique identifier for this prepared sequencing library derived from the sediment sample; format example: SDLIB_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_library_construct_format",
+          "descr": "Construct format of the prepared sediment sequencing library after amplification and adapter incorporation, describing whether the library is shotgun DNA/RNA, DNA-only, RNA-only, or another construct class.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun_dna_rna",
+            "shotgun_dna",
+            "shotgun_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_library_fragment_length_class",
+          "descr": "Approximate fragment length class of the prepared sediment library after library preparation and before sequencing, recorded as a coarse categorical descriptor such as short, medium, or long insert library.",
+          "type": "categorical",
+          "allowed_values": [
+            "short",
+            "medium",
+            "long",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_library_indexed",
+          "descr": "Whether sequencing indices and adapters were successfully incorporated into the sediment-derived library before sequencing, recorded as an intrinsic property of the finished library entity.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_library_ready_for_sequencing",
+          "descr": "Whether the prepared sediment sequencing library met internal acceptance criteria to proceed to the sequencing capture step, assessed after library preparation and prior to loading on the instrument.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_library_microbiome": {
+      "reasoning": "The sequencing_library_microbiome node is an Entity, so I included only intrinsic properties of the prepared host-associated library: a unique library identifier, host-associated library class, insert size, adapter/indexing status, and whether it passed pre-sequencing QC. Because generic library fields like library_type, insert_size_bp, adapter_indexed, and library_passing_qc were already generated for earlier library nodes, I used microbiome-specific field names to avoid DAG-wide collisions. I excluded the library preparation process, sequencing run settings, raw read properties, and downstream analysis because those belong to the Process, Capture, Signal, and Derivative nodes.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_library_id",
+          "descr": "Unique identifier for this prepared sequencing library derived from the host-associated microbiome sample; format example: MBLIB_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_library_class",
+          "descr": "Library class for this entity, describing the prepared material intended for shotgun sequencing of host-associated microbiome nucleic acids.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun_dna_rna",
+            "shotgun_dna",
+            "shotgun_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_library_insert_size_bp",
+          "descr": "Approximate insert size of the prepared host-associated microbiome sequencing library in base pairs, measured after library preparation and before sequencing; typical metagenomic library inserts are often in the 150 to 1000 bp range.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_library_adapters_indexed",
+          "descr": "Whether sequencing adapters and sample indices have been successfully ligated or incorporated into the host-associated microbiome-derived library before sequencing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_library_qc_passed",
+          "descr": "Whether the prepared host-associated microbiome sequencing library met quality criteria for proceeding to the sequencing capture step, assessed after library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "shotgun_sequencing_water": {
+      "reasoning": "The shotgun_sequencing_water node is a Capture, so I included only instrument/session configuration and actively controlled sequencing settings: sequencing platform, run mode, flow cell or lane context, read length, depth target, and operator/instrument identifiers. I excluded input library properties because those belong to the upstream Entity node, and I excluded raw read file properties because those belong to the downstream Signal node. I also kept the schema focused on the sequencing session itself rather than any environmental or analytical interpretation.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_session_id",
+          "descr": "Unique identifier for the water shotgun sequencing session, used to link the configured sequencing run to the resulting raw read files; format example: SEQW_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the water-derived library capture session; record the hardware vendor at the time of sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model name or number of the sequencing instrument used for the water-derived library capture session; record the platform model configured for this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the water-derived library capture session, recorded for instrument traceability; format example: SN12345.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_mode",
+          "descr": "Sequencing run mode selected for the water-derived library capture session, describing the intended throughput or chemistry configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for the water shotgun sequencing session, typically in the range of 50 to 300 bp depending on the platform and chemistry.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_output_gigabases",
+          "descr": "Planned or target output yield for the water sequencing session in gigabases, recorded as a run setting or expectation at capture time; typical metagenomic runs may range from a fraction of a gigabase to many gigabases.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_id",
+          "descr": "Identifier of the flow cell or equivalent consumable used for the water sequencing capture session, recorded for run traceability; example format: FC123456.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_quality_flag",
+          "descr": "Operational quality status for the sequencing session, indicating whether the run completed as configured and produced data suitable for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "shotgun_sequencing_sediment": {
+      "reasoning": "The shotgun_sequencing_sediment node is a Capture, so I included only sediment-specific sequencing session fields to avoid collisions with previously generated generic capture fields. I kept a session identifier plus instrument/run descriptors that are still within the capture-session territory, but I renamed them to be sediment-specific so they do not duplicate fields already produced for the water capture step. I excluded library properties, raw read file properties, and downstream analysis because those belong to other node types.",
+      "md_schema": [
+        {
+          "field_id": "sediment_sequencing_session_id",
+          "descr": "Unique identifier for the sediment shotgun sequencing session, used to link the configured sequencing run to the resulting raw read files; format example: SEQS_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_sequencer_profile",
+          "descr": "Instrument profile used for the sediment-derived library capture session, including manufacturer, model, and serial traceability as a combined capture-level descriptor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_sequencing_chemistry",
+          "descr": "Sequencing chemistry or run configuration used for the sediment-derived library capture session, recorded as the actively controlled capture setting at the time of sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_run_identifier",
+          "descr": "Run identifier assigned to the sediment sequencing capture session by the instrument or laboratory information system; example format: RUN_2026_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_capture_quality_status",
+          "descr": "Operational quality status for the sediment sequencing session, indicating whether the run completed as configured and produced data suitable for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "shotgun_sequencing_microbiome": {
+      "reasoning": "The shotgun_sequencing_microbiome node is a Capture, so I included only instrument/session configuration and actively controlled sequencing settings for the host-associated library. Because the generic sequencing-run fields were already generated for earlier capture nodes, I avoided collisions by using microbiome-specific field names for the session identifier and all run parameters. I excluded input library properties because those belong to the upstream Entity node, and I excluded raw read file properties because those belong to the downstream Signal node.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_sequencing_session_id",
+          "descr": "Unique identifier for the host-associated microbiome shotgun sequencing session, used to link the configured sequencing run to the resulting raw read files; format example: SEQM_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the host-associated microbiome library capture session; record the hardware vendor at the time of sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_sequencer_model",
+          "descr": "Model name or number of the sequencing instrument used for the host-associated microbiome library capture session; record the platform model configured for this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_sequencer_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the host-associated microbiome library capture session, recorded for instrument traceability; format example: SN12345.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_run_mode",
+          "descr": "Sequencing run mode selected for the host-associated microbiome capture session, describing the intended throughput or chemistry configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_read_length_bp",
+          "descr": "Configured read length in base pairs for the host-associated microbiome shotgun sequencing session, typically in the range of 50 to 300 bp depending on the platform and chemistry.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_target_output_gigabases",
+          "descr": "Planned or target output yield for the host-associated microbiome sequencing session in gigabases, recorded as a run setting or expectation at capture time; typical metagenomic runs may range from a fraction of a gigabase to many gigabases.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_flow_cell_id",
+          "descr": "Identifier of the flow cell or equivalent consumable used for the host-associated microbiome sequencing capture session, recorded for run traceability; example format: FC123456.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_sequencing_run_quality_flag",
+          "descr": "Operational quality status for the host-associated microbiome sequencing session, indicating whether the run completed as configured and produced data suitable for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_reads_water": {
+      "reasoning": "The raw_reads_water node is a Signal, so I included only raw data artefact properties: file identity, format, size, dimensions/read counts, technical quality, and storage location. I excluded sequencing settings and library properties because those belong to the upstream Capture and Entity nodes, and I excluded cleanup/analysis details because those belong to downstream Process and Derivative nodes. I also kept the schema strictly file-level so it describes the raw reads themselves rather than the sequencing session that produced them.",
+      "md_schema": [
+        {
+          "field_id": "water_raw_reads_file_name",
+          "descr": "Name of the raw sequencing file produced from the water-derived library capture session; format example: water_R1.fastq.gz or water_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_raw_reads_file_format",
+          "descr": "File format of the raw water read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "water_raw_reads_file_size_bytes",
+          "descr": "Size of the raw water read file in bytes at the time it was saved or transferred; typically ranges from megabytes to tens of gigabytes depending on run yield and compression.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_raw_read_count",
+          "descr": "Number of reads contained in the raw water sequencing file, measured from the file content rather than the capture session; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_raw_reads_storage_path",
+          "descr": "Storage location or relative file path for the raw water read file in the data repository; example format: /raw_reads/water/seqw_0001_R1.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_raw_reads_integrity_flag",
+          "descr": "Technical integrity status of the raw water read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_reads_sediment": {
+      "reasoning": "The raw_reads_sediment node is a Signal, so I included only raw data artefact properties: file identity, format, size, read count, storage location, and integrity status. I excluded sequencing settings and library properties because those belong to the upstream Capture and Entity nodes, and I excluded cleanup/analysis details because those belong to downstream Process and Derivative nodes. I also used sediment-specific field names to avoid collisions with the water raw-read fields already generated earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "sediment_raw_reads_file_name",
+          "descr": "Name of the raw sequencing file produced from the sediment-derived library capture session; format example: sediment_R1.fastq.gz or sediment_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_raw_reads_file_format",
+          "descr": "File format of the raw sediment read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_raw_reads_file_size_bytes",
+          "descr": "Size of the raw sediment read file in bytes at the time it was saved or transferred; typically ranges from megabytes to tens of gigabytes depending on run yield and compression.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_raw_read_count",
+          "descr": "Number of reads contained in the raw sediment sequencing file, measured from the file content rather than the capture session; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_raw_reads_storage_path",
+          "descr": "Storage location or relative file path for the raw sediment read file in the data repository; example format: /raw_reads/sediment/seqs_0001_R1.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_raw_reads_integrity_flag",
+          "descr": "Technical integrity status of the raw sediment read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_reads_microbiome": {
+      "reasoning": "The raw_reads_microbiome node is a Signal, so I included only raw data artefact properties: file identity, format, size, read count, storage location, and integrity status. I excluded sequencing settings and library properties because those belong to the upstream Capture and Entity nodes, and I excluded cleanup/analysis details because those belong to downstream Process and Derivative nodes. I also used microbiome-specific field names to avoid collisions with the water and sediment raw-read fields already generated earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_raw_reads_file_name",
+          "descr": "Name of the raw sequencing file produced from the host-associated microbiome library capture session; format example: microbiome_R1.fastq.gz or microbiome_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_raw_reads_file_format",
+          "descr": "File format of the raw host-associated microbiome read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_raw_reads_file_size_bytes",
+          "descr": "Size of the raw host-associated microbiome read file in bytes at the time it was saved or transferred; typically ranges from megabytes to tens of gigabytes depending on run yield and compression.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_raw_read_count",
+          "descr": "Number of reads contained in the raw host-associated microbiome sequencing file, measured from the file content rather than the capture session; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_raw_reads_storage_path",
+          "descr": "Storage location or relative file path for the raw host-associated microbiome read file in the data repository; example format: /raw_reads/microbiome/seqm_0001_R1.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_raw_reads_integrity_flag",
+          "descr": "Technical integrity status of the raw host-associated microbiome read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_qc_water": {
+      "reasoning": "The read_qc_water node is a Process, so I included only the cleanup protocol and its outputs at the process level: trimming software, version/repository, key parameters, filters used, and QC outcome/retention summary. I excluded raw read file properties because those belong to the upstream Signal node, and I excluded cleaned-read file properties because those belong to the downstream Signal node. I also included software agent details per the rules for operation nodes, and I kept the fields specific to water read cleanup to avoid collisions with later read-QC steps.",
+      "md_schema": [
+        {
+          "field_id": "water_qc_tool_name",
+          "descr": "Name of the software or pipeline used to trim adapters, filter, and clean raw water sequencing reads during this process step; record the exact tool used for read QC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_qc_tool_version",
+          "descr": "Version of the software or pipeline used for water read cleanup, recorded during the process step to support reproducibility; example format: 1.2.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_qc_tool_repository",
+          "descr": "Repository or source location for the water read cleanup software, recorded at the process step; example format: GitHub URL, conda package reference, or internal pipeline path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_adapter_trimming_method",
+          "descr": "Adapter trimming strategy used during water read cleanup, recorded as part of the process parameters; for example, automatic detection, reference adapter list, or fixed-position trimming.",
+          "type": "categorical",
+          "allowed_values": [
+            "automatic",
+            "reference_based",
+            "fixed_position",
+            "other"
+          ]
+        },
+        {
+          "field_id": "water_quality_filter_threshold",
+          "descr": "Primary quality filtering threshold applied to raw water reads during cleanup, such as minimum base quality or minimum read length; specify the numeric threshold and units in the metadata value when stored downstream.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_qc_reads_retained_fraction",
+          "descr": "Fraction of raw water reads retained after adapter trimming and filtering, measured at the end of the cleanup process; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_read_qc_success",
+          "descr": "Whether the water read cleanup process completed successfully and produced clean reads suitable for downstream profiling.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc_sediment": {
+      "reasoning": "The read_qc_sediment node is a Process, so I included only the cleanup protocol and process-level outputs: software, version, repository, trimming strategy, quality filter setting, retained fraction, and success status. I excluded raw read file properties because those belong to the upstream Signal node, and I excluded cleaned-read file properties because those belong to the downstream Signal node. I also used sediment-specific field names to avoid collisions with the water read-QC fields already generated in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "sediment_qc_tool_name",
+          "descr": "Name of the software or pipeline used to trim adapters, filter, and clean raw sediment sequencing reads during this process step; record the exact tool used for read QC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_qc_tool_version",
+          "descr": "Version of the software or pipeline used for sediment read cleanup, recorded during the process step to support reproducibility; example format: 1.2.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_qc_tool_repository",
+          "descr": "Repository or source location for the sediment read cleanup software, recorded at the process step; example format: GitHub URL, conda package reference, or internal pipeline path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_adapter_trimming_method",
+          "descr": "Adapter trimming strategy used during sediment read cleanup, recorded as part of the process parameters; for example, automatic detection, reference adapter list, or fixed-position trimming.",
+          "type": "categorical",
+          "allowed_values": [
+            "automatic",
+            "reference_based",
+            "fixed_position",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_quality_filter_threshold",
+          "descr": "Primary quality filtering threshold applied to raw sediment reads during cleanup, such as minimum base quality or minimum read length; specify the numeric threshold and units in the metadata value when stored downstream.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_qc_reads_retained_fraction",
+          "descr": "Fraction of raw sediment reads retained after adapter trimming and filtering, measured at the end of the cleanup process; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_read_qc_success",
+          "descr": "Whether the sediment read cleanup process completed successfully and produced clean reads suitable for downstream profiling.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc_microbiome": {
+      "reasoning": "The read_qc_microbiome node is a Process, so I included only the cleanup protocol and process-level outputs: software, version, repository, trimming strategy, quality filter setting, retained fraction, and success status. I excluded raw read file properties because those belong to the upstream Signal node, and I excluded cleaned-read file properties because those belong to the downstream Signal node. I also used microbiome-specific field names to avoid collisions with the water and sediment read-QC fields already generated in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_qc_tool_name",
+          "descr": "Name of the software or pipeline used to trim adapters, filter, and clean raw host-associated microbiome sequencing reads during this process step; record the exact tool used for read QC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_qc_tool_version",
+          "descr": "Version of the software or pipeline used for host-associated microbiome read cleanup, recorded during the process step to support reproducibility; example format: 1.2.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_qc_tool_repository",
+          "descr": "Repository or source location for the host-associated microbiome read cleanup software, recorded at the process step; example format: GitHub URL, conda package reference, or internal pipeline path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_adapter_trimming_method",
+          "descr": "Adapter trimming strategy used during host-associated microbiome read cleanup, recorded as part of the process parameters; for example, automatic detection, reference adapter list, or fixed-position trimming.",
+          "type": "categorical",
+          "allowed_values": [
+            "automatic",
+            "reference_based",
+            "fixed_position",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_quality_filter_threshold",
+          "descr": "Primary quality filtering threshold applied to raw host-associated microbiome reads during cleanup, such as minimum base quality or minimum read length; specify the numeric threshold and units in the metadata value when stored downstream.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_qc_reads_retained_fraction",
+          "descr": "Fraction of raw host-associated microbiome reads retained after adapter trimming and filtering, measured at the end of the cleanup process; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_read_qc_success",
+          "descr": "Whether the host-associated microbiome read cleanup process completed successfully and produced clean reads suitable for downstream profiling.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "clean_reads_water": {
+      "reasoning": "The clean_reads_water node is a Signal, so I included only raw-file-like artefact properties for the cleaned reads: file identity, format, size, read count, storage location, and technical integrity status. I excluded the QC procedure itself because that belongs to the upstream Process node, and I excluded downstream inference results because those belong to the Derivative node. I also kept the schema specific to the cleaned water reads so it describes the output artefact rather than the cleanup process that produced it.",
+      "md_schema": [
+        {
+          "field_id": "water_clean_reads_file_name",
+          "descr": "Name of the cleaned sequencing file produced after adapter trimming and filtering of water reads; format example: water_clean_R1.fastq.gz or water_clean_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_clean_reads_file_format",
+          "descr": "File format of the cleaned water read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "water_clean_reads_file_size_bytes",
+          "descr": "Size of the cleaned water read file in bytes at the time it was saved or transferred; typically smaller than the raw file and may range from megabytes to tens of gigabytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_clean_read_count",
+          "descr": "Number of reads contained in the cleaned water sequencing file, measured from the file content rather than the QC process; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_clean_reads_storage_path",
+          "descr": "Storage location or relative file path for the cleaned water read file in the data repository; example format: /clean_reads/water/seqw_0001_clean.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "water_clean_reads_integrity_flag",
+          "descr": "Technical integrity status of the cleaned water read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "clean_reads_sediment": {
+      "reasoning": "The clean_reads_sediment node is a Signal, so I included only file-level artefact properties for the cleaned reads: file identity, format, size, read count, storage location, and integrity status. I excluded the QC procedure itself because that belongs to the upstream Process node, and I excluded downstream profiling outputs because those belong to the Derivative node. I also used sediment-specific field names to avoid collisions with the water clean-read fields already generated in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "sediment_clean_reads_file_name",
+          "descr": "Name of the cleaned sequencing file produced after adapter trimming and filtering of sediment reads; format example: sediment_clean_R1.fastq.gz or sediment_clean_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_clean_reads_file_format",
+          "descr": "File format of the cleaned sediment read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sediment_clean_reads_file_size_bytes",
+          "descr": "Size of the cleaned sediment read file in bytes at the time it was saved or transferred; typically smaller than the raw file and may range from megabytes to tens of gigabytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_clean_read_count",
+          "descr": "Number of reads contained in the cleaned sediment sequencing file, measured from the file content rather than the QC process; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_clean_reads_storage_path",
+          "descr": "Storage location or relative file path for the cleaned sediment read file in the data repository; example format: /clean_reads/sediment/seqs_0001_clean.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sediment_clean_reads_integrity_flag",
+          "descr": "Technical integrity status of the cleaned sediment read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "clean_reads_microbiome": {
+      "reasoning": "The clean_reads_microbiome node is a Signal, so I included only file-level artefact properties for the cleaned host-associated reads: file identity, format, size, read count, storage location, and integrity status. I excluded the QC procedure itself because that belongs to the upstream Process node, and I excluded downstream profiling outputs because those belong to the Derivative node. I also used microbiome-specific field names to avoid collisions with the water and sediment clean-read fields already generated in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "microbiome_clean_reads_file_name",
+          "descr": "Name of the cleaned sequencing file produced after adapter trimming and filtering of host-associated microbiome reads; format example: microbiome_clean_R1.fastq.gz or microbiome_clean_reads.bam.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_clean_reads_file_format",
+          "descr": "File format of the cleaned host-associated microbiome read data as stored in the repository, such as FASTQ, BAM, or CRAM.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "bam",
+            "cram",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microbiome_clean_reads_file_size_bytes",
+          "descr": "Size of the cleaned host-associated microbiome read file in bytes at the time it was saved or transferred; typically smaller than the raw file and may range from megabytes to tens of gigabytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_clean_read_count",
+          "descr": "Number of reads contained in the cleaned host-associated microbiome sequencing file, measured from the file content rather than the QC process; for paired-end data this may refer to read pairs or individual reads depending on repository convention.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_clean_reads_storage_path",
+          "descr": "Storage location or relative file path for the cleaned host-associated microbiome read file in the data repository; example format: /clean_reads/microbiome/seqm_0001_clean.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_clean_reads_integrity_flag",
+          "descr": "Technical integrity status of the cleaned host-associated microbiome read file, recorded after ingestion or validation; indicates whether the file is complete and readable.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "community_profiling": {
+      "reasoning": "The community_profiling node is a Process, so I included only computational workflow details: analysis software, version, repository, key parameters, output summarization choices, and a process-level success flag. I excluded cleaned-read properties because those belong to the upstream Signal nodes, and I excluded the final integrated table contents because those belong to the downstream Derivative node. I also included software agent details per the rules for operation nodes, and I made the fields specific to the joint profiling step rather than to one sample type.",
+      "md_schema": [
+        {
+          "field_id": "community_profiling_tool_name",
+          "descr": "Name of the software or pipeline used for joint profiling of microbial diversity and functional potential across all cleaned sequencing reads; record the exact analysis tool used in this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profiling_tool_version",
+          "descr": "Version of the software or pipeline used for community profiling, recorded during the process step to support reproducibility; example format: 1.2.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profiling_tool_repository",
+          "descr": "Repository or source location for the community profiling software, recorded at the process step; example format: GitHub URL, conda package reference, or internal pipeline path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profiling_method",
+          "descr": "Primary profiling strategy used in the joint computational analysis, such as taxonomic classification, functional annotation, or integrated multi-omic summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "taxonomic_classification",
+            "functional_annotation",
+            "integrated_profiling",
+            "other"
+          ]
+        },
+        {
+          "field_id": "community_profiling_reference_database",
+          "descr": "Reference database or database release used during the community profiling analysis, recorded as part of the process configuration; example format: GTDB release, KEGG release, or custom marine reference set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profiling_minimum_support_threshold",
+          "descr": "Minimum support or abundance threshold used to retain taxa or functions during community profiling, recorded as a process parameter; specify the numeric threshold and units in the stored value when applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profiling_output_summary_level",
+          "descr": "Level of aggregation used for the profiling output, such as sample-level summary, taxon-level summary, or gene-family-level summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "sample_level",
+            "taxon_level",
+            "gene_family_level",
+            "pathway_level",
+            "other"
+          ]
+        },
+        {
+          "field_id": "community_profiling_success",
+          "descr": "Whether the joint computational profiling completed successfully and produced results suitable for derivation of the integrated diversity-function table.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "diversity_function_table": {
+      "reasoning": "The diversity_function_table node is a Derivative, so I included only computed-result properties: the algorithmic provenance of the table, its dimensions, included result categories, and post-computation quality/usefulness indicators. I excluded cleaned-read properties and community profiling parameters because those belong to upstream Signal and Process nodes, and I excluded raw environmental capture settings because those belong to the Capture and Signal nodes earlier in the DAG. I also avoided repeating generic sample or sequencing identifiers already produced elsewhere, keeping this node focused on the integrated computed output.",
+      "md_schema": [
+        {
+          "field_id": "integrated_table_id",
+          "descr": "Unique identifier for the computed diversity-function table, used to reference the integrated analysis result; format example: DFT_0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_algorithm_name",
+          "descr": "Name of the algorithm, pipeline, or workflow used to combine taxonomic diversity, functional annotation, and environmental variables into the integrated table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_algorithm_version",
+          "descr": "Version of the integration algorithm or workflow used to generate the diversity-function table, recorded for reproducibility; example format: 1.2.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_input_profile_count",
+          "descr": "Number of profiling inputs combined to generate the integrated table, measured at derivation time; for this DAG it typically reflects the number of cleaned read sets or sample-level profiles included in the analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of rows in the integrated diversity-function table, measured after derivation; this reflects the total number of sample or feature records represented in the final table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_column_count",
+          "descr": "Number of columns in the integrated diversity-function table, measured after derivation; this reflects the total number of variables included across diversity, function, and environmental annotations.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "included_data_domains",
+          "descr": "Data domains represented in the integrated derivative table, recorded as a summary of what was combined during derivation.",
+          "type": "categorical",
+          "allowed_values": [
+            "taxonomic_diversity",
+            "functional_annotation",
+            "environmental_variables",
+            "all_three"
+          ]
+        },
+        {
+          "field_id": "derivation_quality_flag",
+          "descr": "Quality status of the computed table after integration, recorded at derivation completion; use this to indicate whether the table is complete and suitable for comparative analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

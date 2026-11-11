@@ -1,0 +1,1001 @@
+{
+  "md_name": "coastal_sediment_16s_microbiome_workflow",
+  "md_description": "Workflow for coastal sediment microbiome profiling using 16S rRNA amplicon sequencing across multiple locations and seasons. It includes sediment collection under varying environmental conditions, DNA extraction, sequencing, sequence processing, taxonomic profiling, and joint analysis with sample metadata to assess how geography, season, depth, temperature, and salinity shape microbial community diversity.",
+  "fields_per_node": {
+    "coastal_sediment_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the sediment sample itself: identity, origin, collection context, and in situ sample descriptors. I excluded any procedural collection details (those belong to sediment_aliquoting or metadata_capture), any DNA/library/sequencing properties downstream, and any analysis outputs. I also avoided repeating sample identifiers or experiment identifiers because those should be generated once at the root and are likely already covered in already_generated or elsewhere in the DAG. Given the workflow description, the most relevant sample-level fields are coastal location, geographic coordinates, sampling date/season, sediment depth, and the key environmental conditions observed at the moment of collection.",
+      "md_schema": [
+        {
+          "field_id": "sample_label",
+          "descr": "Local sample label or code assigned to the sediment sample at collection, used to link the physical sample to downstream aliquots and metadata. Example: CS-03-2024-07. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_name",
+          "descr": "Named coastal location where the sediment sample was collected, recorded as the site identity rather than the procedure used to collect it. Example: Bay A intertidal station.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "latitude_decimal_degrees",
+          "descr": "Geographic latitude of the sampling location in decimal degrees, recorded at the time of collection or from the sampling GPS. Typical range: -90 to 90.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longitude_decimal_degrees",
+          "descr": "Geographic longitude of the sampling location in decimal degrees, recorded at the time of collection or from the sampling GPS. Typical range: -180 to 180.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_date",
+          "descr": "Date when the sediment sample was collected in the field, captured as the collection date for the entity. Example: 2024-07-15.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_season",
+          "descr": "Season associated with the collection time of the sediment sample, used to capture temporal context for microbiome comparisons. Allowed values should be exhaustive for this study.",
+          "type": "categorical",
+          "allowed_values": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter"
+          ]
+        },
+        {
+          "field_id": "sediment_depth_cm",
+          "descr": "Depth within the sediment column from which the sample originates, measured at collection. Example: 0.5, 2.0, 5.0 cm. Typical range depends on site and study design; record in centimeters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "in_situ_temperature_celsius",
+          "descr": "Ambient temperature at the sampling site at the time of collection, reflecting field conditions associated with the sediment sample. Record in degrees Celsius; example range for coastal systems may be approximately -2 to 35.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "in_situ_salinity_psu",
+          "descr": "Salinity measured at or associated with the sampling site during collection, used to describe the local coastal environmental condition. Record in practical salinity units (PSU); typical coastal range is approximately 0 to 40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coastal_habitat_type",
+          "descr": "Broad habitat context of the sampled coastal sediment, describing the setting of the entity rather than any treatment. Example values may include intertidal flat, estuary, salt marsh, or subtidal sediment.",
+          "type": "categorical",
+          "allowed_values": [
+            "intertidal_flat",
+            "estuary",
+            "salt_marsh",
+            "subtidal_sediment",
+            "beach_sediment"
+          ]
+        }
+      ]
+    },
+    "sediment_aliquoting": {
+      "reasoning": "This is a Process node, so I included only how the sediment aliquotting was performed: the portion taken, the operational handling conditions, and the agent properties if relevant. I excluded intrinsic sample descriptors such as site, depth, season, and environmental variables because those belong to the upstream Entity and metadata capture nodes. I also excluded downstream DNA extract properties and any sequencing/library outcomes because those belong to later Entity/Derivative nodes. I avoided fields that would duplicate general sample identifiers already created at the entity level.",
+      "md_schema": [
+        {
+          "field_id": "aliquot_mass_grams",
+          "descr": "Mass of sediment separated from the collected sample for downstream extraction, measured during the aliquoting step. Record in grams; example values may be 0.25 to 5 g depending on protocol and available material.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_volume_milliliters",
+          "descr": "Volume of wet sediment transferred for downstream processing, if the protocol records a volumetric aliquot instead of mass. Record in milliliters; example values may be 0.5 to 10 mL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquoting_method",
+          "descr": "Operational method used to separate the measured sediment portion for extraction. Use a controlled vocabulary describing the handling approach at this process step.",
+          "type": "categorical",
+          "allowed_values": [
+            "weighed_subsample",
+            "volumetric_subsample",
+            "sterile_spatula_transfer",
+            "homogenized_subsample"
+          ]
+        },
+        {
+          "field_id": "aliquoting_temperature_celsius",
+          "descr": "Temperature of the sample handling environment during aliquoting, measured or recorded while the measured portion was separated. Record in degrees Celsius; typical bench range is approximately 18 to 25.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquoting_duration_minutes",
+          "descr": "Time spent performing the aliquoting step for a sample, measured from start of measured transfer to completion. Record in minutes; example values may be 1 to 30.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "operator_id",
+          "descr": "Identifier for the person or role carrying out the aliquoting step, if the workflow tracks the operator responsible for the process. Example format: initials or staff code such as AB12.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sediment_dna_extract": {
+      "reasoning": "This is an Entity node, so I included only properties intrinsic to the recovered DNA extract: what it is, how much DNA is present, its purity/integrity, and what preservative or storage state it has at the time it becomes an extract. I excluded extraction protocol details because those belong to the upstream Process node, and I excluded library preparation, sequencing, and downstream computed outputs because those belong to later nodes. I also avoided repeating the original sample identifiers from the root entity.",
+      "md_schema": [
+        {
+          "field_id": "dna_extract_id",
+          "descr": "Unique identifier for the sediment DNA extract, used to track the recovered community DNA between extraction and library preparation. Example: E-001 or DNA-CS03-1. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Measured concentration of the recovered DNA extract at the time it is assessed for downstream amplicon library preparation. Record in nanograms per microliter; typical low-biomass sediment extracts may range from below 1 to tens of ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total amount of DNA recovered in the extract, calculated or measured after extraction and before library preparation. Record in nanograms; typical values depend on input mass and extraction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_a260_a280",
+          "descr": "Spectrophotometric purity ratio (A260/A280) for the DNA extract, measured after extraction and before library preparation. Typical DNA values are often around 1.7 to 2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_a260_a230",
+          "descr": "Spectrophotometric purity ratio (A260/A230) for the DNA extract, measured after extraction and before library preparation. Lower values may indicate residual salt or organic contaminants; typical clean DNA values are often around 2.0 to 2.2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of whether the extracted DNA is intact enough for downstream amplicon sequencing, based on the study's internal QC check at the extract stage.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "moderate",
+            "poor"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the DNA extract is stored after recovery and before library preparation. Record in degrees Celsius; common values include -20 or -80 depending on the workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_batch_id",
+          "descr": "Identifier for the extraction batch or run in which the DNA was recovered, used to track extract-level grouping and batch effects. Example: EXTR-2024-07-01. Type string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_library_preparation": {
+      "reasoning": "This is a Process node, so I included only library preparation parameters: the amplification chemistry, primer set, PCR cycling, reaction setup, cleanup, and process quality indicators. I excluded characteristics of the input DNA extract because those belong to the upstream Entity node, and I excluded properties of the resulting sequencing library because those belong to the downstream Entity node. I also avoided fields already used elsewhere such as sample identifiers and operator/instrument details unrelated to the process itself. The chosen fields are the minimum needed to reproduce a 16S amplicon library preparation workflow and assess whether the library is suitable for sequencing.",
+      "md_schema": [
+        {
+          "field_id": "amplicon_target_gene",
+          "descr": "Targeted marker gene amplified during library preparation for this workflow. This step targets the 16S rRNA gene used for bacterial community profiling.",
+          "type": "categorical",
+          "allowed_values": [
+            "16S_rRNA"
+          ]
+        },
+        {
+          "field_id": "primer_set_name",
+          "descr": "Name or code of the primer pair used to amplify the 16S rRNA gene during library preparation. Example: 515F_806R or 341F_785R.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplicon_region",
+          "descr": "Hypervariable region or span of the 16S rRNA gene amplified by the primers, recorded at the library preparation step. Example values: V3_V4, V4, V4_V5.",
+          "type": "categorical",
+          "allowed_values": [
+            "V1_V2",
+            "V3_V4",
+            "V4",
+            "V4_V5",
+            "V5_V7"
+          ]
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR cycles used to amplify the 16S insert during library preparation. Typical values are often in the range of 20 to 35 cycles.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_reaction_volume_ul",
+          "descr": "Total PCR reaction volume used to generate the sequencing library, measured at the amplification step. Record in microliters; typical volumes are 10 to 50 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_template_input_ng",
+          "descr": "Amount of extracted DNA input to the amplification reaction for library preparation. Record in nanograms at the moment the PCR is assembled; typical low-input values may range from <1 to 20 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_cleanup_method",
+          "descr": "Cleanup or normalization method applied after amplification to prepare the amplicon library for sequencing. Examples include bead-based cleanup or enzymatic cleanup.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_cleanup",
+            "enzymatic_cleanup",
+            "gel_extraction",
+            "no_cleanup"
+          ]
+        },
+        {
+          "field_id": "library_preparation_qc_pass",
+          "descr": "Indicates whether the prepared library met the study's quality criteria for progression to sequencing at the end of the preparation step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "final_library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the completed amplicon library immediately before sequencing, recorded at the end of library preparation. Record in nanograms per microliter; typical sequencing-ready libraries may range from low single digits to tens of ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_library": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the prepared sequencing library itself: its identifier, target insert characteristics, concentration, fragment size, pooling state, and storage before capture. I excluded sequencing instrument configuration and run settings because those belong to the downstream Capture node, and I excluded raw read file properties because those belong to the downstream Signal node. I also avoided repeating sample-level or PCR-setup fields already represented upstream. The selected fields are the minimum needed to identify and assess the library as a physical sequencing-ready material.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_library_id",
+          "descr": "Unique identifier for the prepared 16S sequencing library, used to track the amplicon library from preparation through the sequencing run. Example: LIB-16S-001. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "insert_length_bp",
+          "descr": "Approximate length of the amplified 16S rRNA gene insert in base pairs as present in the prepared library. Typical values depend on primer set and region, for example 200 to 600 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the prepared sequencing library at the time it is evaluated for loading onto the sequencer or for pooling. Record in nanograms per microliter; typical values may range from low single digits to tens of ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Observed fragment size of the amplicon library as assessed after preparation and before sequencing. Record the dominant size in base pairs; example values often fall within 250 to 550 bp for 16S amplicons.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pool_status",
+          "descr": "Whether this library was kept as an individual preparation or combined into a pool before sequencing capture. Use the workflow state at the time the sequencing instrument received the library.",
+          "type": "categorical",
+          "allowed_values": [
+            "individual",
+            "pooled"
+          ]
+        },
+        {
+          "field_id": "index_adapter_present",
+          "descr": "Indicates whether sequencing adapters and sample indices are attached and ready for instrument loading at the library stage. This reflects library readiness rather than sequencing settings.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_temperature_celsius",
+          "descr": "Temperature at which the prepared library is stored before sequencing capture. Record in degrees Celsius; common values include 4, -20, or -80 depending on workflow timing.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "illumina_miseq_sequencing": {
+      "reasoning": "This is a Capture node, so I included only the sequencing session and instrument configuration: the MiSeq hardware identity, run chemistry, active run settings, and operational output quality indicators that describe how the instrument measured the library. I excluded sample and library properties because those belong upstream, and I excluded file-level properties because those belong to the downstream raw FASTQ Signal node. I also respected the rule to describe hardware manufacturer/model/serial on Capture nodes. I avoided repeating fields already generated for earlier nodes, especially library identifiers and sequencing-ready material properties.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture step. For this workflow, it identifies the vendor of the Illumina MiSeq platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the sequencing instrument configured for the run. Example: MiSeq.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number or other hardware-specific identifier of the sequencing instrument used for this run. Example format: MSQ-12345. Type string; should uniquely identify the instrument unit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_chemistry_version",
+          "descr": "Sequencing chemistry or reagent kit version used for the MiSeq run. Record the version or kit designation active during the capture session; examples include v2 or v3 chemistries.",
+          "type": "categorical",
+          "allowed_values": [
+            "v2",
+            "v3"
+          ]
+        },
+        {
+          "field_id": "read_layout",
+          "descr": "Sequencing read structure configured for the run, describing the paired-end layout used to measure the amplicons. For this workflow, the expected layout is paired-end.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read produced by the MiSeq run. Typical values for paired-end amplicon workflows may be 150, 250, or 300 bp depending on chemistry.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_density_k_per_mm2",
+          "descr": "Observed cluster density during the sequencing run, recorded as a run-quality metric for the capture session. Report in thousands of clusters per square millimeter; typical acceptable ranges depend on kit and flow cell.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_yield_mbases",
+          "descr": "Total number of megabases generated by the sequencing run, measured after capture as an instrument output quality indicator. This describes the run session rather than the downstream file content.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pct_q30",
+          "descr": "Percentage of bases in the run that achieved Q30 or better, used as a standard sequencing quality indicator at the end of the capture session. Typical MiSeq runs often aim for high Q30 values.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "This is a Signal node, so I included only file-level properties of the raw FASTQ artefact: file naming, format, storage, size, read count, and technical quality metrics that describe the raw data object itself. I excluded instrument settings and run chemistry because those belong to the capture step, and I excluded preprocessing or biological interpretation because those belong to downstream process and derivative nodes. I also avoided repeating sequencing library or sample identifiers already generated upstream. The fields below are the minimum needed for a downstream user to locate, inspect, and validate the raw read files.",
+      "md_schema": [
+        {
+          "field_id": "fastq_file_name",
+          "descr": "Name of the raw FASTQ file produced by the sequencing run. Example: sample01_R1.fastq.gz. Use the exact file name as stored in the data repository.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_file_path",
+          "descr": "Storage location or relative path for the raw FASTQ file in the project data system. Example: /data/sequencing/raw/sample01_R1.fastq.gz. Record the location where the raw file can be retrieved.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw read artefact. For this workflow, the raw reads are expected to be stored as compressed FASTQ files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw FASTQ file in bytes, measured as a file property after sequencing and storage. Typical size depends on read count and compression level.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_orientation",
+          "descr": "Orientation of the raw read file within a paired-end sequencing output. This describes whether the file contains forward or reverse reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "forward",
+            "reverse"
+          ]
+        },
+        {
+          "field_id": "sequence_read_count",
+          "descr": "Number of individual reads contained in the FASTQ file, counted from the raw artefact after sequencing. Typical values depend on run output and demultiplexing strategy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "average_read_quality_score",
+          "descr": "Average Phred quality score across reads in the raw FASTQ file, recorded as a technical quality metric for the raw signal artefact. Use the summary value computed directly from the file contents; typical scores may vary across runs.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gzip_compressed",
+          "descr": "Indicates whether the raw FASTQ file is gzip-compressed at rest in the storage system. This is a file property, not a sequencing setting.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_preprocessing": {
+      "reasoning": "This is a Process node, so I included only preprocessing operations and the software configuration used to transform raw FASTQ reads into cleaned reads: demultiplexing, adapter trimming, quality filtering, and key threshold parameters. I excluded raw file properties because those belong to the upstream Signal node, and I excluded the properties of the cleaned output reads because those belong to the downstream Signal node. I also included the software agent details as required for operation nodes. I avoided repeating any sample, library, or instrument fields already generated upstream.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software or workflow engine used to perform read preprocessing. Example: QIIME 2. Record the software active at this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the software used for preprocessing, recorded at the time the raw reads were demultiplexed, trimmed, and quality-filtered. Example: 2024.5 or similar release tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository, package source, or distribution reference for the preprocessing software, used to identify the exact implementation of the read-processing step. Example: https://qiime2.org/ or a GitHub URL.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed",
+          "descr": "Indicates whether the raw sequencing reads were separated by sample barcode during preprocessing. This describes the transformation applied to the input reads.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_method",
+          "descr": "Method used to remove sequencing adapters from raw reads during preprocessing. Examples include built-in adapter trimming, cutadapt, or equivalent trimming strategy.",
+          "type": "categorical",
+          "allowed_values": [
+            "built_in",
+            "cutadapt",
+            "manual_trim",
+            "none"
+          ]
+        },
+        {
+          "field_id": "quality_filter_threshold_phred",
+          "descr": "Phred quality threshold applied during filtering of raw reads in preprocessing. Record the cutoff used to retain or discard reads; typical values are often between 10 and 30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after adapter trimming and quality filtering during preprocessing. Record in base pairs; typical cutoffs may range from 50 to 200 bp depending on workflow design.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessing_retained_read_fraction",
+          "descr": "Fraction of raw reads retained after demultiplexing, trimming, and quality filtering, used as a process-level quality indicator for the preprocessing step. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "preprocessed_reads": {
+      "reasoning": "I corrected the collision by removing the repeated gzip_compressed field and keeping only non-duplicative Signal properties for the preprocessed read artefact. I preserved file identity, location, counts, lengths, and quality summaries because they remain within the Signal node’s territory and are needed to reuse the cleaned reads downstream. I excluded preprocessing parameters and upstream/downstream content to avoid overlap with other steps.",
+      "md_schema": [
+        {
+          "field_id": "preprocessed_read_file_name",
+          "descr": "Name of the cleaned read file produced after preprocessing. Example: sample01_filtered.fastq.gz. Use the exact file name stored in the repository.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessed_file_path",
+          "descr": "Storage location or relative path for the preprocessed read file in the project data system. Example: /data/sequencing/preprocessed/sample01_filtered.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessed_file_format",
+          "descr": "Technical file format of the cleaned read artefact after preprocessing. For this workflow, it is typically a compressed FASTQ file.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz"
+          ]
+        },
+        {
+          "field_id": "preprocessed_read_count",
+          "descr": "Number of reads remaining after preprocessing, counted from the cleaned sequencing file. This is a file-level count measured after demultiplexing, trimming, and filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp_mean",
+          "descr": "Mean read length in base pairs after preprocessing, measured across the cleaned reads in the file. Typical values depend on trimming thresholds and input read length.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preprocessed_average_quality_score",
+          "descr": "Average Phred quality score across the cleaned reads in the preprocessed file, used as a technical quality summary of the signal artefact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ambiguous_base_fraction",
+          "descr": "Fraction of bases in the cleaned reads that are ambiguous (for example, N), calculated from the preprocessed file as a technical quality metric. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "denoise_and_merge": {
+      "reasoning": "This is a Process node, so I kept only fields specific to the denoise-and-merge operation and its process-level outcomes. I removed generic software fields because they collide with earlier process nodes in this DAG and are already generated elsewhere. I also excluded input read properties and downstream ASV table properties, staying within the process territory only. The remaining fields capture the key tunable parameters and quality outcome needed to interpret this denoising step.",
+      "md_schema": [
+        {
+          "field_id": "dada2_truncation_length_forward_bp",
+          "descr": "Forward-read truncation length in base pairs used by the denoising and merging workflow. Record the value applied to preprocessed reads at the time of inference; typical values depend on quality profiles and overlap requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dada2_truncation_length_reverse_bp",
+          "descr": "Reverse-read truncation length in base pairs used by the denoising and merging workflow. Record the value applied to preprocessed reads at the time of inference; typical values depend on quality profiles and overlap requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_removal_method",
+          "descr": "Method used to identify and remove chimeric sequences during denoising. For this workflow, describe the chimera detection strategy applied before ASV table generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "consensus",
+            "pooled",
+            "per_sample",
+            "none"
+          ]
+        },
+        {
+          "field_id": "paired_reads_merged",
+          "descr": "Indicates whether forward and reverse reads were successfully merged during the denoising step. This is a process outcome recorded during sequence inference.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nonchimera_retained_fraction",
+          "descr": "Fraction of input preprocessed reads retained after denoising, merging, and chimera removal, used as a process-level quality indicator. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "asv_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the ASV table itself: table identity, dimensions, sparsity/completeness, normalization state, and summary quality indicators. I excluded denoising and merging parameters because those belong to the upstream Process node, and I excluded downstream taxonomic interpretation because that belongs to the next Process/Derivative chain. I also avoided any fields already generated earlier in the DAG, including generic software fields and compression flags. The selected fields are the minimum needed to understand and reuse the ASV table as a computed abundance matrix.",
+      "md_schema": [
+        {
+          "field_id": "asv_table_id",
+          "descr": "Unique identifier for the ASV table produced by the denoising pipeline. Example: ASV-001. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_count",
+          "descr": "Number of distinct amplicon sequence variants represented as columns or features in the table, measured from the computed output. Typical values depend on sequencing depth and sample diversity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of sediment samples represented as rows in the ASV table, measured from the computed output matrix.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_format",
+          "descr": "File or serialization format of the ASV table output. Example values should describe how the computed table is stored for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "biom",
+            "tsv",
+            "csv",
+            "rds",
+            "hdf5"
+          ]
+        },
+        {
+          "field_id": "table_density_fraction",
+          "descr": "Fraction of non-zero entries in the ASV table, calculated from the computed abundance matrix as a sparsity/completeness metric. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalized",
+          "descr": "Indicates whether the ASV table values were normalized or remain as raw counts at the time this derivative was generated.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "zero_count_fraction",
+          "descr": "Fraction of table cells that are zero, calculated from the final ASV matrix. This summarizes sparsity in the derivative output and is useful for downstream analysis planning.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "rarefied",
+          "descr": "Indicates whether the ASV table was rarefied as part of derivative generation. Use this flag to distinguish count-preserving versus depth-standardized outputs.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomic_assignment": {
+      "reasoning": "This is a Process node, so I included only the taxonomic classification procedure and its software/database configuration, along with process-level assignment quality indicators. I excluded the ASV table content because that belongs upstream as the input Derivative, and I excluded the taxon profile output because that belongs downstream as the produced Derivative. I also avoided repeating generic software fields already used earlier in the DAG by using process-specific names tied to the taxonomic assignment step. The selected fields are the minimum needed to reproduce or interpret the taxonomy assignment workflow.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_classification_method",
+          "descr": "Algorithmic method used to assign taxonomy to the inferred sequence variants. Record the classification approach applied at this process step; examples include naive Bayes classification or exact sequence matching.",
+          "type": "categorical",
+          "allowed_values": [
+            "naive_bayes",
+            "blast",
+            "vsearch",
+            "sklearn_classifier",
+            "exact_match"
+          ]
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the reference database used to assign bacterial taxonomy to the sequence variants. Example: SILVA, Greengenes, or RDP.",
+          "type": "categorical",
+          "allowed_values": [
+            "SILVA",
+            "Greengenes",
+            "RDP",
+            "GTDB",
+            "custom"
+          ]
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the taxonomic reference database used during assignment. Example: 138, 16, or a custom release tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_confidence_threshold",
+          "descr": "Minimum confidence score required to accept a taxonomic assignment at this process step. Record the threshold used by the classifier; typical values are often between 0.5 and 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_rank_assigned",
+          "descr": "Highest taxonomic rank that was reported or retained from the assignment process. This describes the granularity of the classification output produced by the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "domain",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species"
+          ]
+        },
+        {
+          "field_id": "unclassified_fraction",
+          "descr": "Fraction of sequence variants that could not be assigned to the requested taxonomic rank or confidence threshold, measured as a process-level outcome of the assignment step. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assigned_asv_fraction",
+          "descr": "Fraction of input ASVs that received a taxonomy assignment meeting the study's acceptance criteria, used as a process quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxon_profile": {
+      "reasoning": "This is a Derivative node, so I kept only computed taxon-profile properties and avoided any field names already used elsewhere in the DAG, including sample_count and generic software or compression fields. I retained identifiers, taxonomic resolution, abundance scaling, and profile-level composition summaries because those describe the derived result itself. I excluded upstream taxonomic assignment details and downstream environmental association analysis outputs.",
+      "md_schema": [
+        {
+          "field_id": "taxon_profile_id",
+          "descr": "Unique identifier for the taxonomic abundance profile produced from ASV taxonomy assignment. Example: TAXON-001. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxon_rank_level",
+          "descr": "Taxonomic rank at which abundances are summarized in the profile. Example values represent the resolution of the computed community profile.",
+          "type": "categorical",
+          "allowed_values": [
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species"
+          ]
+        },
+        {
+          "field_id": "taxon_count",
+          "descr": "Number of taxonomic features included in the abundance profile, measured from the computed derivative table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_scale",
+          "descr": "Scale used for the abundance values in the taxon profile, indicating whether the output is raw counts, relative abundance, percent abundance, or transformed values.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_counts",
+            "relative_abundance",
+            "percent_abundance",
+            "log_transformed"
+          ]
+        },
+        {
+          "field_id": "relative_abundance_normalized",
+          "descr": "Indicates whether abundance values were normalized to sum to one or 100% within each sample when generating the taxon profile.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dominant_taxon_fraction",
+          "descr": "Fraction of total abundance accounted for by the most abundant taxon in the profile, calculated from the derived community composition output. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "rare_taxon_fraction",
+          "descr": "Fraction of taxa below the study's rarity cutoff in the profile, used as a summary of community composition sparsity in the derivative output. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_sparsity_fraction",
+          "descr": "Fraction of taxon-by-sample cells in the profile that are zero, calculated from the derived taxon abundance matrix. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_capture": {
+      "reasoning": "This is a Capture node, so I kept only the field-level observation details that are still unique to metadata collection and not already generated elsewhere in the DAG. Because collection_site_name, coordinates, sediment_depth_cm, and sampling_season were already produced in earlier steps, I excluded them here to avoid collisions. I retained only additional capture-context fields that describe when and under what immediate conditions the metadata was recorded, without duplicating sample identity or downstream table structure.",
+      "md_schema": [
+        {
+          "field_id": "sampling_event_id",
+          "descr": "Field collection event identifier linking the observation record to a specific sample collection instance. Example: EVT-2024-07-15-01. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_time_local",
+          "descr": "Local time at which the sediment sample was collected or the observation was recorded, if the study tracks diel timing. Example: 14:35. Use 24-hour local time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_weather_condition",
+          "descr": "Immediate weather condition during metadata capture at the sampling site, recorded as part of the field observation context. Example categories describe the collection moment rather than long-term climate.",
+          "type": "categorical",
+          "allowed_values": [
+            "clear",
+            "cloudy",
+            "rainy",
+            "windy",
+            "foggy",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "tide_state",
+          "descr": "Tidal state at the time of field metadata capture, if relevant to the coastal sampling design. This records the immediate hydrological context of the collection event.",
+          "type": "categorical",
+          "allowed_values": [
+            "low_tide",
+            "rising_tide",
+            "high_tide",
+            "falling_tide",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "sample_metadata_table": {
+      "reasoning": "This is a Derivative node, so I kept only properties of the computed metadata table itself and removed any field names that collided with earlier DAG steps, including table_format. I retained table identity, dimensions, completeness, and linkage/coverage summaries because those describe the derivative artifact without repeating upstream capture content. I excluded all sample, environmental, and analysis-result fields since they belong to upstream Capture/Entity nodes or downstream analysis nodes, not the table derivative itself.",
+      "md_schema": [
+        {
+          "field_id": "sample_metadata_table_id",
+          "descr": "Unique identifier for the structured sample metadata table derived from field observations. Example: META-001. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of sample records contained in the metadata table, measured from the derived table itself.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of metadata fields or variables represented as columns in the table, measured from the derived table itself.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_serialization_format",
+          "descr": "Serialization format used for storing the sample metadata table derivative. Example values indicate how the table is written for downstream analysis or exchange.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "json",
+            "rds"
+          ]
+        },
+        {
+          "field_id": "metadata_completeness_fraction",
+          "descr": "Fraction of required metadata fields present for each row in the table, calculated from the derivative output as a completeness metric. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_count",
+          "descr": "Total number of missing cells in the metadata table, calculated from the derived table as a data quality summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identifier_linkage_complete",
+          "descr": "Indicates whether all rows in the metadata table can be linked back to a sample identifier in the study. This is a derivative-level consistency check.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temporal_coverage_days",
+          "descr": "Total span of sampling dates covered by the metadata table, measured from the earliest to the latest sample record included in the derivative output. Record in days.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_comparison": {
+      "reasoning": "This is a Process node, so I included only the analysis procedure and its software configuration, statistical design, and process-level output quality indicators. I excluded the input taxon profile and sample metadata table contents because those belong to upstream derivative nodes, and I excluded the final association results because those belong to the downstream derivative node. I also avoided reusing generic software field names that were already generated earlier in the DAG by giving process-specific names tied to community-environment analysis. The fields below are the minimum needed to reproduce the joint analysis and interpret whether the modeling was adequate.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the analysis software or package used to integrate community abundance data with sample metadata. Example: R phyloseq, vegan, or a combined workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software used for the community-environment comparison step, recorded at the time the statistical tests were run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Repository, package source, or documentation reference for the analysis software used in the community comparison step. Example: CRAN, Bioconductor, or a GitHub URL.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ordination_method",
+          "descr": "Statistical ordination or multivariate method used to summarize community-environment relationships during the comparison step. Example methods include PCoA, NMDS, or constrained ordination.",
+          "type": "categorical",
+          "allowed_values": [
+            "pcoa",
+            "nmds",
+            "pca",
+            "rda",
+            "cca"
+          ]
+        },
+        {
+          "field_id": "distance_metric",
+          "descr": "Distance or dissimilarity metric used to compare community composition among samples in the analysis step. Example: Bray-Curtis or Jaccard.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "unifrac",
+            "weighted_unifrac",
+            "euclidean"
+          ]
+        },
+        {
+          "field_id": "covariates_tested",
+          "descr": "Number of environmental or temporal covariates included in the association analysis, counted at the time the model or test is specified.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "permutation_count",
+          "descr": "Number of permutations used for significance testing in the community-environment analysis, if permutation-based methods were applied. Typical values are often 999 or more.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_qc_pass",
+          "descr": "Indicates whether the community comparison workflow completed successfully and produced valid intermediate outputs for downstream interpretation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_association_results": {
+      "reasoning": "This is a Derivative node, so I included only computed result properties of the environmental association output: result identity, statistical summary, effect sizes, significance measures, and model fit summaries. I excluded the upstream community comparison procedure and its software settings because those belong to the process node, and I excluded raw sample or taxon inputs because those belong to earlier derivative nodes. I also avoided repeating any field names already generated earlier in the DAG, including generic table-format or software fields. The selected fields are the minimum needed for a downstream user to interpret the joint analysis output and assess which environmental variables were associated with community composition.",
+      "md_schema": [
+        {
+          "field_id": "environmental_association_results_id",
+          "descr": "Unique identifier for the joint analysis result artifact summarizing associations between microbial composition and environmental factors. Example: ENVASSOC-001. Type string; should be unique within the study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_variable_name",
+          "descr": "Name of the community composition response used in the association analysis. Example values may refer to alpha diversity, beta diversity, or taxon abundance summaries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predictor_variable_count",
+          "descr": "Number of environmental or temporal predictors evaluated in the final association result, counted from the computed analysis output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significant_predictor_count",
+          "descr": "Number of predictors that met the study's significance criterion in the final association output, based on the computed statistical results.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "global_model_p_value",
+          "descr": "Overall p-value for the community-environment model or multivariate test, reported from the computed result. Typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "explained_variance_fraction",
+          "descr": "Fraction of variance in community composition explained by the environmental model, reported as a derived effect-size metric. Record as a proportion from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size_summary",
+          "descr": "Summary of the strength of association between environmental factors and microbial community composition. Use the study's chosen effect-size scale or category.",
+          "type": "categorical",
+          "allowed_values": [
+            "small",
+            "moderate",
+            "large",
+            "weak",
+            "strong"
+          ]
+        },
+        {
+          "field_id": "association_result_format",
+          "descr": "File or serialization format of the association results artifact. Example values should describe how the computed result is stored for downstream reuse.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "rds",
+            "xlsx"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,858 @@
+{
+  "md_name": "virus_host_protein_interaction_apms_ms_workflow",
+  "md_description": "This DAG represents an affinity purification and mass spectrometry workflow for studying virus-host protein interactions during viral infection. It begins with infected host cell material, enriches protein complexes, captures raw MS spectra, and computes interaction identifications and network-level summaries. The resulting dataset supports interpretation of how viruses hijack host machinery and helps prioritize antiviral drug targets.",
+  "fields_per_node": {
+    "infected_host_cell_culture": {
+      "reasoning": "This Entity node should capture only intrinsic identity/origin and infection-state attributes of the starting biological material, not any purification, MS, or downstream computational details. I included fields for the host cell line, virus identity, infection timing/dose, and basic culture context because those define what the infected sample is. I excluded affinity purification, instrument, spectra, identification, and network fields because they belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided repeating generic sample or experiment identifiers because those are typically root-level entity metadata and may already be generated elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "host_cell_line",
+          "descr": "Host cell line used as the biological background for infection; report the established line name exactly as used in the study, for example HeLa, A549, or HEK293T. This describes what the starting material is, not how it was processed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "virus_name",
+          "descr": "Virus used to infect the host cells; provide the taxonomic/common name or strain designation used in the experiment, for example influenza A virus or SARS-CoV-2. This identifies the infectious agent present in the starting material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "virus_strain_or_isolate",
+          "descr": "Specific viral strain, isolate, or variant designation used for infection, if reported, for example H1N1 A/PR8/34 or Wuhan-Hu-1. Use the exact study nomenclature because it defines the infected entity’s origin.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "infection_moi",
+          "descr": "Multiplicity of infection applied to the host cells at the time of infection, expressed as infectious units per cell (for example 1, 5, or 10 MOI). Report the value used at the infection step to define the infected biological material.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "infection_time_post_inoculation_hours",
+          "descr": "Time between viral inoculation and downstream harvest, in hours, measured for the infected cell culture before affinity purification. Typical values are 1–72 h depending on the study.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_cell_passage_number",
+          "descr": "Passage number of the host cell line at the time of infection, if tracked. This describes the biological state of the starting material and is recorded before any enrichment or measurement.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_growth_condition",
+          "descr": "General culture condition of the infected host cells before harvesting, such as adherent or suspension culture when relevant to the cell line. This is an intrinsic preparation context for the starting material, not a protocol step.",
+          "type": "categorical",
+          "allowed_values": [
+            "adherent",
+            "suspension",
+            "mixed",
+            "not_reported"
+          ]
+        }
+      ]
+    },
+    "affinity_purification": {
+      "reasoning": "This Process node should describe how the protein complexes were enriched from infected cells, including the affinity strategy, bait/tag used, elution, and key protocol conditions. I included operation-level details and the researcher agent context only insofar as it affects the procedure. I excluded infected-cell identity fields because those belong to the upstream Entity node, and I excluded purified-complex file/instrument outputs because they belong to downstream Entity/Capture/Signal nodes. I also avoided duplicating generic sample identifiers or experimental identifiers that should remain at the root Entity level or may already be generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "affinity_purification_strategy",
+          "descr": "Affinity enrichment strategy used to isolate viral-host protein complexes from infected host cell material, recorded at the purification step. Example values include tagged bait pulldown, antibody immunoprecipitation, or streptavidin capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "tagged_bait_pulldown",
+            "antibody_immunoprecipitation",
+            "streptavidin_capture",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bait_protein_name",
+          "descr": "Name of the viral bait protein or tagged protein used to capture interacting host proteins during affinity purification. Report the exact bait designation used in the experiment, for example viral NP, NS1, or tagged ORF product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bait_tag",
+          "descr": "Affinity tag fused to the bait protein, if applicable, such as FLAG, HA, GFP, or Strep. Record the tag used at the purification step, not the downstream detection method.",
+          "type": "categorical",
+          "allowed_values": [
+            "FLAG",
+            "HA",
+            "GFP",
+            "Strep",
+            "His",
+            "Myc",
+            "GST",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "lysis_buffer_composition",
+          "descr": "Primary lysis buffer formulation used to solubilize infected cells before affinity enrichment, including the buffer system and key additives if reported. Provide the exact formulation used at the purification step, for example 50 mM Tris-HCl with NaCl and NP-40.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Temperature in degrees Celsius used during the binding/incubation phase of affinity purification, measured at the purification step. Typical values are 4 or 25 C depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_duration_minutes",
+          "descr": "Duration of the affinity binding/incubation step in minutes, measured from the start of lysate incubation with beads or antibody to the start of washing. Typical values range from 30 to 1440 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_buffer_stringency",
+          "descr": "Relative stringency of the wash conditions applied during affinity purification, described as the level used to remove nonspecific binders. Use one of the controlled categorical values.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "medium",
+            "high",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "elution_method",
+          "descr": "Method used to recover purified protein complexes from the affinity matrix at the end of the enrichment process. Examples include competitive peptide elution, acidic elution, or boiling in sample buffer.",
+          "type": "categorical",
+          "allowed_values": [
+            "competitive_peptide",
+            "acidic_elution",
+            "boiling_sample_buffer",
+            "on_bead_digest",
+            "other"
+          ]
+        },
+        {
+          "field_id": "purification_replicate_count",
+          "descr": "Number of independent affinity purification replicates performed for this condition, counted at the purification step before MS analysis. Report the biological or technical replicate count used to generate the purified complex.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purification_yield_assessment",
+          "descr": "Qualitative or quantitative assessment of enrichment success for the purified complex at the end of the affinity purification step, such as visible banding, protein concentration, or yield category. Record the operational QC used before mass spectrometry.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "marginal",
+            "failed",
+            "not_reported"
+          ]
+        }
+      ]
+    },
+    "purified_protein_complex": {
+      "reasoning": "This Entity node should describe the purified complex itself as a sample object: its composition, enrichment context, and basic physical/prep state before mass spectrometry. I included fields that identify what kind of complex it is, what bait/capture context produced it, and whether any fractionation or concentration state applies to the sample. I excluded purification protocol settings because those belong to the upstream Process node, and I excluded instrument, spectra, and file attributes because those belong to downstream Capture and Signal nodes. I also avoided repeating infection or cell-line fields already owned by the upstream infected-cell Entity.",
+      "md_schema": [
+        {
+          "field_id": "complex_sample_type",
+          "descr": "Type of purified sample obtained after affinity enrichment, recorded before mass spectrometry. Use a controlled description such as viral bait complex, antibody pull-down, or control background complex.",
+          "type": "categorical",
+          "allowed_values": [
+            "viral_bait_complex",
+            "antibody_pull_down_complex",
+            "control_background_complex",
+            "other"
+          ]
+        },
+        {
+          "field_id": "purification_bait_name",
+          "descr": "Name of the viral bait protein or tagged protein associated with this purified complex, reported as the sample’s capture origin. This identifies what protein complex was enriched, for example viral NP, NS1, or tagged ORF product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interactor_content_description",
+          "descr": "Short description of the expected content of the purified complex at the sample stage, such as viral proteins plus host interactors, host-only background, or mixed complexes. This captures the intrinsic composition of the purified sample before MS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_concentration_mg_per_ml",
+          "descr": "Protein concentration of the purified complex sample measured after enrichment and before mass spectrometry, in mg/mL. Typical values may range from near 0.01 to several mg/mL depending on yield.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_volume_ul",
+          "descr": "Volume of the purified complex sample available for downstream MS injection or digestion, measured in microliters after purification. Record the pre-MS aliquot volume actually carried forward.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_buffer",
+          "descr": "Buffer or solvent in which the purified protein complex was finally resuspended before mass spectrometry preparation, for example PBS, ammonium bicarbonate, or sample buffer. This describes the final sample environment rather than the purification process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "desalting_status",
+          "descr": "Whether the purified protein complex was desalted before downstream mass spectrometry preparation, assessed at the sample stage. This is a sample property reflecting readiness for MS.",
+          "type": "categorical",
+          "allowed_values": [
+            "desalted",
+            "not_desalted",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "complex_stability_state",
+          "descr": "Observed stability or integrity state of the purified complex before MS, if noted, such as intact, partially degraded, or aggregated. This is a property of the prepared sample rather than a protocol parameter.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_degraded",
+            "aggregated",
+            "not_reported"
+          ]
+        }
+      ]
+    },
+    "mass_spectrometry_capture": {
+      "reasoning": "This Capture node should capture the instrument session and actively configured MS settings used to acquire spectra from the purified complex. I included hardware identity and acquisition parameters such as ionization mode, analyzer type, scan range, fragmentation, and run timing because these are controlled by the operator and define the capture configuration. I excluded sample composition and purification details because those belong to upstream Entity nodes, and I excluded raw file attributes and quality metrics because those belong to the downstream Signal node. I also avoided repeating software-oriented processing fields, which are reserved for Process nodes.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the mass spectrometer used for the acquisition session, recorded for the capture instrument. Example: Thermo Fisher Scientific, Bruker, or Agilent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the mass spectrometer used to acquire the raw spectra, recorded at the capture step. Example: Orbitrap Fusion Lumos or timsTOF Pro.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the mass spectrometer, if recorded, used to uniquely identify the capture hardware. Report the exact vendor serial or inventory identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ionization_mode",
+          "descr": "Ionization mode configured for the MS run, recorded during acquisition. Use the mode that produced the raw spectra from the purified complex.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "alternating",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "mass_analyzer_type",
+          "descr": "Primary mass analyzer used for the capture session, such as Orbitrap, TOF, ion trap, or quadrupole. Record the analyzer that defined the acquisition performance.",
+          "type": "categorical",
+          "allowed_values": [
+            "orbitrap",
+            "tof",
+            "ion_trap",
+            "quadrupole",
+            "ft_icr",
+            "other"
+          ]
+        },
+        {
+          "field_id": "ms_scan_range_mz",
+          "descr": "Mass-to-charge range scanned during data acquisition, expressed in m/z units and measured at the capture step. Typical ranges span from approximately 100 to 2000 m/z depending on method.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Fragmentation technique used during MS/MS acquisition, recorded for the capture session. Examples include CID, HCD, ETD, or no fragmentation for MS1-only runs.",
+          "type": "categorical",
+          "allowed_values": [
+            "cid",
+            "hcd",
+            "etd",
+            "ecd",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "lc_gradient_duration_minutes",
+          "descr": "Liquid chromatography gradient duration used immediately before MS acquisition, measured in minutes for the capture session. Typical values range from 30 to 240 minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_duration_minutes",
+          "descr": "Total acquisition time for the MS run, measured from sample injection start to run completion at the capture step. Record the actual instrument session duration in minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "replicate_run_index",
+          "descr": "Ordinal index of this MS acquisition replicate within the study condition, recorded at the capture step. Example values are 1, 2, or 3 for repeated injections of the same sample.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_ms_spectra": {
+      "reasoning": "This Signal node should describe the raw data artefact produced by the MS capture session: file identity, format, size, dimensionality, acquisition completeness, and technical quality indicators. I included only properties of the raw spectra files and their storage-level characteristics, because those belong to the signal itself. I excluded instrument settings, chromatographic parameters, and sample composition because those belong upstream to Capture or Entity nodes. I also avoided duplicate software or algorithm fields because this node is about raw artefacts, not computation or interpretation.",
+      "md_schema": [
+        {
+          "field_id": "raw_spectra_file_name",
+          "descr": "File name of the raw mass spectrometry data artefact as stored after acquisition, for example sample1.raw or run_01.mzML. Record the exact file name used in the dataset.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_file_format",
+          "descr": "File format of the raw MS data file, recorded at the signal level. Example values include vendor raw, mzML, mzXML, or mgf.",
+          "type": "categorical",
+          "allowed_values": [
+            "vendor_raw",
+            "mzML",
+            "mzXML",
+            "mgf",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_spectra_file_size_bytes",
+          "descr": "Size of the raw MS file in bytes, measured after acquisition and storage. This is a technical property of the raw signal artefact and typically ranges from megabytes to tens of gigabytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_spectra_channel_count",
+          "descr": "Number of acquisition channels or logical data channels represented in the raw spectra file, measured for the signal artefact. Use this if the file encodes multiple channels or multiplexed readouts.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms1_scan_count",
+          "descr": "Total number of MS1 scans contained in the raw data file, counted in the stored spectra object. This is a structural property of the raw measurement output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms2_scan_count",
+          "descr": "Total number of MS/MS scans contained in the raw data file, counted in the stored spectra object. This is a structural property of the raw measurement output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retention_time_range_minutes",
+          "descr": "Observed chromatographic retention-time span covered by the raw file, expressed in minutes. Record the minimum and maximum retention times represented in the acquired data.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_to_noise_summary",
+          "descr": "Summary of the raw spectral signal-to-noise quality for the file, reported as a technical QC descriptor or numeric summary if available. This reflects the raw data artefact quality before any identification or filtering.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_path",
+          "descr": "Filesystem or object-store location where the raw MS file is stored, for example a local path, network path, or accession directory. This describes where the artefact resides after acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_completeness_flag",
+          "descr": "Indicator of whether the raw spectra file is complete and readable for downstream processing at the signal stage. Use this to flag truncated, corrupted, or fully usable files.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "truncated",
+            "corrupted",
+            "not_reported"
+          ]
+        }
+      ]
+    },
+    "spectral_identification": {
+      "reasoning": "This Process node should describe the computational spectral-matching workflow: database source, search software context, search parameters, and identification-level thresholds that determine how spectra are interpreted. I included software execution settings and identification QC because they define how the transformation from raw spectra to protein calls was performed. I excluded raw file properties because those belong to the upstream Signal node, and I excluded the resulting peptide/protein calls themselves because those belong to the downstream Derivative node. I also avoided duplicating generic experiment/sample identifiers already owned by upstream Entity nodes or already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "search_database_name",
+          "descr": "Name of the peptide/protein sequence database used to match spectra during spectral identification, recorded at the identification step. Example: UniProt human+virus combined database or a custom host-virus FASTA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_database_version",
+          "descr": "Version or release date of the sequence database used for spectral matching, if reported. Provide the exact release identifier because it affects peptide/protein assignment reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_software_name",
+          "descr": "Software package used to perform spectral identification, recorded as the computational search engine or pipeline name. Example: search software v1.0 or Mascot, MaxQuant, or Proteome Discoverer.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_software_version",
+          "descr": "Version of the spectral identification software used in the search step. Record the exact version because it can alter scoring and output calls.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_parameters_summary",
+          "descr": "Concise summary of key search parameters used for matching spectra to the database, such as precursor tolerance, fragment tolerance, enzyme specificity, and fixed/variable modifications. This describes how the computation was performed at the identification step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enzyme_specificity",
+          "descr": "Protease specificity assumed during database searching, measured as the digestion rule used for spectral identification. Typical values include trypsin, trypsin/p, or nonspecific.",
+          "type": "categorical",
+          "allowed_values": [
+            "trypsin",
+            "trypsin_p",
+            "lys_c",
+            "chymotrypsin",
+            "nonspecific",
+            "other"
+          ]
+        },
+        {
+          "field_id": "precursor_mass_tolerance_ppm",
+          "descr": "Allowed precursor mass tolerance in parts per million used during spectral matching, measured at the identification step. Typical values are 5–20 ppm depending on instrument and software.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_mass_tolerance_da",
+          "descr": "Allowed fragment-ion mass tolerance in daltons used during spectral matching, measured at the identification step. Typical values are 0.01–0.8 Da depending on analyzer type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "peptide_spectrum_match_fdr_percent",
+          "descr": "Estimated false discovery rate for peptide-spectrum matches after identification filtering, expressed as a percentage. Record the QC threshold applied to accept matches, typically 0.1–5%.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_inference_method",
+          "descr": "Method used to infer protein-level assignments from peptide identifications, recorded during the identification process. Examples include parsimony-based inference, razor peptide assignment, or custom inference rules.",
+          "type": "categorical",
+          "allowed_values": [
+            "parsimony",
+            "razor_peptide",
+            "unique_peptides_only",
+            "custom",
+            "not_reported"
+          ]
+        }
+      ]
+    },
+    "protein_identifications": {
+      "reasoning": "This Derivative node should describe the computed protein-level result produced from spectral identification: the output table content, summary statistics, thresholds, and confidence annotations. I included fields that characterize the inferred protein set and its output dimensions because those are properties of the derived result itself. I excluded search software, database, and scoring parameters because those belong to the upstream identification Process node, and I excluded raw spectra and capture settings because those belong upstream to Signal and Capture nodes. I also avoided sample identity and infection context fields already owned by the upstream Entity nodes.",
+      "md_schema": [
+        {
+          "field_id": "protein_identification_table_name",
+          "descr": "Name of the derived protein-identification result table or file produced for the sample, recorded at the derivative step. Example: protein_ids.tsv or sample1_protein_identifications.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identified_protein_count",
+          "descr": "Total number of unique proteins assigned in the derived protein-identification output for this infected-cell sample. Report the final accepted count after filtering and protein inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identified_peptide_count",
+          "descr": "Total number of unique peptides supporting the protein identifications, counted in the derived result set. This reflects the peptide evidence used to build protein calls.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_identification_confidence_threshold",
+          "descr": "Confidence or score threshold used in the final derived protein-identification output, such as minimum probability, score cutoff, or posterior error probability. Record the effective acceptance threshold applied to generate the protein list.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_method",
+          "descr": "Method used, if any, to attach abundance or intensity information to the protein identifications in the derived output. Examples include label-free intensity, spectral counting, or none if purely identification-only.",
+          "type": "categorical",
+          "allowed_values": [
+            "label_free_intensity",
+            "spectral_counting",
+            "tmt_reporter_intensity",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "shared_peptide_handling",
+          "descr": "Rule used to treat peptides shared among multiple proteins when producing the derived protein identifications. This describes the output interpretation strategy, not the search engine settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "parsimony",
+            "all_proteins",
+            "unique_only",
+            "manual_curation",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "decoy_match_fraction",
+          "descr": "Fraction or percentage of matches assigned to decoy sequences in the final protein-identification result, used as a derived QC indicator. Report this as a summary quality metric for the output set.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_identification_notes",
+          "descr": "Free-text notes about the derived protein-identification output, such as unusual filtering, contaminants removed, or sample-specific caveats. Use this only for properties of the computed result set.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "interaction_table_generation": {
+      "reasoning": "This Process node should describe how the identified proteins were transformed into an interaction matrix, including the curation rules, contextual filters, scoring logic, and analysis software used. I included process-level parameters because they define how the interaction table was generated from the protein-identification results. I excluded the actual table content, dimensions, and network summaries because those belong to the downstream Derivative node. I also avoided repeating raw MS, capture, or upstream sample fields, and I kept software agent details on the process as required.",
+      "md_schema": [
+        {
+          "field_id": "interaction_table_software_name",
+          "descr": "Software, workflow, or pipeline used to generate the virus-host interaction matrix from protein identifications, recorded at the process step. Example: bioinformatics pipeline v1.0 or a custom R script.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_table_software_version",
+          "descr": "Version of the software or pipeline used for interaction table generation. Record the exact version or release identifier to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_table_repository",
+          "descr": "Code repository, package source, or workflow location for the interaction-table generation method, if available. Provide a URL, accession, or repository name used for the analysis implementation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_context_conditions",
+          "descr": "Experimental conditions used as analysis context when assembling the interaction matrix, such as infection timepoint, treatment, or host condition. Record the contextual variables used to compare or curate interactions at this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_detection_method",
+          "descr": "Methodological basis used to decide which proteins are considered virus-host interactors in the interaction table, for example AP-MS enrichment, spectral enrichment, or curated co-purification. This describes the analysis rule applied at table-generation time.",
+          "type": "categorical",
+          "allowed_values": [
+            "ap_ms_enrichment",
+            "spectral_enrichment",
+            "curated_co_purification",
+            "statistical_scoring",
+            "other"
+          ]
+        },
+        {
+          "field_id": "background_subtraction_method",
+          "descr": "Strategy used to remove nonspecific background proteins before interaction table assembly, such as control subtraction, contaminant filtering, or negative-control modeling. Record the method used during curation of the interaction matrix.",
+          "type": "categorical",
+          "allowed_values": [
+            "control_subtraction",
+            "contaminant_filtering",
+            "negative_control_model",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "interaction_score_cutoff",
+          "descr": "Score threshold used to retain candidate virus-host interactions in the assembled table, measured as the cutoff applied during curation. Report the numeric threshold if a scoring system was used.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_replicate_support",
+          "descr": "Minimum number of replicate observations required for an interaction to be included in the final matrix, applied during table generation. Typical values are 1 or 2 depending on stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_curation_level",
+          "descr": "Degree of manual or automated curation applied when assembling the interaction table. Use a controlled value describing how strictly interactions were reviewed.",
+          "type": "categorical",
+          "allowed_values": [
+            "fully_automated",
+            "semi_automated",
+            "manual_reviewed",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "output_table_format",
+          "descr": "File or table format produced by the interaction table generation step, such as TSV, CSV, or Excel. This describes the process output format rather than the data contents.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        }
+      ]
+    },
+    "virus_host_interaction_table": {
+      "reasoning": "This Derivative node should describe the computed interaction matrix itself: its structure, content scope, annotation coverage, and table-level quality/size metrics. I included fields for table dimensions, interaction count, annotation coverage, and confidence summaries because those are properties of the derived result. I excluded software, scoring, and curation parameters because those belong to the upstream interaction-table generation Process node, and I excluded network topology because that belongs to the downstream network inference/interaction_network node. I also avoided repeating upstream virus, host cell, and MS capture details except as table-level annotation coverage metrics, since this node should describe the output table rather than the original biological sample.",
+      "md_schema": [
+        {
+          "field_id": "interaction_table_file_name",
+          "descr": "File name or table name of the derived virus-host interaction matrix produced by the workflow, recorded at the derivative step. Example: virus_host_interactions.tsv or interaction_table.xlsx.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_table_format",
+          "descr": "Format of the derived interaction table file, describing the output artifact itself. Example values include TSV, CSV, XLSX, or JSON.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "interaction_table_row_count",
+          "descr": "Total number of rows in the derived virus-host interaction table, counted after all filtering and curation. This indicates the size of the computed result set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_table_column_count",
+          "descr": "Total number of columns in the derived interaction table, including interaction fields and sample annotation fields. Record the final table width after generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_count",
+          "descr": "Number of unique virus-host protein interaction pairs represented in the derived table. This is the central summary of the computed result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "virus_annotation_coverage",
+          "descr": "Proportion or percentage of interaction-table entries with virus-type annotation present, measured as a table-level completeness metric. Report this as a derived coverage summary for the output table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_cell_line_annotation_coverage",
+          "descr": "Proportion or percentage of interaction-table entries with host cell line annotation present, measured at the derived table level. This summarizes completeness of sample annotation in the output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "experimental_condition_annotation_coverage",
+          "descr": "Proportion or percentage of interaction-table entries with experimental-condition annotation present in the derived table. Use this as a completeness metric for contextual metadata in the output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detection_method_annotation_coverage",
+          "descr": "Proportion or percentage of interaction-table entries with detection-method annotation present in the derived table. This indicates how fully the output table preserves the analysis context.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_confidence_summary",
+          "descr": "Summary of interaction confidence distribution in the derived table, such as minimum, median, or high-confidence fraction. This describes the quality of the computed interaction set, not the scoring algorithm itself.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "curated_interaction_subset_flag",
+          "descr": "Indicator of whether the table represents a fully curated subset of interactions rather than all initially detected pairs. Use this to distinguish final curated outputs from exploratory results.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "network_inference": {
+      "reasoning": "This Process node should describe how the interaction table was transformed into a network: the software used, graph construction rules, edge definitions, thresholding, and prioritization logic. I included process-level parameters because they define how the derived network is inferred from the table. I excluded raw interaction-table content and node/edge counts as primary result properties because those belong to the downstream interaction_network Derivative node, though I retained the inference criteria that determine the process output. I also avoided repeating upstream biological sample or MS acquisition fields, and kept software agent details on the process per the schema rules.",
+      "md_schema": [
+        {
+          "field_id": "network_analysis_software_name",
+          "descr": "Software, package, or workflow used to infer the protein interaction network from the interaction table, recorded at the process step. Example: network analysis software v1.0, igraph, Cytoscape automation script, or custom Python pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_analysis_software_version",
+          "descr": "Version of the software or workflow used for network inference. Record the exact version or release identifier to support reproducibility of the graph-building step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_analysis_repository",
+          "descr": "Repository, package source, or workflow location for the network inference method, if available. Provide a URL, accession, or repository name used to construct the network.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "edge_definition_rule",
+          "descr": "Rule used to convert interaction-table entries into network edges, for example one edge per interaction pair, weighted by confidence, or collapsed by protein family. This describes the graph construction logic applied at the inference step.",
+          "type": "categorical",
+          "allowed_values": [
+            "one_edge_per_interaction",
+            "confidence_weighted",
+            "collapsed_by_protein_family",
+            "thresholded_subnetwork",
+            "other"
+          ]
+        },
+        {
+          "field_id": "network_inclusion_threshold",
+          "descr": "Numeric threshold applied to interaction entries before inclusion in the inferred network, such as minimum confidence, score, or replicate support. Record the cutoff used to decide which interactions become edges.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "edge_weight_type",
+          "descr": "Quantity used to assign edge weights in the inferred network, if any. Examples include interaction confidence, spectral count support, or binary unweighted edges.",
+          "type": "categorical",
+          "allowed_values": [
+            "confidence",
+            "spectral_count",
+            "binary",
+            "correlation",
+            "other",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "hub_prioritization_method",
+          "descr": "Method used to prioritize potential drug-target hub proteins or central nodes during network inference, recorded as the analysis logic applied to the graph. Examples include degree centrality, betweenness centrality, or combined ranking.",
+          "type": "categorical",
+          "allowed_values": [
+            "degree_centrality",
+            "betweenness_centrality",
+            "eigenvector_centrality",
+            "pagerank",
+            "combined_ranking",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "network_layout_method",
+          "descr": "Optional layout or visualization method used during network inference or export, if the workflow generates a positioned graph. This describes the graph arrangement method rather than biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "force_directed",
+            "hierarchical",
+            "circular",
+            "manual",
+            "not_reported"
+          ]
+        },
+        {
+          "field_id": "interaction_table_input_name",
+          "descr": "Name or identifier of the interaction table used as input to the network inference step, recorded for traceability of the transformation. This links the process to the derived table without describing the table contents.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_network_format",
+          "descr": "Format of the network output produced by the inference step, such as graphml, gml, xgmml, or json. This describes the process output artifact format.",
+          "type": "categorical",
+          "allowed_values": [
+            "graphml",
+            "gml",
+            "xgmml",
+            "json",
+            "other"
+          ]
+        }
+      ]
+    },
+    "interaction_network": {
+      "reasoning": "This Derivative node should describe the computed network object itself: graph size, topology summaries, edge weighting, node categories, and output file/format properties. I included network-level properties because they are intrinsic to the derived graph and help users interpret the result. I excluded the inference software and graph-construction rules because those belong to the upstream network_inference Process node, and I excluded raw table and MS details because those are upstream in other nodes. I also avoided repeating sample, capture, and protein-identification fields except where they appear as network-summary properties such as centrality or target-prioritization outputs.",
+      "md_schema": [
+        {
+          "field_id": "interaction_network_file_name",
+          "descr": "File name or graph object name of the derived virus-host interaction network, recorded at the derivative step. Example: interaction_network.graphml or virus_host_network.json.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_network_format",
+          "descr": "Format of the derived network file or object, describing the graph artifact itself. Example values include GraphML, GML, XGMML, JSON, or Cytoscape session format.",
+          "type": "categorical",
+          "allowed_values": [
+            "graphml",
+            "gml",
+            "xgmml",
+            "json",
+            "cyjs",
+            "other"
+          ]
+        },
+        {
+          "field_id": "node_count",
+          "descr": "Total number of nodes in the derived virus-host interaction network, counted after network inference. This summarizes the size of the computed graph.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "edge_count",
+          "descr": "Total number of edges in the derived network, counted after graph construction. This reflects the number of inferred virus-host interactions represented in the graph.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_density",
+          "descr": "Density of the derived interaction network, expressed as the fraction of possible edges that are present. Record the computed graph density as a summary topology metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "connected_component_count",
+          "descr": "Number of connected components in the derived network, computed from the final graph. This summarizes graph fragmentation and overall connectivity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hub_node_count",
+          "descr": "Number of nodes classified as hubs in the derived network according to the project’s prioritization rule. Record the final hub count used to highlight potential antiviral targets.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "top_ranked_host_target",
+          "descr": "Identifier or name of the highest-priority host protein target in the derived network, if ranked outputs are produced. This describes a network-level result used for target prioritization.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "edge_weighting_present",
+          "descr": "Indicator of whether the derived network includes weighted edges rather than binary edges. This is a property of the final graph artifact.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "network_summary_notes",
+          "descr": "Free-text notes describing notable properties of the derived network, such as modularity, dominant viral hubs, or unusual topology. Use this only for properties of the computed graph.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

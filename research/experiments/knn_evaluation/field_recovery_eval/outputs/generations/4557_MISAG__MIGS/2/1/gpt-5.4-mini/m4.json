@@ -1,0 +1,970 @@
+{
+  "md_name": "Urban Airborne Microbiome Sequencing Workflow",
+  "md_description": "This DAG describes collection of airborne microbial samples from multiple urban cities, preparation of sequencing libraries, generation of raw sequencing reads, and computational derivation of microbial community profiles. It also incorporates location, time, weather, air quality, pollution, and surrounding-environment context so that microbial composition can be analyzed against urban exposure gradients and pollution sources.",
+  "fields_per_node": {
+    "urban_air_particulate_sample": {
+      "reasoning": "This Entity node should only describe the airborne sample itself: what it is, where/when it originated, and intrinsic sample identity/origin metadata. I included fields for sample identity, collection location and time context, and broad source environment because these are properties of the sample entity. I excluded collection protocol details, sampler/instrument configuration, downstream library prep, sequencing, file, and computational-analysis fields because those belong to Process, Capture, Signal, or Derivative nodes. I also avoided duplicating fields likely represented elsewhere in the DAG such as detailed weather, air quality, and surrounding-environment context, since those are owned by the sampling_context_capture/site_context_metadata branch rather than the sample entity. No already_generated fields were provided, so there were no direct name collisions to avoid.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the airborne particulate sample at collection time, e.g. a stable string such as URB-SEA-2026-0001. Generated once per Entity node and used to link all downstream processing records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_city",
+          "descr": "City or municipality where this airborne sample was obtained, recorded at the sampling site; example: 'Chicago'. Use a controlled place name string rather than a free-text description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_latitude",
+          "descr": "Sampling-site latitude in decimal degrees recorded for the sample origin, measured at collection time using the site location record; typical range -90 to 90.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_longitude",
+          "descr": "Sampling-site longitude in decimal degrees recorded for the sample origin, measured at collection time using the site location record; typical range -180 to 180.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_datetime",
+          "descr": "Date and local time when the airborne sample was collected, recorded at the point of sampling; format example 2026-04-18T08:35:00-05:00. Use ISO 8601 with timezone offset when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_time_of_day",
+          "descr": "Coarse time-of-day category describing when the sample was taken, derived from the collection_datetime at the sampling site; allowed values morning, afternoon, evening, night.",
+          "type": "categorical",
+          "allowed_values": [
+            "morning",
+            "afternoon",
+            "evening",
+            "night"
+          ]
+        },
+        {
+          "field_id": "source_environment_type",
+          "descr": "General urban source setting of the airborne particulate sample at collection, describing the surrounding exposure context of the sample itself; examples include roadside, residential, industrial, commercial, park-adjacent, or mixed urban.",
+          "type": "categorical",
+          "allowed_values": [
+            "roadside",
+            "residential",
+            "industrial",
+            "commercial",
+            "park-adjacent",
+            "mixed_urban"
+          ]
+        }
+      ]
+    },
+    "airborne_sample_collection": {
+      "reasoning": "This Process node should describe how airborne particulate matter was collected, including protocol conditions and operator-controlled collection settings. I included sampling-device and protocol parameters that define the collection operation itself, plus a process-level quality indicator for the resulting collected material. I excluded sample identity, location, weather, air quality, and environmental context because those belong to the Entity or the separate context-capture branch, not the collection procedure. I also excluded downstream preservation, extraction, library prep, sequencing, and file properties because those are outside this process's semantic territory. No already_generated fields were provided, so there were no duplicate-field constraints to apply.",
+      "md_schema": [
+        {
+          "field_id": "collection_method",
+          "descr": "Primary airborne sampling method used to capture particulate matter from city air at the field site; record the operator-selected method at collection time. Examples: active filter-based collection, impaction, or passive deposition.",
+          "type": "categorical",
+          "allowed_values": [
+            "active_filter_collection",
+            "impaction",
+            "passive_deposition"
+          ]
+        },
+        {
+          "field_id": "sampling_device_type",
+          "descr": "Type of field sampling device used during airborne particulate collection, recorded as the instrument class actually deployed at the site; examples include portable air pump, high-volume sampler, or passive collector.",
+          "type": "categorical",
+          "allowed_values": [
+            "portable_air_pump",
+            "high_volume_sampler",
+            "passive_collector"
+          ]
+        },
+        {
+          "field_id": "collection_flow_rate_l_per_min",
+          "descr": "Air volume flow rate in liters per minute used during active sampling, measured on the collection device while the sample was being captured; typical range 1 to 1000 depending on sampler type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_duration_minutes",
+          "descr": "Total sampling duration in minutes for which the device actively collected airborne material at the site; measured from start to stop of the collection run. Typical range 1 to 1440.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_pore_size_micrometer",
+          "descr": "Filter pore size in micrometers, if a filter-based method was used to capture airborne particulate matter; record the installed collection filter specification at setup time. Typical range 0.1 to 20.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_replica_number",
+          "descr": "Replica number for repeated collections taken at the same site and time window, used to distinguish technical or field replicates; example values 1, 2, 3.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_yield_indicator",
+          "descr": "Operator-assessed quality or adequacy of the collected airborne material immediately after sampling, describing whether sufficient particulate matter was recovered for downstream processing; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    },
+    "preserved_air_sample": {
+      "reasoning": "I removed the colliding sample identifier because sample/subject/experiment identifiers are generated once at the root Entity node and must not be repeated on later nodes. The remaining fields stay within the preserved-sample entity territory by describing preservation state and storage conditions only. I kept out preservation protocol details, downstream molecular processing, sequencing, and file properties because those belong elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "preservation_state",
+          "descr": "Current preservation condition of the airborne material at the time this Entity record is created, indicating whether the sample is frozen, refrigerated, dried, or chemically stabilized.",
+          "type": "categorical",
+          "allowed_values": [
+            "frozen",
+            "refrigerated",
+            "dried",
+            "chemically_stabilized"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature in degrees Celsius at which the preserved air sample is stored immediately after preservation and before downstream molecular processing; typical range -196 to 25 depending on storage method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_hours",
+          "descr": "Elapsed time in hours between preservation and the point when the sample was moved to downstream molecular processing or long-term storage; typical range 0 to 8760.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_container_type",
+          "descr": "Physical container used to hold the preserved airborne sample, recorded as the container class at storage; examples include cryovial, sterile tube, or sealed cartridge.",
+          "type": "categorical",
+          "allowed_values": [
+            "cryovial",
+            "sterile_tube",
+            "sealed_cartridge"
+          ]
+        },
+        {
+          "field_id": "preservative_used",
+          "descr": "Preservation reagent or method used to stabilize the collected airborne material, if applicable; examples include ethanol, RNAlater, or no_additive when preservation relied only on freezing or drying.",
+          "type": "categorical",
+          "allowed_values": [
+            "ethanol",
+            "rn_alater",
+            "no_additive"
+          ]
+        }
+      ]
+    },
+    "dna_extraction_library_prep": {
+      "reasoning": "This Process node should capture the laboratory protocol used to extract microbial DNA and build the sequencing library, along with operator-controlled reagent, input, and quality details of the transformation. Because sample identifiers were already generated earlier in the DAG, I avoided any sample_id field and instead focused on process-specific parameters only. I included extraction and library-prep kit/reagent choices, key workflow settings, and a process-level output quality indicator that helps downstream users judge whether the library is suitable for sequencing. I excluded properties of the resulting library entity itself, sequencing instrument settings, raw files, and downstream taxonomic outputs because those belong to Entity, Capture, Signal, or Derivative nodes.",
+      "md_schema": [
+        {
+          "field_id": "dna_extraction_method",
+          "descr": "Primary DNA extraction approach applied to the preserved air sample during this laboratory process, recorded as the method actually used to release microbial DNA; examples include bead beating, chemical lysis, or column-based extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "chemical_lysis",
+            "column_based_extraction"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial or in-house extraction kit used for microbial DNA isolation from the preserved air sample, recorded as the kit name at the time of processing; example format: 'Qiagen DNeasy PowerSoil'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Library preparation kit or protocol name used to convert extracted DNA into a sequencing-ready library; record the exact kit or protocol designation used in this process, for example 'Nextera XT'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_dna_ng",
+          "descr": "Amount of extracted DNA in nanograms used as input to library preparation, measured after extraction and before adapter ligation or amplification; typical range 0.1 to 1000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR amplification cycles applied during library preparation, if amplification was performed; measured as the process setting used for library construction. Typical range 0 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Target or observed DNA insert size in base pairs for the prepared library, measured after library construction and before sequencing; typical range 50 to 1000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_quality_indicator",
+          "descr": "Process-level assessment of whether the prepared sequencing library met size, concentration, and purity expectations for sequencing; allowed values failed, borderline, acceptable, good.",
+          "type": "categorical",
+          "allowed_values": [
+            "failed",
+            "borderline",
+            "acceptable",
+            "good"
+          ]
+        }
+      ]
+    },
+    "urban_air_sequencing_library": {
+      "reasoning": "This Entity node should describe the prepared sequencing library as a material object: its identity, composition, and intrinsic readiness for sequencing. I included library identifiers and basic library structure/quality properties because they define what the library is. I excluded the library preparation protocol, extraction reagents, sequencing instrument settings, and raw read properties because those belong to the upstream Process node, the Capture node, or the downstream Signal node. I also avoided any sample_id field to prevent collision with fields already generated elsewhere in the DAG, and instead used a library-specific identifier plus library-intrinsic descriptors only.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the prepared sequencing library derived from the airborne microbial sample, e.g. URB-SEA-2026-0001-LIB. Use a stable string identifier that is distinct from sample and file identifiers.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library construction class represented by this Entity, describing whether the preparation is compatible with shotgun sequencing, amplicon sequencing, or another library architecture; record the actual library class produced here.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun",
+            "amplicon",
+            "metagenomic"
+          ]
+        },
+        {
+          "field_id": "adapter_index_sequence",
+          "descr": "Index or barcode sequence incorporated into the prepared library for sample multiplexing, recorded at the library entity stage as a string of nucleotide bases; example: 'ACGTAG'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Observed or target fragment size in base pairs for the prepared sequencing library, measured after cleanup and before sequencing; typical range 50 to 1000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the prepared library in nanograms per microliter measured after library construction and normalization, before loading onto the sequencer; typical range 0.01 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_ready",
+          "descr": "Boolean indicator of whether the library passed the final entity-level readiness check for sequencing loading, based on concentration, fragment size, and purity expectations.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "shotgun_sequencing_capture": {
+      "reasoning": "This Capture node should capture the sequencing session and instrument configuration used to read the prepared library. I included instrument identity, run settings, and configured output mode because these are actively controlled capture parameters. I excluded sample/library intrinsic properties, raw FASTQ file properties, and downstream analysis outputs because those belong to Entity, Signal, or Derivative nodes. I also avoided file-path or file-format fields since the Capture node describes the measurement session, not the artefact produced by it. No already_generated fields were provided for this node, so there were no direct naming conflicts to resolve.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture session, recorded as the hardware vendor responsible for the system; example: Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Sequencing instrument model used to perform the capture session, recorded as the exact platform model; example: NovaSeq 6000. Capture this at the time of the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number or unique hardware identifier of the sequencing instrument used for the capture session, recorded from the instrument label or system settings; example format: NSQ-123456.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_id",
+          "descr": "Unique sequencing-run identifier assigned to this capture session, used to link the instrument session to generated raw reads; example format: RUN-2026-04-18-01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for the sequencing session, measured as the planned output length per read; typical values include 75, 100, 150, or 250.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_mode",
+          "descr": "Configured sequencing output mode for this capture session, describing whether the run was single-end or paired-end; record the mode set on the instrument before sequencing began.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell or cartridge type loaded for the sequencing session, recorded as the instrument consumable actually used during capture; example: S4 flow cell.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pmol",
+          "descr": "Library loading concentration in picomoles used for the sequencing capture, measured at run setup when the library was loaded onto the instrument; typical range 0.1 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_completion_status",
+          "descr": "Final status of the sequencing session after completion, indicating whether the capture finished as intended; allowed values completed, aborted, partial, failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "completed",
+            "aborted",
+            "partial",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "This Signal node should describe only the raw FASTQ artefact itself, using file and read-level technical properties. I retained file format, read count, base count, file size, average quality, and storage location because these characterize the raw output as a data object. I removed read_length_bp because it already exists elsewhere in the DAG and would collide with previously generated metadata. I also excluded instrument settings, sample identity, preprocessing settings, and downstream analysis fields because those belong to Capture, Entity, Process, or Derivative nodes, not the raw signal artefact.",
+      "md_schema": [
+        {
+          "field_id": "fastq_file_format",
+          "descr": "Technical file format of the raw sequencing output, recorded for the Signal artefact itself; for this node it should normally be FASTQ, possibly compressed. Example values: FASTQ, FASTQ.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "FASTQ",
+            "FASTQ_GZ"
+          ]
+        },
+        {
+          "field_id": "raw_read_count",
+          "descr": "Total number of reads present in the raw FASTQ signal file, counted after instrument base-calling and before any filtering or trimming; typical range 1e4 to 1e9.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_base_count_bp",
+          "descr": "Total number of sequenced bases in the raw FASTQ file, summed across all reads before preprocessing; typical range 1e6 to 1e11.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "On-disk size of the raw FASTQ file in bytes, measured for the stored Signal artefact; use the exact file size from the data repository or file system.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "average_phred_quality_score",
+          "descr": "Average base-call quality score across the raw FASTQ reads, computed from the file content as a technical quality summary for the raw Signal; typical range 0 to 40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_storage_location",
+          "descr": "Filesystem path, object-store URI, or repository location where the raw FASTQ file is stored, e.g. '/data/runs/RUN-2026-04-18-01/sample.fastq.gz' or 's3://bucket/path/'.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_filtering_process": {
+      "reasoning": "This Process node should describe the computational filtering and trimming workflow applied to raw reads, including the software used, key algorithmic settings, and process-level quality changes. I included trimming/filtering parameters and a post-process quality indicator because they describe how the transformation was performed and how successful it was. I excluded raw read file properties, capture settings, sample identity, and downstream taxonomic results because those belong to Signal, Capture, Entity, or Derivative nodes. Because read_length_bp was previously generated elsewhere in the DAG, I avoided reusing that field and used process-specific input/output length and quality fields instead.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software used for read filtering and trimming, recorded as the computational tool actually executed for this process; example: fastp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the read-filtering software used in this process, recorded at the time the workflow was run; example: 0.23.4.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "repository_url",
+          "descr": "Repository or source location for the software used in this process, such as a GitHub URL, package registry reference, or container source if applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Boolean indicator of whether sequencing adapters were trimmed from reads during this process step, based on the selected preprocessing configuration.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Phred score threshold used to trim low-quality bases from reads during preprocessing, measured as the cutoff applied by the filtering software; typical range 0 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_post_trim_length_bp",
+          "descr": "Minimum read length in base pairs required for a read to be retained after filtering and trimming, measured as the process retention threshold; typical range 20 to 500.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contaminant_removal_reference",
+          "descr": "Reference sequence database or contaminant list used to identify and remove non-target reads during filtering, if contaminant filtering was enabled; example: phiX or host genome reference name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_retention_fraction",
+          "descr": "Fraction of raw reads retained after filtering and trimming, computed as retained reads divided by input raw reads for this process; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_filtering_quality_indicator",
+          "descr": "Overall assessment of the filtered read set after preprocessing, reflecting whether trimming and contaminant removal produced usable reads for downstream taxonomic assignment; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    },
+    "filtered_reads": {
+      "reasoning": "This Signal node should describe the filtered-read artefact itself, focusing on post-processing file characteristics and technical quality. I kept the fields limited to artefact-level descriptors such as format, counts, sizes, and composition/quality summaries. I excluded software settings, contaminant references, and all upstream capture or process parameters because those belong to the read_filtering_process node. I also removed any storage-location field because it collides with a field already generated elsewhere in the DAG, and avoided read_length_bp because it was previously generated in another step. The remaining fields are unique to the filtered Signal object and do not duplicate earlier metadata.",
+      "md_schema": [
+        {
+          "field_id": "filtered_fastq_file_format",
+          "descr": "File format of the filtered sequencing read artefact, recorded for the post-filtering Signal output; typically FASTQ or FASTQ_GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "FASTQ",
+            "FASTQ_GZ"
+          ]
+        },
+        {
+          "field_id": "filtered_read_count",
+          "descr": "Total number of reads remaining in the filtered read file after trimming and contaminant removal; measured on the post-processing Signal artefact. Typical range 1e3 to 1e9.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_base_count_bp",
+          "descr": "Total number of bases retained across all reads after filtering and trimming, measured from the filtered Signal artefact; typical range 1e5 to 1e11.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_file_size_bytes",
+          "descr": "On-disk size in bytes of the filtered read file, measured from the stored post-processing Signal artefact in the repository or filesystem.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_filtering_mean_phred_quality_score",
+          "descr": "Average Phred quality score across the filtered reads, computed from the filtered Signal artefact as a technical quality summary; typical range 0 to 40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_filtering_gc_content_fraction",
+          "descr": "Fraction of bases in the filtered reads that are G or C, computed from the filtered Signal artefact to summarize sequence composition; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomic_assignment_process": {
+      "reasoning": "This Process node should describe the bioinformatic classification step: the software used, database/reference configuration, assignment thresholds, and a process-level assignment quality summary. I included only computational parameters and output quality relevant to how taxonomic assignment was performed. I excluded sample identity, filtered-read file properties, and the resulting taxonomic profile table itself because those belong to Entity/Signal or the downstream Derivative node. I also avoided any data_storage_location field because that field has already been generated elsewhere in the DAG and would collide semantically across steps.",
+      "md_schema": [
+        {
+          "field_id": "taxonomy_classifier_name",
+          "descr": "Name of the taxonomic classification software used in this process, recorded as the exact tool executed to map filtered reads to taxa; example: Kraken2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_classifier_version",
+          "descr": "Version of the taxonomic assignment software used at run time, recorded for reproducibility; example: 2.1.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_reference_database_name",
+          "descr": "Name of the taxonomic reference database used for classification, recorded as the database actually queried during assignment; example: GTDB or SILVA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_reference_database_version",
+          "descr": "Version or release identifier of the taxonomic reference database used in this process, recorded at the time of analysis; example: 'r207' or '2024-01'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_threshold",
+          "descr": "Minimum classification confidence threshold applied when assigning reads to microbial taxa, measured as the cutoff used by the classifier; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_supporting_reads",
+          "descr": "Minimum number of read assignments required for a taxon to be retained by this process, measured as the process-level abundance support threshold; typical range 1 to 1000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classification_method",
+          "descr": "Classification strategy used by the taxonomic assignment workflow, recorded as the algorithmic mode selected for the process; allowed values exact_match, probabilistic, kmer_based.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_match",
+            "probabilistic",
+            "kmer_based"
+          ]
+        },
+        {
+          "field_id": "assigned_read_fraction",
+          "descr": "Fraction of filtered reads that received a taxonomic assignment during this process, computed as assigned reads divided by total input filtered reads; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assignment_quality_indicator",
+          "descr": "Overall assessment of the taxonomic assignment run, reflecting whether the classification results were sufficient for downstream community profiling; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profile": {
+      "reasoning": "This Derivative node should describe the computed abundance table itself: the algorithmic output, its dimensions, how abundances are represented, and quality summaries of the derived profile. I included fields that characterize the table as a result object, such as profile identifier, matrix dimensions, abundance unit, normalization, and summary diversity metrics. I excluded classifier software, database versions, and assignment thresholds because those belong to the upstream taxonomic_assignment_process. I also excluded sample identity, raw/filtered read properties, and downstream association results because those belong to Entity, Signal, or later Derivative nodes. No already_generated field collisions were introduced, and I avoided repeating any file-storage field because that has already been used earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "profile_id",
+          "descr": "Unique identifier for the computed taxonomic abundance profile, e.g. TAXPROF-2026-04-18-01. Use a stable string identifier distinct from sample, library, and file IDs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_table_format",
+          "descr": "Tabular representation used for the derived taxonomic profile, recorded as the output table format for this derivative result; example values: TSV, CSV, parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "TSV",
+            "CSV",
+            "parquet"
+          ]
+        },
+        {
+          "field_id": "number_of_taxa",
+          "descr": "Number of microbial taxa represented as rows or features in the derived abundance table, counted in the final taxonomic profile; typical range 1 to 100000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of samples represented as columns or linked observations in the derived taxonomic profile, counted at the time this result was generated; typical range 1 to 10000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_unit",
+          "descr": "Unit or scale used to represent taxon abundance in the derived profile, recorded for the result table itself; allowed values counts, relative_abundance, percentages.",
+          "type": "categorical",
+          "allowed_values": [
+            "counts",
+            "relative_abundance",
+            "percentages"
+          ]
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization or scaling approach applied to convert taxon assignments into the final abundance profile, recorded as the derivation method used for the output table; examples include none, total_sum_scaling, centered_log_ratio.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "total_sum_scaling",
+            "centered_log_ratio"
+          ]
+        },
+        {
+          "field_id": "profile_sparsity_fraction",
+          "descr": "Fraction of cells in the derived abundance matrix that are zero or absent, computed from the final taxonomic table as a scientific quality descriptor; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_diversity_summary",
+          "descr": "Summary diversity statistic for the derived profile, such as observed richness or Shannon index, computed from the final taxonomic table to provide a compact scientific descriptor; record the primary summary metric used in this dataset.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "geo_location_record": {
+      "reasoning": "This Entity node should describe the site-location record itself: the geographic identity and intrinsic spatial context of the sampling point. I included fields for coordinates, place hierarchy, and coarse site descriptors because these are properties of the location record rather than the sampling process. I excluded weather, air quality, pollution, and surrounding-environment variables because those belong to the separate sampling_context_capture/site_context_metadata branch, not the location entity. I also avoided any sample_id or collection_id field to prevent collisions with fields already generated elsewhere in the DAG and because this node is specifically about the location record, not the sample material.",
+      "md_schema": [
+        {
+          "field_id": "location_record_id",
+          "descr": "Unique identifier for the geographic location record corresponding to a sampling point, e.g. LOC-CHI-001. Use a stable string identifier that links this Entity to the site-level coordinates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_site_name",
+          "descr": "Local name or label of the urban sampling site associated with this location record, recorded as the site designation used in the study; example: 'Downtown rooftop'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "latitude_decimal_degrees",
+          "descr": "Latitude of the sampling location in decimal degrees, recorded for the site location record; typical range -90 to 90 and should match the actual collection point.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longitude_decimal_degrees",
+          "descr": "Longitude of the sampling location in decimal degrees, recorded for the site location record; typical range -180 to 180 and should match the actual collection point.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coordinate_precision_meters",
+          "descr": "Approximate spatial precision of the recorded coordinates in meters, reflecting the resolution of the location record; typical range 1 to 10000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "city_name",
+          "descr": "City or municipality containing the sampling site, recorded as the administrative area associated with the location record; example: 'London'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "country_name",
+          "descr": "Country where the sampling site is located, recorded as the national-level geographic context for the location record; example: 'United States'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "site_environment_type",
+          "descr": "Coarse urban setting at the sampling location, recorded as the inherent site context of the location record; allowed values roadside, residential, industrial, commercial, park-adjacent, mixed_urban.",
+          "type": "categorical",
+          "allowed_values": [
+            "roadside",
+            "residential",
+            "industrial",
+            "commercial",
+            "park-adjacent",
+            "mixed_urban"
+          ]
+        }
+      ]
+    },
+    "sampling_context_capture": {
+      "reasoning": "This Capture node should describe the field metadata recording session and the observed environmental context captured at the sampling event. I included actively recorded context variables such as time of day, weather, air quality, pollution level, and proximity to nearby land-use features because these are measurements/observations made during the capture session. I excluded sample identity, location-entity fields already owned by geo_location_record, and any downstream signal, process, or derivative outputs. I also avoided repeating geographic coordinates by using context-specific fields only where the capture session records them as part of the observation bundle, while keeping the main coordinate identity with the location Entity node to prevent duplication.",
+      "md_schema": [
+        {
+          "field_id": "context_record_id",
+          "descr": "Unique identifier for the field context capture session corresponding to a sampling event, e.g. CTX-2026-04-18-CHI-01. Use a stable string identifier linking the context record to the sample and site.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "observation_datetime",
+          "descr": "Date and local time when environmental context was recorded at the sampling site, captured during the same field visit as sample collection; format example 2026-04-18T08:35:00-05:00.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_of_day",
+          "descr": "Observed time-of-day category at the moment of sampling context capture, recorded from the field observation session; allowed values dawn, morning, midday, afternoon, evening, night.",
+          "type": "categorical",
+          "allowed_values": [
+            "dawn",
+            "morning",
+            "midday",
+            "afternoon",
+            "evening",
+            "night"
+          ]
+        },
+        {
+          "field_id": "weather_condition",
+          "descr": "Weather condition observed at the sampling site during context capture, recorded as the dominant local condition at the time of collection; allowed values clear, cloudy, rainy, snowy, foggy, windy, mixed.",
+          "type": "categorical",
+          "allowed_values": [
+            "clear",
+            "cloudy",
+            "rainy",
+            "snowy",
+            "foggy",
+            "windy",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "temperature_celsius",
+          "descr": "Ambient air temperature in degrees Celsius measured or observed at the sampling site during context capture; typical range -30 to 50.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_humidity_percent",
+          "descr": "Ambient relative humidity percentage measured at the sampling site during context capture; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "air_quality_index",
+          "descr": "Air Quality Index value recorded at the sampling site during context capture, using the local or standardized AQI scale in effect at that city; typical range 0 to 500.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pollution_level",
+          "descr": "Coarse pollution level observed or reported for the sampling location during context capture, summarizing local exposure conditions; allowed values low, moderate, high, very_high.",
+          "type": "categorical",
+          "allowed_values": [
+            "low",
+            "moderate",
+            "high",
+            "very_high"
+          ]
+        },
+        {
+          "field_id": "proximity_to_industrial_area_m",
+          "descr": "Approximate distance in meters from the sampling point to the nearest industrial area, recorded as part of the observed field context; typical range 0 to 100000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "proximity_to_green_space_m",
+          "descr": "Approximate distance in meters from the sampling point to the nearest green space, recorded as part of the observed field context; typical range 0 to 100000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "urban_exposure_notes",
+          "descr": "Free-text field for notable contextual observations at the sampling site that affect airborne exposure, such as traffic, construction, smoke events, or unusual local conditions recorded during capture.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "site_context_metadata": {
+      "reasoning": "This Signal node should describe the stored context metadata artefact itself, not the field-observation act or the underlying sample. I included file/record format, record size, number of attributes, and basic completeness/validation metrics because those characterize the structured metadata signal. I excluded the actual scientific context values such as latitude, longitude, weather, AQI, and pollution because those were already captured by the upstream sampling_context_capture and geo_location_record nodes and would duplicate territory. I also avoided any process, capture, or derivative analysis fields since this node is purely a structured metadata record.",
+      "md_schema": [
+        {
+          "field_id": "metadata_record_format",
+          "descr": "Serialization format of the structured site-context metadata artefact, recorded for the Signal output; allowed values JSON, CSV, TSV, or YAML.",
+          "type": "categorical",
+          "allowed_values": [
+            "JSON",
+            "CSV",
+            "TSV",
+            "YAML"
+          ]
+        },
+        {
+          "field_id": "metadata_record_size_bytes",
+          "descr": "On-disk size in bytes of the site-context metadata record, measured for the stored Signal artefact in the repository or filesystem.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_count",
+          "descr": "Number of individual context fields contained in the site-context metadata record, counted from the stored structured artefact; typical range 1 to 100.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_completeness_fraction",
+          "descr": "Fraction of expected context fields present and non-missing in the structured metadata record, computed from the stored Signal artefact; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_validation_passed",
+          "descr": "Boolean indicator of whether the structured metadata record passed schema validation and type checks at creation or export time.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_quality_indicator",
+          "descr": "Overall technical quality assessment of the structured site-context metadata record, reflecting whether the record is complete and machine-readable for downstream integration; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    },
+    "community_environment_join": {
+      "reasoning": "This Process node should describe the computational integration step that joins microbial abundance profiles with site-level environmental metadata. I included software and workflow configuration fields plus join-key and merge-completeness metrics because those define how the integration was performed and how successful it was. I excluded the raw taxonomic profile contents, the site-context record contents, and the final association statistics because those belong to upstream Signal/Derivative nodes or the downstream analysis result. I also avoided any file-storage field because that has already been used elsewhere in the DAG and would not be part of the process semantics.",
+      "md_schema": [
+        {
+          "field_id": "join_software_name",
+          "descr": "Name of the software or analytical environment used to join microbial abundance profiles with site-level metadata, recorded as the actual tool executed for this process; example: R.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_software_version",
+          "descr": "Version of the software or analytical environment used for the join step, recorded at run time; example: 4.3.2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_repository_url",
+          "descr": "Repository, package source, or container location for the join software used in this process, if applicable; example: a GitHub URL or package registry reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_key_field_name",
+          "descr": "Name of the field used to link abundance profiles to site-level metadata during the join process, such as sample identifier or site identifier; record the actual merge key used in the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "merge_strategy",
+          "descr": "Join strategy used to combine microbial profiles and environmental metadata, recorded as the algorithmic merge mode chosen for this process; allowed values inner_join, left_join, right_join, full_join.",
+          "type": "categorical",
+          "allowed_values": [
+            "inner_join",
+            "left_join",
+            "right_join",
+            "full_join"
+          ]
+        },
+        {
+          "field_id": "matched_record_fraction",
+          "descr": "Fraction of abundance-profile records that successfully matched to a site-context record during the join step, computed as matched records divided by total input records; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unmatched_record_count",
+          "descr": "Count of records from the input profiles or metadata that could not be matched during the join process, reported as a process-level integration metric; typical range 0 to 1000000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_quality_indicator",
+          "descr": "Overall assessment of the join step, reflecting whether microbial and environmental records were linked correctly for downstream association analysis; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    },
+    "association_results": {
+      "reasoning": "This Derivative node should describe the statistical result object produced by the association analysis, not the joined inputs or the computation workflow. I included fields that characterize the result table and its scientific output: analysis type, tested variables, effect-size summaries, significance metrics, multiple-testing correction, and a result-quality indicator. I excluded software, join parameters, raw taxonomic abundances, and site-context values because those belong to upstream Process or Signal nodes. I also avoided any file-storage field because storage metadata was already used elsewhere in the DAG and the result node should focus on computed statistical outputs.",
+      "md_schema": [
+        {
+          "field_id": "analysis_result_id",
+          "descr": "Unique identifier for the association-analysis result object, e.g. ASSOC-2026-04-18-01. Use a stable string identifier distinct from sample, profile, and site IDs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_type",
+          "descr": "Statistical analysis class used to evaluate relationships between microbial composition and urban exposure variables, recorded for the derivative result; examples include correlation, regression, or multivariate association.",
+          "type": "categorical",
+          "allowed_values": [
+            "correlation",
+            "regression",
+            "multivariate_association"
+          ]
+        },
+        {
+          "field_id": "response_variable_name",
+          "descr": "Name of the microbial community feature or summary metric analyzed as the response in the association result, such as taxon abundance, Shannon diversity, or principal coordinate axis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predictor_variable_name",
+          "descr": "Name of the urban exposure variable tested against microbial composition in the association result, such as air_quality_index, pollution_level, or proximity_to_industrial_area_m.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size",
+          "descr": "Estimated strength and direction of the association for the tested pair, recorded using the model's effect-size scale; typical range depends on model but often -10 to 10 or 0 to 1 for standardized metrics.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "Nominal p-value for the association test between microbial composition and the selected urban variable, computed by the statistical model; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adjusted_p_value",
+          "descr": "Multiple-testing-adjusted p-value for the association result, computed using the correction method specified in the analysis; typical range 0.0 to 1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction",
+          "descr": "Correction method used to adjust p-values across multiple association tests, recorded as the statistical method applied to this result set; allowed values none, bonferroni, fdr_bh, fdr_by.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "bonferroni",
+            "fdr_bh",
+            "fdr_by"
+          ]
+        },
+        {
+          "field_id": "significance_indicator",
+          "descr": "Boolean indicator of whether the association passed the study's significance criterion after correction, recorded for the final result object.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_quality_indicator",
+          "descr": "Overall scientific quality assessment of the association-analysis output, reflecting whether the result set is interpretable and sufficiently powered for downstream reporting; allowed values poor, acceptable, good, excellent.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "acceptable",
+            "good",
+            "excellent"
+          ]
+        }
+      ]
+    }
+  }
+}

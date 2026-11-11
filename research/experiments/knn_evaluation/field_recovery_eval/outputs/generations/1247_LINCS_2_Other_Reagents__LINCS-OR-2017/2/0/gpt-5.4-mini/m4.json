@@ -1,0 +1,607 @@
+{
+  "md_name": "Histological Staining Morphology Workflow",
+  "md_description": "This DAG represents a histology workflow on tissue samples using chemical stains such as hematoxylin and eosin. It captures tissue preparation, stain application with documented formulation and batch details, microscopy-based image acquisition, and downstream computational analysis to assess tissue morphology and pathology for disease diagnosis and study.",
+  "fields_per_node": {
+    "tissue_sample": {
+      "reasoning": "For the tissue_sample Entity node, I included only intrinsic specimen identity, origin, and biological context fields that describe what the tissue is, not what was done to it. Because this is the root biological sample in the DAG, I captured specimen identifiers, tissue source, anatomical origin, collection context, and baseline preservation/origin details needed to understand the sample before preparation. I excluded fixation, sectioning, staining, microscopy, file/image, and computational-analysis fields because those belong to downstream Process, Capture, Signal, or Derivative nodes. I also avoided duplicating any fields likely to appear on later nodes, and I kept sample identifiers at this root Entity level as required.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique tissue specimen identifier for the biological sample entering the histology workflow; use a stable string such as TS-0001 or LAB12345. Recorded once at the root sample entity and used to link all downstream preparation, staining, imaging, and analysis records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "specimen_type",
+          "descr": "General biological specimen class of the collected material at the time of receipt, used to distinguish the material entering histological processing. Examples include biopsy, resection, autopsy tissue, or surgical margin specimen.",
+          "type": "categorical",
+          "allowed_values": [
+            "biopsy",
+            "resection",
+            "autopsy_tissue",
+            "surgical_margin",
+            "other"
+          ]
+        },
+        {
+          "field_id": "tissue_anatomical_site",
+          "descr": "Anatomical source of the tissue specimen as collected, such as breast, liver, colon, lung, kidney, skin, or brain. Record the organ or region before any preparation or sectioning.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tissue_disease_context",
+          "descr": "Clinical or research context motivating collection of the tissue specimen, describing the suspected or confirmed pathology associated with the sample. Examples include inflammation, carcinoma, benign lesion, fibrosis, or normal control.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the tissue specimen was collected from the subject or source, recorded at the moment of excision or retrieval before downstream processing. Use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_organism",
+          "descr": "Organism from which the tissue was obtained, describing the biological source of the specimen prior to preparation. Commonly human or a model organism such as mouse, rat, or zebrafish.",
+          "type": "categorical",
+          "allowed_values": [
+            "human",
+            "mouse",
+            "rat",
+            "zebrafish",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preservation_state_at_receipt",
+          "descr": "Condition of the tissue specimen when it entered the workflow, before any fixation or sectioning. Indicates whether the tissue was fresh, frozen, or already preserved by another method.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "frozen",
+            "preserved",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "collection_site",
+          "descr": "Site or institution where the tissue was obtained, such as operating room, pathology suite, biobank, or research collection site. Record the origin location of the specimen rather than the processing laboratory.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "tissue_preparation": {
+      "reasoning": "For the tissue_preparation Process node, I included only preparation protocol parameters that describe how the tissue was fixed and sectioned into a microscope-ready specimen. That includes fixation chemistry and timing, sectioning thickness, embedding medium, and any operator-documented deviations that affect the preparation procedure. I also included the preparer/instrument-side agent details only where relevant to the operation itself. I excluded intrinsic tissue properties because those belong to the upstream tissue_sample entity, and I excluded stain, microscopy, image, and analysis fields because those belong to downstream nodes. I also avoided repeating sample identifiers or any fields already defined for the root entity.",
+      "md_schema": [
+        {
+          "field_id": "fixative_type",
+          "descr": "Chemical fixative used during tissue preparation before sectioning, recorded at the start of the preparation process. Examples include formalin or paraformaldehyde; document the actual fixative used for this specimen.",
+          "type": "categorical",
+          "allowed_values": [
+            "formalin",
+            "paraformaldehyde",
+            "glutaraldehyde",
+            "other"
+          ]
+        },
+        {
+          "field_id": "fixation_duration_hours",
+          "descr": "Total duration of fixation applied to the tissue specimen during preparation, measured in hours from immersion or perfusion start to fixation completion. Typical values depend on specimen size and protocol, often from 1 to 48 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "section_thickness_micrometers",
+          "descr": "Thickness of each tissue section produced during microtomy, measured in micrometers after sectioning and before staining. Typical histology sections are often 2 to 10 micrometers thick.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "embedding_medium",
+          "descr": "Embedding medium used to support the tissue during sectioning, recorded as part of the preparation protocol before microscopic examination. Examples include paraffin or frozen embedding media.",
+          "type": "categorical",
+          "allowed_values": [
+            "paraffin",
+            "cryoembedding_medium",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preparation_modifications",
+          "descr": "Free-text description of any deviations, substitutions, or protocol modifications applied during fixation or sectioning for this specimen, such as altered fixation time, alternative embedding medium, or special trimming steps.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "section_preparation_quality",
+          "descr": "Operator-assessed quality of the prepared section immediately after fixation and sectioning, before staining. Use this to indicate whether the section was suitable for downstream staining and imaging.",
+          "type": "categorical",
+          "allowed_values": [
+            "acceptable",
+            "suboptimal",
+            "unsuitable"
+          ]
+        }
+      ]
+    },
+    "prepared_tissue_section": {
+      "reasoning": "For the prepared_tissue_section Entity node, I included intrinsic properties of the prepared section itself: its physical format, section dimensions, and readiness/state after preparation but before staining. I treated this as the transition product of tissue_preparation, so I described what the section is rather than how it was made or what stain will be applied. I excluded fixation and microtomy protocol details because those belong to the upstream process, and I excluded stain application, imaging, file, and computational fields because those belong to downstream nodes. I also avoided repeating the sample identifier and any preparation-process fields already generated.",
+      "md_schema": [
+        {
+          "field_id": "section_id",
+          "descr": "Unique identifier for the prepared tissue section derived from the root specimen; use a stable string such as TS-0001-S1 or similar section-level label. Recorded once for the section entity so it can be linked to subsequent staining and imaging steps.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "section_material_state",
+          "descr": "Physical state of the prepared section immediately after sectioning and before staining, describing whether it is mounted, unmounted, paraffin-embedded on a slide, or frozen section material.",
+          "type": "categorical",
+          "allowed_values": [
+            "mounted_on_slide",
+            "unmounted",
+            "paraffin_section",
+            "frozen_section",
+            "other"
+          ]
+        },
+        {
+          "field_id": "section_integrity",
+          "descr": "Observed structural integrity of the prepared section before staining, indicating whether the section is intact, partially folded, torn, or fragmented. Record the condition as assessed at the point the section is made ready for staining.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "folded",
+            "torn",
+            "fragmented",
+            "other"
+          ]
+        },
+        {
+          "field_id": "section_ready_for_staining",
+          "descr": "Boolean flag indicating whether the prepared tissue section was judged ready to proceed to chemical staining at the end of tissue preparation. Record true only if the section passed basic handling checks before staining.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "section_storage_condition",
+          "descr": "Short-term storage condition of the prepared tissue section before staining, recorded after preparation and before transfer to the staining step. Examples include ambient, refrigerated, or desiccated storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "ambient",
+            "refrigerated",
+            "desiccated",
+            "other"
+          ]
+        },
+        {
+          "field_id": "slide_label",
+          "descr": "Label printed or written on the microscope slide carrying the prepared tissue section, if applicable. Use the section label as it appears on the physical slide, such as TS-0001-S1-A.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "he_staining": {
+      "reasoning": "For the he_staining Process node, I included only process-level metadata describing how the staining was performed: stain formulation identity, manufacturer, lot/batch details, application sequence or protocol parameters, incubation/differentiation times, and documented deviations from the standard H&E procedure. Because the user explicitly wants formulation, manufacturer, and batch details, these are core fields here. I excluded tissue properties, microscope settings, raw image/file descriptors, and downstream analysis outputs because they belong to upstream Entity nodes or downstream Capture/Signal/Derivative nodes. I also avoided repeating section identity fields already generated for the prepared tissue section and kept the schema focused on the staining operation itself, including software/hardware only if they directly constitute the operation agent (not applicable here beyond process metadata).",
+      "md_schema": [
+        {
+          "field_id": "hematoxylin_formulation",
+          "descr": "Identity of the hematoxylin reagent formulation used for staining this section, recorded at the start of the H&E process. Examples include Harris, Mayer, Gill, or other named formulations.",
+          "type": "categorical",
+          "allowed_values": [
+            "harris",
+            "mayer",
+            "gill",
+            "other"
+          ]
+        },
+        {
+          "field_id": "eosin_formulation",
+          "descr": "Identity of the eosin reagent formulation used for staining this section, recorded at the start of the H&E process. Examples include eosin Y or other specified eosin preparations.",
+          "type": "categorical",
+          "allowed_values": [
+            "eosin_y",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reagent_manufacturer",
+          "descr": "Manufacturer or vendor supplying the staining reagents used in the H&E process, recorded for traceability at the time of staining. Use the supplier name as provided on the reagent label or datasheet.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reagent_batch_number",
+          "descr": "Lot or batch number printed on the hematoxylin/eosin reagent container used for this staining run. Record the exact batch identifier to support reproducibility and troubleshooting.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "staining_protocol_name",
+          "descr": "Name or identifier of the staining protocol used for this section, recorded during the H&E operation. Examples include standard H&E, modified H&E, or a lab-specific protocol code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hematoxylin_application_duration_minutes",
+          "descr": "Duration of hematoxylin application to the tissue section during the staining process, measured in minutes from reagent contact to rinse or transition to the next step. Typical values are often 1 to 10 minutes depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eosin_application_duration_minutes",
+          "descr": "Duration of eosin application to the tissue section during the staining process, measured in minutes from reagent contact to rinse or dehydration. Typical values are often less than 1 to 5 minutes depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "staining_temperature_celsius",
+          "descr": "Temperature at which staining was performed or incubated when the protocol explicitly controls it, measured in degrees Celsius during the H&E process. Typical values are room temperature to mild heating, roughly 18 to 60 Celsius depending on method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "staining_modifications",
+          "descr": "Free-text description of any documented deviations, substitutions, or customizations to the H&E protocol, such as altered staining times, additional differentiation steps, or reagent substitutions.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stain_quality_assessment",
+          "descr": "Operator-assessed quality of the completed H&E staining before microscopy, indicating whether nuclear and cytoplasmic contrast were adequate for imaging and interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "excellent",
+            "acceptable",
+            "suboptimal",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "stained_tissue_section": {
+      "reasoning": "For the stained_tissue_section Entity node, I included only intrinsic properties of the stained section after H&E has been applied: stain identity, staining appearance, completeness, and whether the section is suitable for microscopy. This node represents the physical specimen after the process, so the fields describe what the section is, not the staining protocol itself. I excluded reagent formulation, manufacturer, batch, timing, and modifications because those belong to the he_staining process, and I excluded microscopy, file, and computational descriptors because those belong to downstream capture, signal, and derivative nodes. I also avoided repeating section identifiers already generated for the prepared tissue section.",
+      "md_schema": [
+        {
+          "field_id": "stained_section_id",
+          "descr": "Unique identifier for the stained tissue section derived from the prepared section identifier; use a stable string such as TS-0001-S1-H&E. Recorded once at the stained section entity level to link it to microscopy and downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stain_type",
+          "descr": "Chemical stain applied to the tissue section, recorded as the intrinsic stain identity carried by the physical specimen after processing. For this workflow, the expected stain is H&E.",
+          "type": "categorical",
+          "allowed_values": [
+            "hematoxylin_and_eosin",
+            "other"
+          ]
+        },
+        {
+          "field_id": "staining_uniformity",
+          "descr": "Observed uniformity of staining across the tissue section after H&E processing, assessed before microscopy. Use this to capture whether staining is even, patchy, or over/under-stained across the specimen.",
+          "type": "categorical",
+          "allowed_values": [
+            "uniform",
+            "patchy",
+            "overstained",
+            "understained",
+            "other"
+          ]
+        },
+        {
+          "field_id": "color_contrast_quality",
+          "descr": "Qualitative assessment of histological contrast produced by staining, reflecting how well nuclei, cytoplasm, and background are visually distinguished in the physical section before imaging.",
+          "type": "categorical",
+          "allowed_values": [
+            "excellent",
+            "good",
+            "fair",
+            "poor"
+          ]
+        },
+        {
+          "field_id": "stained_section_integrity",
+          "descr": "Physical integrity of the stained section after staining and drying, describing whether the specimen remains intact or shows folds, tears, or detachment before microscopy.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "folded",
+            "torn",
+            "detached",
+            "other"
+          ]
+        },
+        {
+          "field_id": "microscopy_ready",
+          "descr": "Boolean flag indicating whether the stained section is ready for immediate microscopic examination after staining, based on physical handling and staining success.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "brightfield_microscopy": {
+      "reasoning": "For the brightfield_microscopy Capture node, I included only session- and instrument-configuration metadata: microscope make/model/serial, objective and illumination settings, camera settings, magnification, calibration, and the acquisition mode used to produce the raw histology image. This is the correct territory for the measurement session and configured hardware. I excluded tissue/stain properties because those belong to upstream entity/process nodes, and I excluded file path, image dimensions, and file format because those belong to the downstream histology_image Signal node. I also avoided downstream analysis settings and outputs, keeping the schema focused on how the microscope was configured to capture the raw image.",
+      "md_schema": [
+        {
+          "field_id": "microscope_manufacturer",
+          "descr": "Manufacturer of the brightfield microscope used for acquisition, recorded for instrument traceability at the time of image capture. Examples include Leica, Olympus, Nikon, or Zeiss.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_model",
+          "descr": "Model name or number of the brightfield microscope used to image the stained tissue section. Record the exact model designation shown on the instrument label or system information screen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_serial_number",
+          "descr": "Serial number of the brightfield microscope used for acquisition, recorded to uniquely identify the instrument configuration used for this capture session. Use the exact manufacturer-assigned serial string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Magnification of the objective lens used during brightfield imaging, measured as the configured objective power at the time of capture. Typical values include 4x, 10x, 20x, 40x, or 60x.",
+          "type": "categorical",
+          "allowed_values": [
+            "4x",
+            "10x",
+            "20x",
+            "40x",
+            "60x",
+            "other"
+          ]
+        },
+        {
+          "field_id": "total_magnification",
+          "descr": "Total optical magnification used for acquisition, combining objective and any additional projection factors. Record the effective magnification applied at the moment the raw histology image was captured.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "illumination_mode",
+          "descr": "Illumination configuration used during capture of the stained section, recorded as the microscope light path and contrast mode active at acquisition. For this workflow the expected mode is brightfield.",
+          "type": "categorical",
+          "allowed_values": [
+            "brightfield",
+            "other"
+          ]
+        },
+        {
+          "field_id": "exposure_time_milliseconds",
+          "descr": "Camera exposure time used during acquisition of the raw histology image, measured in milliseconds at the moment of capture. Typical values depend on staining intensity and sensor sensitivity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "camera_gain",
+          "descr": "Electronic camera gain setting used during brightfield capture, recorded as the sensor amplification applied at acquisition. Typical values are instrument-specific and should match the configured imaging session.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pixel_size_micrometers",
+          "descr": "Effective pixel size at the specimen plane for the captured image, measured in micrometers per pixel after optical configuration and calibration. This is recorded for the image acquisition session and is needed to interpret scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_mode",
+          "descr": "Microscopy acquisition mode used for the capture session, indicating whether the image was taken as a single frame, tiled scan, focus stack, or whole-slide acquisition. Record the mode active when the raw image was produced.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_frame",
+            "tiled_scan",
+            "focus_stack",
+            "whole_slide",
+            "other"
+          ]
+        }
+      ]
+    },
+    "histology_image": {
+      "reasoning": "For the histology_image Signal node, I included only raw data artefact properties: file format, file size, pixel dimensions, bit depth, channel count, compression, storage location, and basic technical quality indicators. These fields describe the digital image itself, not how it was captured or interpreted. I excluded microscope settings and calibration because those belong to the brightfield_microscopy capture node, and I excluded tissue/stain/protocol details because those belong upstream. I also avoided downstream image processing or analysis fields, keeping the schema focused on the raw image file produced by microscopy.",
+      "md_schema": [
+        {
+          "field_id": "file_name",
+          "descr": "Name of the raw histology image file as stored in the data repository, recorded for file-level traceability at the point the signal is created. Use the exact filename such as slide_001.ndpi or sampleA.tif.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital format of the raw histology image file produced by microscopy, recorded as the native storage or export format of the signal. Common examples include tif, svs, ndpi, czi, or ome_tiff.",
+          "type": "categorical",
+          "allowed_values": [
+            "tif",
+            "tiff",
+            "svs",
+            "ndpi",
+            "czi",
+            "ome_tiff",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw histology image file in bytes at the time of storage or handoff, used as a basic technical descriptor of the signal. Typical sizes may range from megabytes to many gigabytes for whole-slide images.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Horizontal pixel dimension of the raw histology image, measured in pixels in the stored file. Record the dimension of the image as produced by microscopy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Vertical pixel dimension of the raw histology image, measured in pixels in the stored file. Record the dimension of the image as produced by microscopy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bit_depth",
+          "descr": "Bit depth of the raw image channels, indicating the numeric precision stored per pixel in the histology image file. Common values include 8, 12, or 16 bits per channel.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channel_count",
+          "descr": "Number of image channels present in the stored raw histology image, recorded as the technical channel count in the file. Brightfield histology images are often single-channel or RGB with three channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_type",
+          "descr": "Compression method applied to the image file, if any, at storage or export time. Examples include none, JPEG, JPEG2000, or LZW.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "jpeg",
+            "jpeg2000",
+            "lzw",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Path or URI where the raw histology image is stored in the repository or filesystem, recorded as the file location for retrieval. Example formats include s3://bucket/path/file.tif or /data/slide_001.svs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_quality_flag",
+          "descr": "Technical quality flag for the raw image file, indicating whether the signal is complete and readable at the file level. Use this to capture file corruption, truncation, or acquisition failure visible in the stored image artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "image_processing": {
+      "reasoning": "For the image_processing Process node, I included only computation-level parameters that describe how the raw histology image was transformed: algorithm name, software implementation, version, repository, preprocessing operations, key settings, and output quality indicators. This node owns the processing logic and method settings, so I kept it focused on the transformation performed on the input image. I excluded microscope acquisition settings, tissue/stain metadata, and raw file descriptors because those belong to upstream Capture, Entity/Process, and Signal nodes. I also avoided analysis-result fields because those belong to the downstream morphology_analysis derivative.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software used to process the histology image, recorded at the point the processing step is executed. Examples include QuPath, ImageJ/Fiji, CellProfiler, or a lab-specific pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the image-processing software used for the transformation of the raw histology image, recorded to support reproducibility. Use the exact release string such as 0.4.3 or 2.1.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Source repository or distribution reference for the image-processing software or pipeline, recorded so the computational workflow can be reproduced. Examples include a Git URL, package registry name, or container reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_algorithm",
+          "descr": "Primary algorithm or pipeline used to transform the raw histology image during processing, such as color deconvolution, contrast enhancement, normalization, or feature extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "contrast_enhancement",
+            "color_deconvolution",
+            "normalization",
+            "feature_extraction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "processing_parameters",
+          "descr": "Free-text or structured summary of key parameter values used by the image-processing algorithm, recorded at the time of processing. Examples include threshold values, kernel sizes, stain matrix choices, or normalization references.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_image_reference",
+          "descr": "Identifier or filename of the raw histology image used as input to the processing step, recorded for traceability from the signal to the derivative workflow. Use the exact file or dataset reference such as slide_001.svs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_output_quality",
+          "descr": "Quality assessment of the processed image or feature set immediately after processing, indicating whether the result is suitable for downstream pathology analysis. Use this at the end of the processing step.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "morphology_analysis": {
+      "reasoning": "For the morphology_analysis Derivative node, I included only computed-result metadata: the analysis method, model/algorithm identifier, key analysis parameters, output dimensions or feature counts, and result quality/interpretation confidence. This node represents the derived scientific output, so the fields describe what was computed from the processed image, not the image itself or the software/capture settings used upstream. I excluded tissue, stain, microscopy, raw file, and image-processing implementation details because those belong to upstream nodes. I also avoided duplicating any identifiers already generated for sample, section, image, or processing nodes, and I kept the fields focused on the morphology/pathology summary needed for downstream interpretation.",
+      "md_schema": [
+        {
+          "field_id": "analysis_method",
+          "descr": "Name of the computational method used to generate the morphology analysis result from the processed histology image. Examples include rule-based scoring, classical image analysis, machine learning classifier, or deep learning segmentation.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_scoring",
+            "classical_image_analysis",
+            "machine_learning_classifier",
+            "deep_learning_segmentation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_model_name",
+          "descr": "Name or identifier of the analysis model, pipeline, or scoring system used to produce the derived morphology result. Use the exact model or pipeline label as configured in the analysis workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_model_version",
+          "descr": "Version or release identifier of the analysis model or pipeline used to generate the derivative result, recorded for reproducibility. Use the exact version string such as 1.0.2 or 2024-05.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_parameters",
+          "descr": "Summary of key parameters used in the morphology analysis, recorded at the time the derivative was computed. Examples include threshold values, class labels, patch size, or model cutoff settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_feature_count",
+          "descr": "Number of features, measurements, or regions summarized in the morphology analysis output, measured at the point the derivative is created. Typical values depend on the analysis type and may range from a few to thousands.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_resolution_micrometers",
+          "descr": "Spatial resolution at which the derived morphology result is reported, measured in micrometers per unit or per pixel depending on the analysis output. Record this when the derivative is spatially referenced to the tissue image.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pathology_score",
+          "descr": "Numeric or ordinal score summarizing the pathology-relevant morphology result produced by the analysis, recorded as the primary interpreted output of the derivative. Use the scale defined by the analysis workflow, such as 0 to 1, 0 to 100, or a small ordinal range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_confidence",
+          "descr": "Confidence or quality estimate assigned to the computed morphology result, recorded when the analysis pipeline provides a reliability score. Typical values are normalized probabilities or percentage-like scores.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}
