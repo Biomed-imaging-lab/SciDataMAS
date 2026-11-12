@@ -27,6 +27,15 @@ It is a research prototype, currently in **user testing**. It is not a productio
 
 > Built on ideas from the SciDataMAS line of work: provenance-based data-lake organization, single-call and DAG-augmented metadata generation, and debate-driven completeness estimation ([Biomed-imaging-lab/SciDataMAS](https://github.com/Biomed-imaging-lab/SciDataMAS)).
 
+> **Provenance.** This directory is a source snapshot of the standalone
+> SciDataMAS plugin repository, included in the umbrella repository so that a
+> single clone (and a single QR code) reaches both the research code and the
+> runnable plugin. The upstream repository is
+> [AS2/scidatamas_dsh](https://github.com/AS2/scidatamas_dsh); it may be
+> private until the public release. Once it is public, prefer it for stars,
+> issues and the latest changes — this snapshot remains the public, runnable
+> copy. Snapshot commit and date: [UPSTREAM.md](UPSTREAM.md).
+
 ## Why
 
 Scientific datasets are usually stored as files with a short README. The metadata that makes them reusable — sample preparation, acquisition parameters, units, derived artifacts, licensing — is missing, inconsistent, or impossible to add retroactively. SciDataMAS makes the metadata schema a first-class object and keeps every change auditable:

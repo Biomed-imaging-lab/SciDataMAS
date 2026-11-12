@@ -27,6 +27,12 @@ SciDataMAS 能把一个 DSH 会话变成一个小巧、可审计的科学数据�
 
 > 基于 SciDataMAS 系列工作的思想构建：基于溯源的数据湖组织、单次调用与 DAG 增强的元数据生成，以及辩论驱动的完整性评估（[Biomed-imaging-lab/SciDataMAS](https://github.com/Biomed-imaging-lab/SciDataMAS)）。
 
+> **来源说明。** 本目录是独立 SciDataMAS 插件仓库的源码快照，放入总仓库是为了让
+> 一次 clone（和一个二维码）同时获得论文代码与可运行插件。上游仓库为
+> [AS2/scidatamas_dsh](https://github.com/AS2/scidatamas_dsh)，在正式公开发布前
+> 可能仍为私有。上游公开后，请优先在那里 star、提 issue 和获取最新改动；本快照
+> 仍是公开可运行的副本。快照提交与日期见 [UPSTREAM.md](UPSTREAM.md)。
+
 ## 动机
 
 科学数据集通常以文件形式保存，外加一份简短的 README。而让它们可被复用的那一层元数据——样品制备、采集参数、单位、衍生产物、许可条款——往往缺失、前后不一致，或者无法事后补齐。SciDataMAS 把元数据模式作为一等对象，并让每一次变更都可审计：
