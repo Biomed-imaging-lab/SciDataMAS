@@ -1,0 +1,918 @@
+{
+  "md_name": "breast_cancer_radiotherapy_registry_workflow",
+  "md_description": "Clinical registry workflow for breast cancer radiotherapy patients, capturing baseline patient characteristics, radiotherapy plan parameters, session-level deviations, acute side effects, and downstream outcomes. The workflow produces structured registry tables, a comparative effectiveness summary, and a dataset metadata table for analysis and reporting.",
+  "fields_per_node": {
+    "breast_cancer_patient_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort-level identity and origin fields for the enrolled breast cancer patient cohort. I excluded treatment, protocol, session, file, and analysis variables because those belong to downstream Process/Signal/Derivative nodes. I also avoided repeating any identifiers that are typically generated at the root entity and would conflict with already_generated if present; since no already_generated list was provided here, I kept the schema to core cohort descriptors only: cohort identifier, disease context, eligibility window, source/setting, and enrollment size. These fields support understanding what the cohort is without duplicating baseline patient attributes, treatment plan details, or session outcomes.",
+      "md_schema": [
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique registry identifier for this enrolled breast cancer cohort; use a stable string such as 'BCRT-COHORT-001' to reference the cohort across the workflow. This is assigned at the entity level when the cohort is defined.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "disease_site",
+          "descr": "Primary cancer site represented by the cohort at the time of registry enrollment. For this workflow it should indicate breast cancer and may optionally encode laterality or histology only if that is part of cohort definition, not per-patient clinical detail.",
+          "type": "categorical",
+          "allowed_values": [
+            "breast_cancer"
+          ]
+        },
+        {
+          "field_id": "cohort_definition",
+          "descr": "Short textual description of how the cohort was defined for inclusion in the registry, such as diagnosis context, registry scope, and any major inclusion boundaries. Record this when the cohort is first assembled from source clinical records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrollment_start_date",
+          "descr": "Date when the first eligible breast cancer patient was included in this registry cohort. Use ISO 8601 date format (YYYY-MM-DD). Measured at cohort creation from registry accrual records.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrollment_end_date",
+          "descr": "Date when cohort enrollment closed or when the last patient was added to this cohort, in ISO 8601 format (YYYY-MM-DD). Measured at cohort finalization.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrollment_count",
+          "descr": "Total number of enrolled breast cancer patients in the cohort at the time the registry snapshot is defined. Typical range is a non-negative integer; record the count once cohort assembly is complete.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_source_setting",
+          "descr": "Clinical context or site type from which the cohort was enrolled, such as a single hospital, multi-center registry, or oncology network. Record this as an entity-level origin descriptor, not a treatment or measurement setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_center",
+            "multi_center",
+            "network_registry"
+          ]
+        }
+      ]
+    },
+    "source_clinical_records": {
+      "reasoning": "This is an Entity node describing the source material from which registry data are abstracted, so I included fields for the origin, scope, and document characteristics of the clinical records themselves. I excluded patient demographics, treatment parameters, session events, and analysis outputs because those belong to downstream entity/process/signal/derivative nodes, not the source records. Since no already_generated list was provided in this turn, I avoided repeating cohort identifiers from the patient cohort node and kept the schema focused on document provenance, record type, coverage, and access context needed to interpret the abstraction source.",
+      "md_schema": [
+        {
+          "field_id": "record_source_id",
+          "descr": "Unique identifier for the clinical records source set used to abstract registry data, for example 'CR-2024-BRCA-01'. This identifies the record bundle or chart collection at the entity level.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_type",
+          "descr": "Primary type of source clinical documentation included in the abstraction set, such as chart notes, treatment prescriptions, radiotherapy planning documents, or discharge summaries. Record the dominant document category represented in this source set.",
+          "type": "categorical",
+          "allowed_values": [
+            "chart_notes",
+            "treatment_documents",
+            "radiotherapy_planning_documents",
+            "mixed_clinical_records"
+          ]
+        },
+        {
+          "field_id": "source_care_setting",
+          "descr": "Clinical setting where the source records originated, such as outpatient oncology clinic, inpatient record archive, or radiotherapy department record system. This describes the origin of the records, not the treatment delivery context.",
+          "type": "categorical",
+          "allowed_values": [
+            "outpatient_oncology_clinic",
+            "inpatient_archive",
+            "radiotherapy_department",
+            "mixed_setting"
+          ]
+        },
+        {
+          "field_id": "record_coverage_start_date",
+          "descr": "Earliest date covered by the source clinical records used for abstraction, in ISO 8601 format (YYYY-MM-DD). Measured from the document date range at source record assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_coverage_end_date",
+          "descr": "Latest date covered by the source clinical records used for abstraction, in ISO 8601 format (YYYY-MM-DD). Measured from the document date range at source record assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_document_count",
+          "descr": "Total number of individual source documents or chart entries available for abstraction from this record set. Use a non-negative integer counted at source collection time.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_access_mode",
+          "descr": "How the source clinical records were accessed for registry abstraction, for example via EHR read-only access, paper chart review, or exported document bundle. This describes provenance and access context only.",
+          "type": "categorical",
+          "allowed_values": [
+            "ehr_read_only",
+            "paper_chart_review",
+            "exported_document_bundle",
+            "mixed_access"
+          ]
+        }
+      ]
+    },
+    "baseline_registry_entry": {
+      "reasoning": "This is a Process node, so I included only fields describing how baseline clinical abstraction was performed: the abstraction method, who performed it, the rules used to standardize the data, and a quality indicator for the entry process. I excluded the actual baseline patient variables (age, genetic markers, prior treatments) because those belong to the downstream Signal node patient_baseline_table, not the process. I also avoided source-record provenance details because those are owned by the source_clinical_records Entity, and I did not repeat any cohort identifiers. The agent is clinical data manager, so the schema also reflects operator/reviewer roles appropriate to this process.",
+      "md_schema": [
+        {
+          "field_id": "abstraction_method",
+          "descr": "Method used to extract baseline information from source clinical records into registry format, such as manual review, semi-automated abstraction, or full manual transcription. Record at the time the baseline registry entry process is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_review",
+            "semi_automated_abstraction",
+            "manual_transcription"
+          ]
+        },
+        {
+          "field_id": "abstraction_guideline_version",
+          "descr": "Version label of the abstraction rule set or data dictionary used to standardize baseline fields such as age, genetic markers, and previous treatment history. Record the exact version applied during this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstractor_role",
+          "descr": "Role of the person or team performing the baseline registry entry, typically the clinical data manager responsible for abstraction. Capture this at the time of registry entry creation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_review_performed",
+          "descr": "Indicates whether a secondary quality review or verification step was completed after baseline abstraction. Record as true when review occurred and false when no formal review was done.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "entry_completion_status",
+          "descr": "Status of the baseline registry entry process at the time of recording, indicating whether abstraction of the baseline fields is complete or still in progress. Use this to describe the process outcome, not patient data completeness.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "in_progress",
+            "needs_review"
+          ]
+        }
+      ]
+    },
+    "patient_baseline_table": {
+      "reasoning": "This is a Signal node, so I included only technical and structural properties of the raw registry table produced by baseline_registry_entry: file/table format, row and column counts, size, storage location, and table-level quality flags. I excluded the actual baseline clinical variables because those are the scientific content of the table, not the signal's technical properties. I also avoided repeating process details like abstraction method or guideline version, since those belong to baseline_registry_entry, and I did not include cohort identifiers because those are already owned by the Entity node.",
+      "md_schema": [
+        {
+          "field_id": "table_format",
+          "descr": "File or table serialization format of the patient baseline table as stored in the registry output, such as CSV, TSV, parquet, or SQL table export. Record the technical format of the raw data artefact after baseline abstraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "sql_table_export"
+          ]
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient-level rows in the baseline table at the time of export or snapshot creation. Count each enrolled patient once in the raw table representation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or variables present in the baseline table at the time of export. Record this as a technical measure of table structure, not as a list of variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the baseline table file in bytes at the time it was saved or exported. Measure this for the raw digital artefact used in the workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Logical path, database reference, or repository location where the baseline table is stored, for example a file path or database table name. Record the storage location of the technical artefact, not the source clinical records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_integrity_check_passed",
+          "descr": "Indicates whether basic technical integrity checks on the baseline table passed at the time of creation, such as schema validation or row count consistency checks. Use true when checks passed and false when they failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "baseline_snapshot_date",
+          "descr": "Date when this baseline table snapshot was generated or exported from the registry workflow, in ISO 8601 format (YYYY-MM-DD). This marks the technical creation point of the signal.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "radiotherapy_plan_docs": {
+      "reasoning": "This is an Entity node describing the source prescription documents themselves, so I included document-level identity, prescription scope, and origin descriptors for the radiotherapy plan documents. I excluded process parameters from plan_structuring, and I did not include the actual structured dose/duration values as output variables because those belong in the downstream radiotherapy_plan_table Signal. I also avoided patient baseline details and session delivery information, since those are outside the semantic territory of the document source entity. No already_generated list was provided here, so I focused on document provenance and prescription coverage only.",
+      "md_schema": [
+        {
+          "field_id": "plan_document_id",
+          "descr": "Unique identifier for the radiotherapy prescription document set, such as a chart document number or plan bundle ID (for example 'RT-PLAN-0001'). This identifies the source prescription material at the entity level.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prescription_document_type",
+          "descr": "Type of source document used for radiotherapy planning, such as physician prescription, radiotherapy order, or treatment intent note. Record the primary document form containing the plan.",
+          "type": "categorical",
+          "allowed_values": [
+            "physician_prescription",
+            "radiotherapy_order",
+            "treatment_intent_note",
+            "mixed_prescription_documents"
+          ]
+        },
+        {
+          "field_id": "radiation_modality_source",
+          "descr": "Radiation modality stated in the source prescription documents, such as photon, electron, or mixed modality. This describes what the documents prescribe, not what was actually delivered.",
+          "type": "categorical",
+          "allowed_values": [
+            "photon",
+            "electron",
+            "mixed_modality",
+            "other"
+          ]
+        },
+        {
+          "field_id": "prescription_coverage_start_date",
+          "descr": "Earliest date covered by the radiotherapy plan documents in the source set, in ISO 8601 format (YYYY-MM-DD). This is measured from the document date range at source assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prescription_coverage_end_date",
+          "descr": "Latest date covered by the radiotherapy plan documents in the source set, in ISO 8601 format (YYYY-MM-DD). This is measured from the document date range at source assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_department",
+          "descr": "Clinical department or service responsible for issuing the radiotherapy plan documents, such as radiation oncology or multidisciplinary tumor board. This captures the provenance of the prescription documents.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiation_oncology",
+            "multidisciplinary_tumor_board",
+            "surgical_oncology",
+            "mixed_department"
+          ]
+        },
+        {
+          "field_id": "document_count",
+          "descr": "Total number of individual prescription documents or plan records included in the source set. Use a non-negative integer counted at the entity level.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "plan_structuring": {
+      "reasoning": "This is a Process node, so I included only how the prescription documents were transformed into the standardized plan table: the structuring method, protocol mapping rules, operator/reviewer role, software used, and a process-level completion/quality indicator. I excluded the resulting dose, radiation type, and treatment duration fields because those belong to the downstream radiotherapy_plan_table Signal, not the process. I also avoided source-document provenance fields because those are owned by the radiotherapy_plan_docs Entity. The process agent is a clinical data manager, so I kept the schema centered on abstraction/structuring workflow details rather than instrument or patient properties.",
+      "md_schema": [
+        {
+          "field_id": "structuring_method",
+          "descr": "Method used to convert prescription documents into a standardized plan table, such as manual data entry, rule-based extraction, or hybrid review. Record this at the time the plan structuring process is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_entry",
+            "rule_based_extraction",
+            "hybrid_review"
+          ]
+        },
+        {
+          "field_id": "protocol_standard_version",
+          "descr": "Version label of the plan standardization rules, variable dictionary, or protocol template applied when comparing prescription fields across patients. Record the exact version used in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_curator_role",
+          "descr": "Role of the person or team performing the plan structuring step, typically the clinical data manager or equivalent registry curator. Capture this process-role descriptor when the structured plan table is created.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_assisted",
+          "descr": "Indicates whether software tools were used to assist with plan structuring, such as spreadsheet automation or text parsing support. Record true when software assistance was used and false when the step was entirely manual.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_check_status",
+          "descr": "Status of the plan structuring process after internal checking, indicating whether the standardized plan table passed review, needs revision, or is complete. Use this to describe the process outcome, not the data itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_revision",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "radiotherapy_plan_table": {
+      "reasoning": "This is a Signal node, so I included only technical properties of the structured plan table produced by plan_structuring: table format, row/column counts, file size, storage location, and technical validity/status checks. I excluded the actual prescription contents (radiation type, total dose, duration) because those are the scientific variables represented by the table, not the raw signal metadata. I also avoided process details like structuring method and protocol standard version because those belong to plan_structuring, and I did not repeat source-document provenance from radiotherapy_plan_docs. No already_generated list was provided in this turn, so I focused on the plan table’s technical artefact characteristics.",
+      "md_schema": [
+        {
+          "field_id": "plan_table_format",
+          "descr": "File or table serialization format of the radiotherapy plan table as stored in the registry output, such as CSV, TSV, parquet, or SQL table export. Record the technical format of the raw data artefact after plan structuring.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "sql_table_export"
+          ]
+        },
+        {
+          "field_id": "plan_row_count",
+          "descr": "Number of prescription-level rows in the radiotherapy plan table at the time of export or snapshot creation. Each row should correspond to one recorded plan entry or patient-level prescription record.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_column_count",
+          "descr": "Number of columns or variables present in the radiotherapy plan table at the time of export. Record this as a technical measure of table structure, not as a list of protocol fields.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_file_size_bytes",
+          "descr": "Size of the radiotherapy plan table file in bytes at the time it was saved or exported. Measure this for the raw digital artefact used in the workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_storage_location",
+          "descr": "Logical path, database reference, or repository location where the radiotherapy plan table is stored, for example a file path or database table name. Record the storage location of the technical artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_table_validation_passed",
+          "descr": "Indicates whether basic technical validation checks on the radiotherapy plan table passed at the time of creation, such as schema validation or record consistency checks. Use true when checks passed and false when they failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_snapshot_date",
+          "descr": "Date when this radiotherapy plan table snapshot was generated or exported from the workflow, in ISO 8601 format (YYYY-MM-DD). This marks the technical creation point of the signal.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treatment_session_logs": {
+      "reasoning": "This is an Entity node representing the source per-session clinical records, so I included fields for session-log provenance, scope, and documentation characteristics. I excluded delivered dose, deviation details, and acute side effects as patient/session observations because those are the substantive content that will be abstracted into the downstream session_registry_table Signal. I also avoided treatment process details and plan-level parameters, since those belong to earlier plan nodes, and I did not repeat cohort identifiers from the root entity. The schema focuses on what the session logs are, where they came from, and how many records they contain.",
+      "md_schema": [
+        {
+          "field_id": "session_log_id",
+          "descr": "Unique identifier for the source treatment session log bundle or record set, such as 'SESSION-LOG-2024-01'. This identifies the entity-level source record collection used for abstraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_document_type",
+          "descr": "Primary type of per-session documentation included in the source logs, such as treatment record, nursing note, machine log, or mixed session record. Record the dominant document category represented in this source set.",
+          "type": "categorical",
+          "allowed_values": [
+            "treatment_record",
+            "nursing_note",
+            "machine_log",
+            "mixed_session_record"
+          ]
+        },
+        {
+          "field_id": "session_log_source",
+          "descr": "Clinical system or department where the session logs originated, such as radiotherapy department records or treatment machine documentation. This describes the provenance of the session records, not the patient treatment itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiotherapy_department",
+            "treatment_machine_log",
+            "electronic_health_record",
+            "mixed_source"
+          ]
+        },
+        {
+          "field_id": "session_coverage_start_date",
+          "descr": "Earliest date covered by the treatment session logs in the source set, in ISO 8601 format (YYYY-MM-DD). This is measured from the document date range at source assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_coverage_end_date",
+          "descr": "Latest date covered by the treatment session logs in the source set, in ISO 8601 format (YYYY-MM-DD). This is measured from the document date range at source assembly.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_document_count",
+          "descr": "Total number of individual session records or log entries included in the source set. Use a non-negative integer counted at the entity level.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_logging_granularity",
+          "descr": "Level of detail recorded in the source logs, such as one row per treatment fraction, one row per visit, or one row per machine event. This describes the record structure of the source logs.",
+          "type": "categorical",
+          "allowed_values": [
+            "per_fraction",
+            "per_visit",
+            "per_machine_event",
+            "mixed_granularity"
+          ]
+        }
+      ]
+    },
+    "session_abstraction": {
+      "reasoning": "I fixed the collision by removing the duplicated field name software_assisted and replacing it with process-specific software provenance fields that do not overlap with already_generated. This remains a Process node schema, so I kept only session abstraction workflow descriptors: method, coding standard version, abstractor role, software name/version, and quality review status. I continued to exclude session outcome content such as dose, deviations, and toxicities because those belong to the downstream session_registry_table Signal, not the process.",
+      "md_schema": [
+        {
+          "field_id": "session_abstraction_method",
+          "descr": "Method used to convert raw treatment session records into standardized registry format, such as manual review, semi-automated abstraction, or manual transcription. Record this at the time the session abstraction process is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_review",
+            "semi_automated_abstraction",
+            "manual_transcription"
+          ]
+        },
+        {
+          "field_id": "session_coding_standard_version",
+          "descr": "Version label of the coding rules, toxicity glossary, or session abstraction dictionary used to standardize session-level fields such as deviations and acute side effects. Record the exact version applied during this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_abstractor_role",
+          "descr": "Role of the person or team performing the session abstraction step, typically the clinical data manager responsible for registry entry. Capture this role descriptor when the standardized session records are created.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software tool used to assist session abstraction, if any, such as an internal registry application or spreadsheet automation tool. Record the specific software name at the time of processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the software tool used for session abstraction, if applicable, recorded as a string such as '1.2.0' or 'R 4.4 script package'. Capture this at the time the process is run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_quality_review_status",
+          "descr": "Status of the session abstraction process after internal checking, indicating whether the standardized session records passed review, need revision, or are complete. Use this to describe the process outcome, not the data itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_revision",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "session_registry_table": {
+      "reasoning": "This is a Signal node, so I included only technical properties of the structured session table produced by session_abstraction: table format, row/column counts, file size, storage location, and validation/quality status. I excluded the clinical contents of the table (delivered dose, deviations, acute toxicities) because those are the scientific variables represented by the signal, not its technical metadata. I also avoided repeating process details from session_abstraction and did not reuse the previously generated field name software_assisted, per the collision warning; instead I kept the schema focused on signal-level artefact characteristics and integrity.",
+      "md_schema": [
+        {
+          "field_id": "session_table_format",
+          "descr": "File or table serialization format of the session registry table as stored in the registry output, such as CSV, TSV, parquet, or SQL table export. Record the technical format of the raw data artefact after session abstraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "sql_table_export"
+          ]
+        },
+        {
+          "field_id": "session_row_count",
+          "descr": "Number of treatment-session-level rows in the session registry table at the time of export or snapshot creation. Each row should correspond to one documented session record.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_column_count",
+          "descr": "Number of columns or variables present in the session registry table at the time of export. Record this as a technical measure of table structure, not as a list of session variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_file_size_bytes",
+          "descr": "Size of the session registry table file in bytes at the time it was saved or exported. Measure this for the raw digital artefact used in the workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_storage_location",
+          "descr": "Logical path, database reference, or repository location where the session registry table is stored, for example a file path or database table name. Record the storage location of the technical artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_table_validation_passed",
+          "descr": "Indicates whether basic technical validation checks on the session registry table passed at the time of creation, such as schema validation or record consistency checks. Use true when checks passed and false when they failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_snapshot_date",
+          "descr": "Date when this session registry table snapshot was generated or exported from the workflow, in ISO 8601 format (YYYY-MM-DD). This marks the technical creation point of the signal.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "registry_harmonization": {
+      "reasoning": "This is a Process node, so I included only the integration workflow details: the harmonization method, key matching/join rules, software environment, and a process-level quality/completeness indicator. I excluded source table technical properties and the merged analysis-ready output itself because those belong to the upstream Signal nodes and downstream analysis_ready_registry Signal, respectively. I also avoided repeating previously generated software_assisted, since that field already triggered a collision warning earlier, and instead used a non-overlapping software-environment field tied to the R/Python agent. The schema is limited to reproducible process metadata needed to understand how the registry tables were combined.",
+      "md_schema": [
+        {
+          "field_id": "harmonization_method",
+          "descr": "Method used to integrate baseline, plan, and session tables into a unified registry, such as key-based joins, manual reconciliation, or scripted merge. Record this at the time registry harmonization is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "key_based_join",
+            "manual_reconciliation",
+            "scripted_merge"
+          ]
+        },
+        {
+          "field_id": "join_key_specification",
+          "descr": "Description of the key fields used to link patient baseline, radiotherapy plan, and session records during harmonization, such as patient_id plus treatment_course_id. Record the actual join logic applied in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_environment",
+          "descr": "Software environment used for harmonization, including the analysis language or platform and version, for example R 4.4 or Python 3.12. Record the computing environment that executed the integration workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_reconciliation_rate",
+          "descr": "Proportion of records successfully matched and reconciled during harmonization, expressed as a decimal between 0 and 1. Measure this after the integration step to summarize linkage success.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "harmonization_quality_status",
+          "descr": "Status of the harmonization process after validation, indicating whether the integrated registry passed checks, needs review, or is complete. Use this to describe the process outcome, not the content of the merged registry.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_review",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "analysis_ready_registry": {
+      "reasoning": "This is a Signal node, so I included only technical properties of the consolidated analysis-ready registry table: format, row and column counts, file size, storage location, and validation/status flags. I excluded the scientific contents of the table—baseline characteristics, plan fields, and session observations—because those are the payload of the signal, not its metadata. I also avoided process details from registry_harmonization and did not repeat any previously generated fields such as software_assisted. The resulting schema describes the merged registry artefact sufficiently for downstream analysis and reuse.",
+      "md_schema": [
+        {
+          "field_id": "registry_table_format",
+          "descr": "File or table serialization format of the analysis-ready registry as stored in the workflow output, such as CSV, TSV, parquet, or SQL table export. Record the technical format of the consolidated registry artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "sql_table_export"
+          ]
+        },
+        {
+          "field_id": "registry_row_count",
+          "descr": "Number of rows in the analysis-ready registry at the time of export or snapshot creation. Count each integrated registry record once in the consolidated table representation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_column_count",
+          "descr": "Number of columns or variables present in the analysis-ready registry at the time of export. Record this as a technical measure of table structure, not as a list of variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_file_size_bytes",
+          "descr": "Size of the analysis-ready registry file in bytes at the time it was saved or exported. Measure this for the consolidated digital artefact used in the workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_storage_location",
+          "descr": "Logical path, database reference, or repository location where the analysis-ready registry is stored, for example a file path or database table name. Record the storage location of the consolidated technical artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_validation_passed",
+          "descr": "Indicates whether the analysis-ready registry passed technical validation checks at the time of creation, such as schema validation, key integrity, or completeness checks. Use true when checks passed and false when they failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_snapshot_date",
+          "descr": "Date when this analysis-ready registry snapshot was generated or exported from the workflow, in ISO 8601 format (YYYY-MM-DD). This marks the technical creation point of the signal.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protocol_grouping": {
+      "reasoning": "This is a Process node, so I included only how patients were grouped for comparative analysis: the grouping method, protocol and demographic stratification rules, a non-overlapping execution environment field, and a process-level quality indicator. I excluded the grouped output because that belongs to the downstream stratified_protocol_table Derivative. I also fixed the collision flagged by the user by avoiding the already-generated field name software_environment and replacing it with a more specific, non-redundant compute runtime descriptor for this step. The schema remains focused on reproducible grouping logic and stratification criteria.",
+      "md_schema": [
+        {
+          "field_id": "grouping_method",
+          "descr": "Method used to assign patients to radiotherapy protocol and demographic groups, such as rule-based categorization or scripted clustering. Record this at the time protocol grouping is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_categorization",
+            "scripted_clustering",
+            "manual_curation"
+          ]
+        },
+        {
+          "field_id": "protocol_grouping_criteria",
+          "descr": "Description of the radiotherapy protocol attributes used to define groups, such as radiation modality, total dose band, or planned treatment duration band. Record the exact criteria used for grouping in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demographic_stratification_criteria",
+          "descr": "Description of the demographic variables used for stratification, such as age band, genetic marker status, or other predefined subgroup dimensions. Record the exact stratification logic applied during grouping.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compute_runtime",
+          "descr": "Analysis runtime used to execute the protocol grouping workflow, for example a specific R or Python version plus key package context if applicable. Record the runtime environment that performed the grouping computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "grouping_quality_status",
+          "descr": "Status of the protocol grouping process after validation, indicating whether the grouped patient set passed checks, needs review, or is complete. Use this to describe the process outcome, not the derived table itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_review",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "stratified_protocol_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the stratified table: the derivation method, grouping dimensions, key binning/aggregation parameters, output dimensions, and a result-level completeness/quality indicator. I excluded upstream registry content and process workflow details because those belong to analysis_ready_registry and protocol_grouping, respectively. I also avoided the previously colliding field software_environment and used derivative-specific technical fields instead. The schema is limited to what a downstream user needs to understand how the derived protocol-stratified table was produced and structured.",
+      "md_schema": [
+        {
+          "field_id": "stratification_algorithm",
+          "descr": "Algorithm or rule set used to derive the stratified protocol table from the analysis-ready registry, such as deterministic grouping or scripted aggregation. Record the computation used to create the derivative table.",
+          "type": "categorical",
+          "allowed_values": [
+            "deterministic_grouping",
+            "scripted_aggregation",
+            "rule_based_binning"
+          ]
+        },
+        {
+          "field_id": "stratification_dimensions",
+          "descr": "Dimensions used to organize the derived table, such as radiotherapy protocol, dosage characteristics, and demographic group. Record the set of grouping axes represented in the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dose_binning_rule",
+          "descr": "Rule used to bin or summarize dose-related variables in the stratified table, for example exact dose, dose bands, or quantile bins. Record the binning logic applied to dosage characteristics in this derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_row_count",
+          "descr": "Number of rows in the stratified protocol table after derivation. Count each grouped record or summary row once in the final derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_column_count",
+          "descr": "Number of columns or summary variables present in the stratified protocol table after derivation. Record this as a technical measure of the derivative's structure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "stratified_table_quality_status",
+          "descr": "Quality indicator for the derived stratified protocol table, showing whether the derivative passed validation, needs review, or is complete. Use this to summarize the scientific/technical reliability of the computed output.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_review",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "outcome_aggregation": {
+      "reasoning": "This is a Process node, so I included only the computation workflow for outcome summaries: the aggregation method, outcome definitions, subgroup linkage logic, software environment for computation, and a process-level quality/completeness flag. I excluded the derived recurrence and recovery results themselves because those belong on the downstream effectiveness_summary Derivative. I also avoided upstream registry and stratified table properties, and I did not repeat previously generated fields such as software_environment due to collision constraints. The schema is limited to reproducible computation metadata that explains how outcome summaries were produced.",
+      "md_schema": [
+        {
+          "field_id": "outcome_aggregation_method",
+          "descr": "Method used to compute recurrence and recovery summaries from the analysis-ready registry, such as summary statistics, grouped counting, or scripted model-free aggregation. Record the method used at the time outcomes are aggregated.",
+          "type": "categorical",
+          "allowed_values": [
+            "summary_statistics",
+            "grouped_counting",
+            "scripted_aggregation"
+          ]
+        },
+        {
+          "field_id": "recurrence_definition",
+          "descr": "Operational definition used to identify disease recurrence in the aggregation step, such as clinical recurrence, radiographic recurrence, or registry-defined recurrence. Record the exact criterion applied when summarizing outcomes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "recovery_definition",
+          "descr": "Operational definition used to identify patient recovery in the aggregation step, such as documented clinical recovery, functional improvement, or registry-defined recovery status. Record the exact criterion applied when summarizing outcomes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subgroup_linkage_rule",
+          "descr": "Rule used to link outcome summaries to treatment protocols and patient subgroups, such as protocol ID plus demographic stratum or protocol band plus age group. Record the grouping logic used in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_aggregation_quality_status",
+          "descr": "Status of the outcome aggregation process after validation, indicating whether the computed summaries passed checks, need review, or are complete. Use this to describe the process outcome, not the final derivative values.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_review",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "effectiveness_summary": {
+      "reasoning": "This is a Derivative node, so I kept only computed-result metadata for the effectiveness summary and removed the colliding generic output size fields. Because output_row_count and output_column_count were already used elsewhere in the DAG, I replaced them with node-specific names that preserve the same meaning without collision. I also avoided upstream outcome aggregation process details and focused on the derivation method, effect metrics, subgrouping structure, and quality status needed to interpret the final summary table.",
+      "md_schema": [
+        {
+          "field_id": "effectiveness_metric_type",
+          "descr": "Primary metric family used to quantify protocol effectiveness in the derived summary, such as recurrence rate, recovery rate, or comparative effectiveness measure. Record the metric type used in the analysis table.",
+          "type": "categorical",
+          "allowed_values": [
+            "recurrence_rate",
+            "recovery_rate",
+            "comparative_effectiveness"
+          ]
+        },
+        {
+          "field_id": "effectiveness_summary_method",
+          "descr": "Method used to derive the summary table from aggregated outcomes, such as descriptive summary or grouped comparative analysis. Record the computation approach applied to produce the derivative table.",
+          "type": "categorical",
+          "allowed_values": [
+            "descriptive_summary",
+            "grouped_comparison",
+            "scripted_summary"
+          ]
+        },
+        {
+          "field_id": "demographic_grouping_dimensions",
+          "descr": "Demographic dimensions represented in the effectiveness summary, such as age group, genetic marker status, or other predefined subgroup factors. Record the grouping axes used to stratify the derived analysis table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effectiveness_summary_row_count",
+          "descr": "Number of rows in the effectiveness summary table after derivation. Count each summary row or subgroup-protocol combination once in the final output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effectiveness_summary_column_count",
+          "descr": "Number of columns or summary variables present in the effectiveness summary table after derivation. Record this as a technical measure of the derivative's structure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effectiveness_summary_quality_status",
+          "descr": "Quality indicator for the derived effectiveness summary table, showing whether the result passed validation, needs review, or is complete. Use this to summarize the technical reliability of the computed output.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_review",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "metadata_compilation": {
+      "reasoning": "This is a Process node, so I included only the compilation workflow for the dataset metadata table: the compilation method, source documentation scope, descriptor standard/version, compiler role, and a process-level completion/quality flag. I excluded registry content, outcome values, and file-level properties because those belong to upstream Signal/Derivative nodes or the downstream metadata_table Signal. I also avoided the previously colliding output_row_count and output_column_count field names, and I did not reuse software_assisted or software_environment due to earlier collisions. The schema focuses on how the metadata dictionary was assembled from registry and outcome summaries.",
+      "md_schema": [
+        {
+          "field_id": "metadata_compilation_method",
+          "descr": "Method used to compile dataset field definitions and analysis descriptors from the registry and outcome summaries, such as manual authoring, template-driven compilation, or scripted extraction. Record this at the time the metadata table is produced.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_authoring",
+            "template_driven_compilation",
+            "scripted_extraction"
+          ]
+        },
+        {
+          "field_id": "metadata_source_scope",
+          "descr": "Scope of source content used to compile the metadata table, such as registry variables, outcome summaries, or both. Record which workflow outputs were referenced when building the dataset metadata definitions.",
+          "type": "categorical",
+          "allowed_values": [
+            "registry_only",
+            "outcome_summaries_only",
+            "registry_and_outcomes"
+          ]
+        },
+        {
+          "field_id": "descriptor_standard_version",
+          "descr": "Version label of the metadata dictionary, annotation guidelines, or descriptor standard applied during compilation. Record the exact version used to define field names and analysis descriptors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_compiler_role",
+          "descr": "Role of the person or team responsible for compiling the dataset metadata table, typically the registry analyst or data manager overseeing documentation. Capture this role at the time the metadata compilation process is completed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_compilation_quality_status",
+          "descr": "Status of the metadata compilation process after review, indicating whether the compiled definitions passed checks, need revision, or are complete. Use this to describe the process outcome, not the metadata table contents.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "needs_revision",
+            "complete"
+          ]
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "This is a Signal node, so I included only technical properties of the metadata table as a digital artefact: its format, row/column counts, file size, storage location, and validation/status flags. I excluded the actual field definitions and analysis descriptors because those are the scientific content of the metadata table, not its technical metadata. I also avoided repeating process details from metadata_compilation and did not reuse any previously colliding field names such as output_row_count, output_column_count, software_assisted, or software_environment. The schema focuses on the reusable, machine-readable characteristics of the metadata table itself.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_format",
+          "descr": "File or table serialization format of the dataset metadata table as stored in the workflow output, such as CSV, TSV, parquet, or SQL table export. Record the technical format of the metadata artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "sql_table_export"
+          ]
+        },
+        {
+          "field_id": "metadata_table_row_count",
+          "descr": "Number of rows in the metadata table at the time of export or snapshot creation. Count each metadata entry once in the table representation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_column_count",
+          "descr": "Number of columns or variables present in the metadata table at the time of export. Record this as a technical measure of table structure, not as a list of metadata attributes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_file_size_bytes",
+          "descr": "Size of the metadata table file in bytes at the time it was saved or exported. Measure this for the digital artefact used in the workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_storage_location",
+          "descr": "Logical path, database reference, or repository location where the metadata table is stored, for example a file path or database table name. Record the storage location of the technical artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_validation_passed",
+          "descr": "Indicates whether technical validation checks on the metadata table passed at the time of creation, such as schema validation or row count consistency checks. Use true when checks passed and false when they failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_snapshot_date",
+          "descr": "Date when this metadata table snapshot was generated or exported from the workflow, in ISO 8601 format (YYYY-MM-DD). This marks the technical creation point of the signal.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

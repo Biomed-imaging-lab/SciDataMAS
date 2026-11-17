@@ -1,0 +1,991 @@
+{
+  "md_name": "Prostate Cancer Radiotherapy Registry Workflow",
+  "md_description": "This workflow models a clinical registry for prostate cancer patients receiving radiotherapy, starting from the patient cohort and source clinical records, then capturing demographics, comorbidities, treatment plans, session attendance, adverse reactions, and follow-up outcomes. The raw registry extracts are harmonized into an analysis-ready dataset that supports evaluation of radiotherapy protocol effects on survival and quality-of-life outcomes.",
+  "fields_per_node": {
+    "prostate_cancer_patient_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort-level identifiers and properties that define who is in the registry: cohort identity, disease/population scope, treatment context, enrollment timing, and cohort size. I excluded any fields about captured demographics, treatment plans, session events, outcomes, file artifacts, or analysis outputs because those belong to downstream Capture/Signal/Derivative nodes. I also avoided repeating any identifier fields that would typically be generated at the root only if already present elsewhere in the DAG; since no prior generated fields were provided, I limited the schema to non-overlapping cohort descriptors rather than patient-level variables.",
+      "md_schema": [
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique string identifier for this enrolled cohort in the registry, used to reference the patient population record; format example: PCCOHORT_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "disease_site",
+          "descr": "Primary cancer site defining the cohort at enrollment; this registry is focused on prostate cancer patients.",
+          "type": "categorical",
+          "allowed_values": [
+            "prostate_cancer"
+          ]
+        },
+        {
+          "field_id": "treatment_context",
+          "descr": "Clinical treatment context required for membership in this cohort; patients are enrolled if they are receiving radiotherapy for prostate cancer.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiotherapy_for_prostate_cancer"
+          ]
+        },
+        {
+          "field_id": "registry_inclusion_basis",
+          "descr": "High-level basis used to include patients in this cohort, describing the population definition rather than an analytic variable; measured at cohort assembly from source records.",
+          "type": "categorical",
+          "allowed_values": [
+            "confirmed_prostate_cancer_diagnosis",
+            "receiving_radiotherapy",
+            "followed_in_registry"
+          ]
+        },
+        {
+          "field_id": "enrollment_start_date",
+          "descr": "Date when the first eligible patient was enrolled into this cohort in the registry; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrollment_end_date",
+          "descr": "Date when cohort enrollment closed or the current extraction ended; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cohort_size",
+          "descr": "Total number of patients included in this cohort at the time of registry extraction; integer count of unique enrolled patients.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_design",
+          "descr": "How long and under what general registry logic the cohort is followed after radiotherapy initiation; describes cohort-level follow-up structure, not individual outcomes.",
+          "type": "categorical",
+          "allowed_values": [
+            "routine_clinical_follow_up",
+            "fixed_interval_follow_up",
+            "event_based_follow_up"
+          ]
+        }
+      ]
+    },
+    "clinical_source_records": {
+      "reasoning": "This is an Entity node representing the source record corpus itself, so I included fields that describe the provenance, scope, and identity of the underlying clinical records, not the patient demographics, treatment plans, events, or outcomes contained within them. I avoided duplicating downstream Capture/Signal territory such as abstraction settings, file formats, extract sizes, or harmonization details. Since no already_generated fields were provided for this turn, I still kept the schema focused on record-level characteristics like record system, record type, source institution, and date coverage, which help users understand and trace the origin of the registry inputs.",
+      "md_schema": [
+        {
+          "field_id": "source_record_id",
+          "descr": "Unique string identifier for the source-record collection used by this workflow; format example: SRCREC_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_system_name",
+          "descr": "Name of the hospital, oncology, or electronic record system where the source clinical records originate; measured at source inventory time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_record_type",
+          "descr": "Primary type of clinical documentation represented in this source corpus, such as oncology notes, treatment planning records, encounter notes, or follow-up visit records; categorical values should reflect the dominant record class.",
+          "type": "categorical",
+          "allowed_values": [
+            "hospital_ehr",
+            "oncology_information_system",
+            "radiotherapy_planning_system",
+            "mixed_clinical_record_set"
+          ]
+        },
+        {
+          "field_id": "source_institution_name",
+          "descr": "Name of the hospital, cancer center, or clinical institution that produced the source records; recorded from the originating institution metadata.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_coverage_start_date",
+          "descr": "Earliest clinical record date available in this source corpus for the cohort; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_coverage_end_date",
+          "descr": "Latest clinical record date available in this source corpus for the cohort; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_language",
+          "descr": "Primary language used in the source records, relevant for abstraction and harmonization; categorical value recorded from the document corpus.",
+          "type": "categorical",
+          "allowed_values": [
+            "english",
+            "spanish",
+            "french",
+            "german",
+            "other"
+          ]
+        },
+        {
+          "field_id": "record_access_mode",
+          "descr": "How the clinical source records were accessed for registry use, describing the record provenance pathway rather than the extraction method; examples include direct system access or scanned document review.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_ehr_access",
+            "document_review",
+            "database_export",
+            "hybrid_access"
+          ]
+        }
+      ]
+    },
+    "registry_abstraction_capture": {
+      "reasoning": "This is a Capture node, so I included only the abstraction session and instrument/configuration details that describe how the registry abstraction was performed: who/what system carried it out, the abstraction method, coding standards, abstraction window, and quality control. I excluded the actual demographic and comorbidity values because those belong on the downstream Signal node, and I avoided file/storage fields because Capture nodes should not describe output artefacts. No already_generated fields were provided for this turn, so I did not need to suppress overlaps beyond keeping the schema strictly within capture-operation territory.",
+      "md_schema": [
+        {
+          "field_id": "abstraction_session_id",
+          "descr": "Unique string identifier for the abstraction session or batch used to enter structured registry data; format example: ABS_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstraction_method",
+          "descr": "Primary method used by clinical data abstractors to extract patient demographics and comorbidity information from source records into the registry system; record at the time abstraction is performed.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_chart_review",
+            "semi_automated_extraction",
+            "rules_based_mapping",
+            "hybrid_manual_automated"
+          ]
+        },
+        {
+          "field_id": "abstraction_tool_name",
+          "descr": "Name of the registry abstraction software or interface used during capture, if applicable; measured from the capture configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstraction_tool_version",
+          "descr": "Version of the abstraction software or registry interface used during capture; record the exact release or build string used for the session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coding_standard",
+          "descr": "Clinical terminology or coding standard used to normalize structured demographics and comorbidity fields during abstraction; captured as part of the registry configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "icd_10",
+            "icd_9",
+            "snomed_ct",
+            "custom_registry_dictionary",
+            "mixed_standard"
+          ]
+        },
+        {
+          "field_id": "abstraction_start_date",
+          "descr": "Date when the abstraction session started for this batch of source records; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstraction_end_date",
+          "descr": "Date when the abstraction session ended for this batch of source records; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qa_passed",
+          "descr": "Whether the abstracted registry entry passed internal quality assurance review for completeness and consistency at the capture stage.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstractor_id",
+          "descr": "Identifier for the clinical data abstractor or abstraction team member responsible for the capture session; format example: ABSR_12.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "demographics_raw_signal": {
+      "reasoning": "This is a Signal node, so I included only raw data artefact properties: what the extract contains, its row/column structure, technical file characteristics, schema version, and basic completeness/consistency metrics. I excluded capture settings, source-record provenance, patient identity fields, and harmonization outputs because those belong to upstream Capture/Entity nodes or downstream Process/Derivative nodes. No already_generated fields were provided in this turn, so I focused on signal-level descriptors that would let a downstream user store, validate, and reuse the raw demographics extract without repeating the actual demographic values themselves.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_id",
+          "descr": "Unique string identifier for this raw demographics extract file or table; format example: DEMO_RAW_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw demographics extract at the point it is written or exported, such as CSV, TSV, or Parquet; record the exact storage format used.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "json",
+            "xlsx"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw demographics data artefact in bytes at the time of storage or export; useful for integrity checks and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient-level records contained in the raw demographics extract; measured after the capture step and before harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of fields or columns in the raw demographics extract; measured from the structured signal as stored.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_version",
+          "descr": "Version label for the raw demographics data schema used in this extract; format example: v1.0 or 2024_06.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_rate",
+          "descr": "Proportion of expected raw demographic/comorbidity fields present in the extract, expressed as a fraction from 0 to 1 or percentage-equivalent decimal; assess at the raw signal validation stage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_patient_record_count",
+          "descr": "Count of duplicate patient-level rows detected in the raw demographics extract before any harmonization or deduplication.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "radiotherapy_plan_capture": {
+      "reasoning": "This is a Capture node, so I included only the configuration and session details of how radiotherapy planning information was abstracted from planning records: capture method, planning system identity, software version, plan review timing, and QC. I excluded the actual dose, target volume, and fractionation values because those belong on the downstream Signal node, and I avoided output-file properties because Capture nodes should not describe the produced artefact. No already_generated fields were provided for this turn, so I did not need to suppress overlaps beyond staying within capture-operation territory and including the agent/hardware-software properties required for operation nodes.",
+      "md_schema": [
+        {
+          "field_id": "plan_capture_session_id",
+          "descr": "Unique string identifier for the radiotherapy plan capture session or batch; format example: RPCAP_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_record_source",
+          "descr": "Primary radiotherapy planning record source used during capture, such as treatment planning system or planning chart review; record at the time of abstraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "treatment_planning_system",
+            "paper_planning_chart",
+            "combined_planning_record_review"
+          ]
+        },
+        {
+          "field_id": "planning_system_name",
+          "descr": "Name of the radiotherapy planning software or system used as the operational capture platform, if applicable; recorded from the active configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_system_version",
+          "descr": "Version of the radiotherapy planning software or system used for capture; use the exact release string available during the session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_method",
+          "descr": "Method used by treatment planning staff or registry abstraction to obtain dose, target volume, and fractionation details from planning records; record during the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "semi_automated_import",
+            "direct_system_query",
+            "hybrid_abstraction"
+          ]
+        },
+        {
+          "field_id": "plan_review_date",
+          "descr": "Date when the plan details were reviewed or abstracted into the registry capture workflow; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_plan_type",
+          "descr": "General radiotherapy plan class being captured, describing the treatment plan context rather than the numeric plan parameters themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "definitive",
+            "adjuvant",
+            "salvage",
+            "palliative",
+            "boost"
+          ]
+        },
+        {
+          "field_id": "capture_quality_flag",
+          "descr": "Whether the captured plan details passed the capture-stage consistency check for completeness and plausibility.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "operator_id",
+          "descr": "Identifier for the planning staff member or registry abstractor responsible for the capture session; format example: OPS_17.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "plan_raw_signal": {
+      "reasoning": "I corrected the Signal-node schema to avoid cross-step field-id collisions by renaming the generic technical fields that had already been used elsewhere in the DAG. I kept only raw-treatment-plan artefact descriptors and quality metrics that belong to the plan signal, while preserving the same semantic meaning with plan-specific field names. I did not include capture settings, source properties, or downstream harmonization outputs.",
+      "md_schema": [
+        {
+          "field_id": "plan_signal_file_id",
+          "descr": "Unique string identifier for the raw treatment-plan extract file or table; format example: PLAN_RAW_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_file_format",
+          "descr": "Technical file format of the raw treatment-plan extract at the point of storage or export, such as DICOM-RT export, CSV, TSV, or JSON; record the exact format used.",
+          "type": "categorical",
+          "allowed_values": [
+            "dicom_rt",
+            "csv",
+            "tsv",
+            "json",
+            "xml"
+          ]
+        },
+        {
+          "field_id": "plan_file_size_bytes",
+          "descr": "Size of the raw treatment-plan artefact in bytes at the time it is written or exported; useful for integrity checks and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_count",
+          "descr": "Number of distinct treatment plans contained in the raw extract; measured after capture and before harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_count",
+          "descr": "Number of data fields or columns present in the raw treatment-plan extract; measured from the stored signal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_schema_version",
+          "descr": "Version label for the raw treatment-plan schema used in this extract; format example: v1.0 or 2024_06.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_rate",
+          "descr": "Proportion of expected raw treatment-plan fields that are missing in the extract, expressed as a fraction from 0 to 1; assessed at the raw signal validation stage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_plan_record_count",
+          "descr": "Count of duplicate plan rows or repeated plan entries detected in the raw treatment-plan extract before any harmonization.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treatment_session_capture": {
+      "reasoning": "This is a Capture node, so I kept only session-level capture configuration and operational descriptors and removed the colliding field capture_quality_flag. I included identifiers, event-capture mode, adverse-event recording method, coding standard, timing, operator identity, and session source because these describe how treatment-session attendance and acute adverse reactions were recorded. I excluded raw attendance/adverse-event values, downstream signal artifacts, and any field names known to collide across DAG steps such as capture_quality_flag, file_format, file_size_bytes, and schema_version.",
+      "md_schema": [
+        {
+          "field_id": "treatment_session_capture_id",
+          "descr": "Unique string identifier for the treatment-session capture batch or session group; format example: TSCAP_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "attendance_capture_mode",
+          "descr": "Mode used to record whether each radiotherapy session was attended, missed, or delayed; capture this at the time of registry entry.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_entry",
+            "barcode_scan",
+            "system_import",
+            "hybrid_entry"
+          ]
+        },
+        {
+          "field_id": "adverse_event_recording_method",
+          "descr": "Method used to record acute adverse reactions during each treatment session, such as clinician note abstraction or direct patient-reported entry; measured during the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinician_abstraction",
+            "patient_reported",
+            "mixed_source",
+            "system_import"
+          ]
+        },
+        {
+          "field_id": "event_coding_standard",
+          "descr": "Coding or classification standard used to label attendance events and acute adverse reactions during capture; record the standard active in the registry workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "ctcae",
+            "meddra",
+            "custom_registry_dictionary",
+            "mixed_standard"
+          ]
+        },
+        {
+          "field_id": "capture_start_date",
+          "descr": "Date when this treatment-session capture batch began; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_end_date",
+          "descr": "Date when this treatment-session capture batch ended; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_operator_id",
+          "descr": "Identifier for the registry staff member or team responsible for entering the treatment-session events; format example: OPS_17.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_note_source",
+          "descr": "Primary source of the session event information used during capture, such as clinic note, treatment record, or patient report; captured as part of the registry workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinic_note",
+            "treatment_record",
+            "patient_report",
+            "mixed_source"
+          ]
+        }
+      ]
+    },
+    "session_event_signal": {
+      "reasoning": "This is a Signal node, so I included only raw event-artefact descriptors for the session-event extract: file identity, event granularity, record counts, technical format, storage size, and raw-quality indicators. I excluded capture settings, operator details, and the scientific content values themselves because attendance and adverse reactions are the payload of the signal and should not be repeated as metadata fields. I also avoided previously colliding generic names such as file_format, file_size_bytes, schema_version, and capture_quality_flag, using distinct session-event-specific names instead.",
+      "md_schema": [
+        {
+          "field_id": "session_event_signal_id",
+          "descr": "Unique string identifier for the raw session-event extract file or table; format example: SESS_EVT_RAW_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "event_granularity",
+          "descr": "Level of detail represented in the raw session-event extract, describing whether records are per treatment session, per attendance event, or per adverse event observation; measured from the stored signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "per_session",
+            "per_attendance_event",
+            "per_adverse_event",
+            "mixed_event_level"
+          ]
+        },
+        {
+          "field_id": "record_count",
+          "descr": "Total number of raw event records in the session-event extract at the time of storage or export; counted before harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_session_count",
+          "descr": "Number of distinct treatment sessions represented in the raw session-event extract; measured from the raw signal table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "event_data_format",
+          "descr": "Technical file format of the raw session-event extract at the point of storage or export; record the exact format used.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xlsx"
+          ]
+        },
+        {
+          "field_id": "artifact_size_bytes",
+          "descr": "Size of the raw session-event data artefact in bytes at the time it is written or exported; useful for integrity checks and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_event_rate",
+          "descr": "Proportion of expected session-event fields missing in the raw extract, expressed as a fraction from 0 to 1; assessed during raw signal validation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_event_count",
+          "descr": "Count of duplicate attendance or adverse-event records detected in the raw session-event extract before any harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_validated",
+          "descr": "Whether the raw session-event extract passed basic structural validation at the signal stage, such as parsability and record-count checks.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "followup_outcome_capture": {
+      "reasoning": "This is a Capture node, so I included only the follow-up session and instrument configuration details: how follow-up was conducted, when it occurred, which outcomes were targeted, what quality-of-life instrument was used, and who/system performed the capture. I excluded the actual survival status, time-to-event values, and QoL scores because those belong on the downstream Signal node, and I avoided file/storage and analysis fields. I also kept away from previously colliding generic names like capture_quality_flag, file_format, file_size_bytes, and schema_version by using follow-up-specific operational names instead.",
+      "md_schema": [
+        {
+          "field_id": "followup_capture_id",
+          "descr": "Unique string identifier for the follow-up outcome capture batch or encounter group; format example: FUCAP_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_visit_type",
+          "descr": "Type of follow-up encounter used to capture post-radiotherapy outcome information; record at the time the visit is scheduled or completed.",
+          "type": "categorical",
+          "allowed_values": [
+            "routine_clinic_visit",
+            "telephone_followup",
+            "telehealth_visit",
+            "chart_review_only"
+          ]
+        },
+        {
+          "field_id": "outcome_domains_captured",
+          "descr": "Outcome domains actively captured during the follow-up encounter, describing the measurement scope rather than the measured values themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival_status",
+            "quality_of_life",
+            "both"
+          ]
+        },
+        {
+          "field_id": "quality_of_life_instrument",
+          "descr": "Name of the questionnaire or instrument used to collect quality-of-life measurements during follow-up, if applicable; recorded at the follow-up capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_capture_date",
+          "descr": "Date on which the follow-up outcome capture occurred; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_interval_months",
+          "descr": "Elapsed time in months from radiotherapy completion to the follow-up capture point; measured when the encounter is recorded, typically ranging from 0 to multiple years.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_operator_id",
+          "descr": "Identifier for the registry staff member or clinical system responsible for capturing the follow-up encounter; format example: OPS_17.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_quality_flag",
+          "descr": "Whether the follow-up encounter capture passed initial completeness and consistency checks at the capture stage.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_source_document",
+          "descr": "Primary source used to capture the follow-up encounter, such as clinic note, patient-reported questionnaire, or chart abstraction; recorded as part of the capture process.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinic_note",
+            "patient_questionnaire",
+            "telephone_script",
+            "chart_review",
+            "mixed_source"
+          ]
+        }
+      ]
+    },
+    "outcome_raw_signal": {
+      "reasoning": "This is a Signal node. I kept only raw follow-up artefact descriptors and renamed overlapping generic technical fields to avoid DAG-wide collisions: instead of record_count and artifact_size_bytes, I used outcome_record_count and outcome_artifact_size_bytes. I excluded capture details and the actual survival/QoL values because they belong to the capture and data-content layers, not the signal metadata. The schema therefore focuses on raw outcome extract identity, content scope, structure, validation, and storage characteristics without duplicating earlier fields.",
+      "md_schema": [
+        {
+          "field_id": "outcome_signal_id",
+          "descr": "Unique string identifier for the raw follow-up outcome extract file or table; format example: OUT_RAW_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_domain",
+          "descr": "Primary follow-up outcome domain represented in the raw extract, describing what the signal contains at a high level; measured from the stored raw data.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival_status",
+            "time_to_event",
+            "quality_of_life",
+            "mixed_outcomes"
+          ]
+        },
+        {
+          "field_id": "outcome_record_count",
+          "descr": "Total number of follow-up outcome records in the raw extract at the time of storage or export; counted before harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "patient_count",
+          "descr": "Number of unique patients represented in the raw follow-up outcome extract; measured from the raw signal table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_data_format",
+          "descr": "Technical file format of the raw outcome extract at the point of storage or export; record the exact format used.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xlsx"
+          ]
+        },
+        {
+          "field_id": "outcome_artifact_size_bytes",
+          "descr": "Size of the raw outcome data artefact in bytes at the time it is written or exported; useful for integrity checks and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_outcome_rate",
+          "descr": "Proportion of expected follow-up outcome fields missing in the raw extract, expressed as a fraction from 0 to 1; assessed during raw signal validation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_outcome_record_count",
+          "descr": "Count of duplicate follow-up outcome rows detected in the raw extract before any harmonization or deduplication.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_integrity_passed",
+          "descr": "Whether the raw follow-up outcome extract passed basic structural and integrity validation at the signal stage.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "harmonize_registry_tables": {
+      "reasoning": "This is a Process node, so I included only the harmonization operation itself: cleaning, standardization, linkage logic, key parameters, software/runtime, and output-quality indicators. I excluded upstream raw signal properties, downstream dataset properties, and any patient-level scientific variables because those do not belong to the transformation step. I also avoided repeating already generated fields and the known colliding generic names like record_count and artifact_size_bytes; instead I used process-specific names for linkage completeness, normalization rules, and validation outcomes that describe how the registry tables were harmonized.",
+      "md_schema": [
+        {
+          "field_id": "harmonization_run_id",
+          "descr": "Unique string identifier for this harmonization execution or batch; format example: HARM_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software or script environment used to harmonize the registry tables; for process nodes this identifies the computing agent, such as a Python pipeline or ETL package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the harmonization software or pipeline used for cleaning, standardizing, and linking the registry extracts; record the exact release string used in the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "repository_url",
+          "descr": "Code repository or provenance location for the harmonization workflow, if available; use a stable URL or repository identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linkage_strategy",
+          "descr": "Primary strategy used to link patient, plan, session, and follow-up tables into a unified registry dataset; record at the time the harmonization step is executed.",
+          "type": "categorical",
+          "allowed_values": [
+            "deterministic_id_linkage",
+            "probabilistic_linkage",
+            "rule_based_linkage",
+            "mixed_linkage"
+          ]
+        },
+        {
+          "field_id": "standardization_ruleset",
+          "descr": "Ruleset or reference standard applied to normalize terminology, dates, units, and categorical labels during harmonization; measured as part of the transformation specification.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "duplicate_resolution_method",
+          "descr": "Method used to resolve duplicate records encountered during merging of the structured extracts; describes the harmonization logic rather than raw duplicate counts.",
+          "type": "categorical",
+          "allowed_values": [
+            "keep_first",
+            "keep_last",
+            "prioritize_source",
+            "manual_review",
+            "rule_based_merge"
+          ]
+        },
+        {
+          "field_id": "linkage_completeness_rate",
+          "descr": "Proportion of expected cross-table links successfully created during harmonization, expressed as a fraction from 0 to 1; assess after table linkage and before dataset release.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_harmonization_validation_passed",
+          "descr": "Whether the unified registry dataset passed the harmonization-stage validation checks for consistency, referential integrity, and standardization.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "analysis_ready_dataset": {
+      "reasoning": "This is a Derivative node, so I kept only properties of the computed analysis-ready table itself: dataset identity, analytic granularity, content coverage, linkage/validation status, and release timing. I excluded raw counts that collide with earlier signal metadata such as row_count, column_count, and patient_count, and avoided upstream process details or downstream statistical results. The schema now uses derivative-specific quality and structure fields that describe the output of harmonization without repeating already generated identifiers or generic count names.",
+      "md_schema": [
+        {
+          "field_id": "dataset_id",
+          "descr": "Unique string identifier for the analysis-ready dataset; format example: ARD_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_granularity",
+          "descr": "Analytic level of the unified table produced by the harmonization step, describing the unit of observation represented in each row.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "patient_session_level",
+            "patient_followup_level",
+            "mixed_granularity"
+          ]
+        },
+        {
+          "field_id": "harmonized_domain_coverage",
+          "descr": "Registry domains represented in the final dataset, describing the content scope of the derivative rather than the source signals.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_plan",
+            "session_events",
+            "adverse_reactions",
+            "followup_outcomes",
+            "all_domains"
+          ]
+        },
+        {
+          "field_id": "cross_domain_linkage_rate",
+          "descr": "Proportion of expected links across patient, plan, session, and follow-up domains that were successfully retained in the analysis-ready dataset, expressed as a fraction from 0 to 1; assessed after harmonization and before analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_data_rate",
+          "descr": "Proportion of expected fields missing in the final analysis-ready dataset, expressed as a fraction from 0 to 1; assessed after harmonization and before analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "referential_integrity_passed",
+          "descr": "Whether the unified patient-level table passed referential integrity checks across linked registry domains at release time.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "release_date",
+          "descr": "Date when the analysis-ready dataset was finalized and released for downstream statistical analysis; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_version",
+          "descr": "Version label assigned to the analysis-ready dataset release, allowing downstream users to distinguish successive harmonized builds; format example: v1.0 or 2024_06.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protocol_outcome_analysis": {
+      "reasoning": "This is a Process node, so I included only analysis-operation fields and avoided the already-colliding generic software metadata names software_name, software_version, and repository_url. I kept the schema focused on the statistical model specification, adjustment logic, diagnostics, and timing for the protocol-outcome analysis. I excluded raw dataset properties and downstream effect estimates because those belong to other nodes, and used alternative process-specific names for the computational environment and model assessment.",
+      "md_schema": [
+        {
+          "field_id": "analysis_run_id",
+          "descr": "Unique string identifier for this statistical modeling run; format example: ANA_2024_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "computing_environment",
+          "descr": "Name of the statistical computing environment or analysis platform used to run the protocol-outcome models; for process nodes this identifies the agent executing the analysis, such as R, Python, or SAS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "computing_environment_version",
+          "descr": "Version of the computing environment or analysis platform used for the analysis; record the exact release string used in the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_code_location",
+          "descr": "Code repository, script archive, or provenance location for the analysis workflow; use a stable URL or repository identifier if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_family",
+          "descr": "Statistical model family used to evaluate associations between radiotherapy protocols and outcomes; record the model class selected for the analysis run.",
+          "type": "categorical",
+          "allowed_values": [
+            "cox_proportional_hazards",
+            "kaplan_meier",
+            "logistic_regression",
+            "linear_regression",
+            "mixed_effects_model",
+            "other"
+          ]
+        },
+        {
+          "field_id": "exposure_variable",
+          "descr": "Primary radiotherapy protocol variable evaluated as the exposure in the analysis; describes the modeled protocol attribute rather than the estimated effect.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_variable",
+          "descr": "Primary outcome variable modeled in the analysis, such as survival or quality-of-life endpoint; record the endpoint targeted by the statistical model.",
+          "type": "categorical",
+          "allowed_values": [
+            "overall_survival",
+            "disease_specific_survival",
+            "progression_free_survival",
+            "quality_of_life_score",
+            "mixed_outcomes"
+          ]
+        },
+        {
+          "field_id": "adjustment_strategy",
+          "descr": "Approach used to adjust for covariates or confounding in the statistical model; measured as part of the analysis specification.",
+          "type": "categorical",
+          "allowed_values": [
+            "unadjusted",
+            "covariate_adjusted",
+            "stratified",
+            "propensity_adjusted",
+            "multivariable_adjusted"
+          ]
+        },
+        {
+          "field_id": "convergence_status",
+          "descr": "Whether the fitted model converged successfully and produced stable estimates during the analysis run.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_start_date",
+          "descr": "Date when the protocol-outcome analysis run started; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_end_date",
+          "descr": "Date when the protocol-outcome analysis run ended; use ISO date format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "outcome_association_results": {
+      "reasoning": "This is a Derivative node, so I included only computed statistical result fields produced by the analysis: effect estimates, uncertainty intervals, p-values, comparison basis, and result-quality summaries. I excluded model configuration, software/runtime, and raw dataset properties because those belong to upstream Process or Derivative-supporting nodes, not the result object itself. I also avoided previously colliding generic identifiers such as software_name, software_version, repository_url, and other already-generated field names by using result-specific field IDs only.",
+      "md_schema": [
+        {
+          "field_id": "results_id",
+          "descr": "Unique string identifier for this derived results object; format example: RES_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_estimate_type",
+          "descr": "Type of statistical effect estimate reported for the protocol-outcome association, such as hazard ratio or odds ratio; measured from the fitted analysis model.",
+          "type": "categorical",
+          "allowed_values": [
+            "hazard_ratio",
+            "odds_ratio",
+            "beta_coefficient",
+            "risk_difference",
+            "median_difference",
+            "other"
+          ]
+        },
+        {
+          "field_id": "effect_estimate_value",
+          "descr": "Numerical value of the primary protocol effect estimate produced by the analysis, such as a hazard ratio; report the point estimate from the fitted model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_lower",
+          "descr": "Lower bound of the confidence interval for the primary effect estimate; report the bound produced by the statistical model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_upper",
+          "descr": "Upper bound of the confidence interval for the primary effect estimate; report the bound produced by the statistical model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_level",
+          "descr": "Nominal confidence level used for the reported interval, typically 95 percent; record the level applied to all effect estimates in this result set.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "P-value associated with the primary protocol effect estimate or hypothesis test; report the value returned by the statistical analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_group_description",
+          "descr": "Description of the reference or comparator group used to estimate the protocol effect, such as a specific radiotherapy protocol or regimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_events",
+          "descr": "Number of outcome events contributing to the estimated association, such as deaths or QoL endpoint occurrences; count derived from the fitted analysis dataset.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_fit_summary",
+          "descr": "Brief summary of model fit or diagnostic status for the derived association result, such as convergence or proportional-hazards adequacy.",
+          "type": "categorical",
+          "allowed_values": [
+            "adequate",
+            "borderline",
+            "poor",
+            "not_assessed"
+          ]
+        }
+      ]
+    }
+  }
+}

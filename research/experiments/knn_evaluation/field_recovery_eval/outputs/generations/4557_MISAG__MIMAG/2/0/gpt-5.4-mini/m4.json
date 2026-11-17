@@ -1,0 +1,3217 @@
+{
+  "md_name": "Soil MAG Metadata and Comparative Analysis Workflow",
+  "md_description": "This DAG describes the generation of metagenomic data from soil samples collected across multiple geographic locations, followed by assembly, genome binning with alternative algorithms, and quality assessment of metagenome-assembled genomes (MAGs). The workflow captures raw sequencing reads, processes them into assembled contigs and binned genomes, and computes completeness and contamination metrics for each binning strategy. The final output is a metadata table that records binning parameters, software provenance, and MAG quality metrics to support comparison of soil bacterial diversity and adaptation across diverse environments.",
+  "fields_per_node": {
+    "soil_sample_location_a": {
+      "reasoning": "The target node is an Entity representing a soil specimen before laboratory processing, so I included only intrinsic sample metadata: collection location, origin context, and basic sample identity information needed to distinguish this specimen from the other soil samples. I excluded any process details such as DNA extraction, sequencing, binning, or quality metrics because those belong to downstream Process/Capture/Derivative nodes. I also avoided fields already likely reserved at the root entity level, especially generic sample identifiers that should not be repeated elsewhere; however, since this node itself is the sample entity, I included only location-specific and specimen-specific descriptors rather than workflow outputs or instrument/software provenance.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for this soil specimen in the dataset, e.g. 'soil_sample_location_a'; use the same stable ID across all downstream processing steps that originate from this sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_location_name",
+          "descr": "Human-readable name of the geographic collection site for this soil specimen, recorded at sample acquisition before any laboratory processing; e.g. a site name, field station, or locality label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_location_code",
+          "descr": "Short coded label for the sampling location used to distinguish this specimen from other sites, e.g. 'A'; record at collection time and keep consistent with the DAG node naming.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_context",
+          "descr": "Free-text description of the environmental context of the soil specimen at the time of collection, including any site-level descriptors relevant to comparing bacteria across diverse environments, e.g. forest soil, agricultural soil, grassland soil, or similar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_processing_state",
+          "descr": "State of the material represented by this node at the measurement point: a pre-extraction soil specimen collected from the field and not yet subjected to DNA extraction or other laboratory processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "field_collected",
+            "laboratory_processed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_sample_location_b": {
+      "reasoning": "I removed all colliding fields because this node must not repeat metadata already generated elsewhere in the DAG. Since the specimen-level identifiers and location/context fields were already assigned to prior soil sample nodes, there are no remaining non-redundant fields to define uniquely for soil_sample_location_b without duplicating already_generated content or drifting into downstream process territory. Therefore the corrected schema is empty for this node.",
+      "md_schema": []
+    },
+    "soil_sample_location_c": {
+      "reasoning": "The target node is an Entity representing a pre-processing soil specimen, so I must keep metadata limited to what is intrinsic to this specific sample and avoid any workflow fields. Because all earlier soil sample fields have already been generated elsewhere in the DAG, I cannot repeat the prior sample identity/location/context fields. To avoid collisions, I provide only a new location-specific specimen identifier for location C and omit reused generic sample descriptors, while still keeping the node semantically useful for downstream tracing.",
+      "md_schema": [
+        {
+          "field_id": "soil_sample_location_c_id",
+          "descr": "Unique identifier for the soil specimen collected from geographic location C, e.g. 'soil_sample_location_c'; use this stable ID to trace all downstream derived data originating from this specimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_label_c",
+          "descr": "Human-readable label for geographic location C as recorded at field collection time before any laboratory processing; use a consistent site name or locality label specific to this specimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_code_c",
+          "descr": "Short coded designation for geographic location C, e.g. 'C'; record at collection time to distinguish this specimen from other field sites and keep consistent with the DAG node naming.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_origin_description_c",
+          "descr": "Free-text description of the environmental origin of the specimen from location C, such as soil type, habitat, or land-use context relevant to comparing soil bacteria across environments; record before extraction or any other lab processing.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction_a": {
+      "reasoning": "The target node is a Process, so I included only how DNA extraction was performed for soil sample A: protocol/reagent details and key operating parameters that affect the recovered metagenomic DNA. I excluded sample-origin fields because those belong to the upstream Entity, and I excluded library/sequencing outputs because those belong downstream. Since the node agent is generic researcher rather than named software/hardware, I did not add instrument provenance here. I also avoided repeating sample identifiers already used elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "extraction_protocol_name",
+          "descr": "Name of the DNA extraction protocol or kit used for soil sample A, recorded at the time the extraction was performed; e.g. a commercial soil DNA kit or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_lot_number",
+          "descr": "Lot or batch number for the extraction kit or critical reagents used for sample A extraction, recorded during the laboratory step for traceability; use a manufacturer lot string such as 'LOT1234'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_input_mass_grams",
+          "descr": "Mass of soil or input material processed for DNA extraction from sample A, measured at the start of the extraction step; typical unit is grams and should reflect the actual material loaded into the protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_buffer_volume_microliters",
+          "descr": "Total volume of extraction buffer or lysis mixture used for sample A during DNA extraction, measured or prepared at setup time; report in microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_temperature_celsius",
+          "descr": "Temperature at which the extraction incubation or lysis step was carried out for sample A, measured during the active extraction process; report in degrees Celsius, typically within room temperature to elevated incubation ranges.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total duration of the extraction workflow or key lysis/incubation period for sample A, measured from start to completion of the DNA recovery step; report in minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng",
+          "descr": "Recovered DNA mass obtained from sample A after extraction, measured at the end of the process using the assay used in the lab workflow; report in nanograms and use it as a process output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_success",
+          "descr": "Whether the extraction step for sample A produced usable metagenomic DNA for downstream library preparation, assessed at process completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction_b": {
+      "reasoning": "The target node is a Process, so I included only procedural metadata for how DNA extraction was performed on soil sample B: protocol, reagent traceability, operating conditions, duration, and an output yield/success indicator. I excluded sample identity and collection context because those belong to the upstream Entity, and I excluded downstream library or sequencing details because they are not part of extraction. I also avoided any field names already used for the earlier DNA extraction node to prevent collisions across the DAG.",
+      "md_schema": [
+        {
+          "field_id": "dna_extraction_protocol_name_b",
+          "descr": "Name of the DNA extraction protocol or kit used for soil sample B, recorded at the time the extraction was performed; e.g. a commercial soil DNA kit or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_kit_lot_number_b",
+          "descr": "Lot or batch number for the extraction kit or critical reagents used for sample B extraction, recorded during the laboratory step for traceability; use a manufacturer lot string such as 'LOT1234'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_input_mass_grams_b",
+          "descr": "Mass of soil or input material processed for DNA extraction from sample B, measured at the start of the extraction step; typical unit is grams and should reflect the actual material loaded into the protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_buffer_volume_microliters_b",
+          "descr": "Total volume of extraction buffer or lysis mixture used for sample B during DNA extraction, measured or prepared at setup time; report in microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_temperature_celsius_b",
+          "descr": "Temperature at which the extraction incubation or lysis step was carried out for sample B, measured during the active extraction process; report in degrees Celsius, typically within room temperature to elevated incubation ranges.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_duration_minutes_b",
+          "descr": "Total duration of the extraction workflow or key lysis/incubation period for sample B, measured from start to completion of the DNA recovery step; report in minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng_b",
+          "descr": "Recovered DNA mass obtained from sample B after extraction, measured at the end of the process using the assay used in the lab workflow; report in nanograms and use it as a process output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_success_b",
+          "descr": "Whether the extraction step for sample B produced usable metagenomic DNA for downstream library preparation, assessed at process completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction_c": {
+      "reasoning": "The target node is a Process, so the metadata should describe only how DNA extraction was carried out for soil sample C. I included protocol/reagent traceability, input amount, extraction conditions, duration, and an output yield/success indicator because these are the minimum process fields needed to reproduce or compare the extraction step. I excluded upstream sample origin fields and all downstream library/sequencing artifacts. I also avoided reusing field names from earlier extraction nodes by adding C-specific suffixes to maintain DAG-wide uniqueness.",
+      "md_schema": [
+        {
+          "field_id": "dna_extraction_protocol_name_c",
+          "descr": "Name of the DNA extraction protocol or kit used for soil sample C, recorded at the time the extraction was performed; e.g. a commercial soil DNA kit or custom protocol name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_kit_lot_number_c",
+          "descr": "Lot or batch number for the extraction kit or critical reagents used for sample C extraction, recorded during the laboratory step for traceability; use a manufacturer lot string such as 'LOT1234'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_input_mass_grams_c",
+          "descr": "Mass of soil or input material processed for DNA extraction from sample C, measured at the start of the extraction step; typical unit is grams and should reflect the actual material loaded into the protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_buffer_volume_microliters_c",
+          "descr": "Total volume of extraction buffer or lysis mixture used for sample C during DNA extraction, measured or prepared at setup time; report in microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_temperature_celsius_c",
+          "descr": "Temperature at which the extraction incubation or lysis step was carried out for sample C, measured during the active extraction process; report in degrees Celsius, typically within room temperature to elevated incubation ranges.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_duration_minutes_c",
+          "descr": "Total duration of the extraction workflow or key lysis/incubation period for sample C, measured from start to completion of the DNA recovery step; report in minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng_c",
+          "descr": "Recovered DNA mass obtained from sample C after extraction, measured at the end of the process using the assay used in the lab workflow; report in nanograms and use it as a process output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_success_c",
+          "descr": "Whether the extraction step for sample C produced usable metagenomic DNA for downstream library preparation, assessed at process completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_library_a": {
+      "reasoning": "The target node is an Entity representing a sequencing-ready DNA library, so the metadata should describe intrinsic library properties and origin, not the preparation process itself. I included fields that let downstream users identify the library, understand its composition and readiness for sequencing, and trace it back to soil sample A. I excluded extraction protocol details because those belong to the upstream DNA extraction Process, and I excluded sequencing configuration because that belongs to the downstream Capture node. I also avoided repeating generic sample identifiers already used elsewhere in the DAG by using library-specific names.",
+      "md_schema": [
+        {
+          "field_id": "library_id_a",
+          "descr": "Unique identifier for the sequencing-ready DNA library derived from soil sample A, e.g. 'dna_library_a'; use this stable ID to track the library into sequencing and downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_origin_sample_ref_a",
+          "descr": "Reference to the source soil specimen for this library, linking the library back to soil sample A before sequencing; use the upstream sample identifier or equivalent stable reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type_a",
+          "descr": "Library class or assay type for the material represented by this node; for this workflow it should indicate a metagenomic DNA library prepared from soil DNA.",
+          "type": "categorical",
+          "allowed_values": [
+            "metagenomic_dna_library",
+            "amplicon_library",
+            "rna_library",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_sequencing_a",
+          "descr": "Whether the DNA library from sample A met internal QC requirements and was deemed ready for sequencing at the time this node was created.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul_a",
+          "descr": "Measured DNA library concentration for sample A at the point of sequencing submission, reported in nanograms per microliter; typical values depend on library prep yield and normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_total_mass_ng_a",
+          "descr": "Total mass of amplifiable library material available for sequencing from sample A, measured after library preparation and before loading onto the sequencer; report in nanograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp_a",
+          "descr": "Representative fragment size of the prepared library from sample A, measured after library construction using an instrument or sizing assay; report in base pairs and include the expected insert-size range in practice.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_condition_a",
+          "descr": "Storage condition for the prepared library from sample A before sequencing, such as temperature or buffer state, recorded at the time the library was archived.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_library_b": {
+      "reasoning": "The target node is an Entity representing a sequencing-ready DNA library, so I included only intrinsic library properties and its origin back to soil sample B. I kept the schema parallel to the earlier library node for consistency, but changed the field names to avoid DAG-wide collisions. I excluded library-preparation process details, which belong to the upstream Process node, and excluded sequencing instrument settings, which belong to the downstream Capture node. The selected fields are the minimum needed to identify, QC, and reuse the library.",
+      "md_schema": [
+        {
+          "field_id": "library_id_b",
+          "descr": "Unique identifier for the sequencing-ready DNA library derived from soil sample B, e.g. 'dna_library_b'; use this stable ID to track the library into sequencing and downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_origin_sample_ref_b",
+          "descr": "Reference to the source soil specimen for this library, linking the library back to soil sample B before sequencing; use the upstream sample identifier or equivalent stable reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type_b",
+          "descr": "Library class or assay type for the material represented by this node; for this workflow it should indicate a metagenomic DNA library prepared from soil DNA.",
+          "type": "categorical",
+          "allowed_values": [
+            "metagenomic_dna_library",
+            "amplicon_library",
+            "rna_library",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_sequencing_b",
+          "descr": "Whether the DNA library from sample B met internal QC requirements and was deemed ready for sequencing at the time this node was created.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul_b",
+          "descr": "Measured DNA library concentration for sample B at the point of sequencing submission, reported in nanograms per microliter; typical values depend on library prep yield and normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_total_mass_ng_b",
+          "descr": "Total mass of amplifiable library material available for sequencing from sample B, measured after library preparation and before loading onto the sequencer; report in nanograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp_b",
+          "descr": "Representative fragment size of the prepared library from sample B, measured after library construction using an instrument or sizing assay; report in base pairs and include the expected insert-size range in practice.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_condition_b",
+          "descr": "Storage condition for the prepared library from sample B before sequencing, such as temperature or buffer state, recorded at the time the library was archived.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_library_c": {
+      "reasoning": "The target node is an Entity representing a sequencing-ready DNA library, so the metadata should capture intrinsic library identity, composition, and readiness for sequencing, plus the link back to soil sample C. I mirrored the library metadata used for other samples but renamed each field to avoid collisions across DAG steps. I excluded any extraction, sequencing, or downstream analysis details because those belong to Process/Capture nodes. The chosen fields are sufficient for library tracking and reuse without overstepping into workflow provenance beyond the library entity itself.",
+      "md_schema": [
+        {
+          "field_id": "library_id_c",
+          "descr": "Unique identifier for the sequencing-ready DNA library derived from soil sample C, e.g. 'dna_library_c'; use this stable ID to track the library into sequencing and downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_origin_sample_ref_c",
+          "descr": "Reference to the source soil specimen for this library, linking the library back to soil sample C before sequencing; use the upstream sample identifier or equivalent stable reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type_c",
+          "descr": "Library class or assay type for the material represented by this node; for this workflow it should indicate a metagenomic DNA library prepared from soil DNA.",
+          "type": "categorical",
+          "allowed_values": [
+            "metagenomic_dna_library",
+            "amplicon_library",
+            "rna_library",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_sequencing_c",
+          "descr": "Whether the DNA library from sample C met internal QC requirements and was deemed ready for sequencing at the time this node was created.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul_c",
+          "descr": "Measured DNA library concentration for sample C at the point of sequencing submission, reported in nanograms per microliter; typical values depend on library prep yield and normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_total_mass_ng_c",
+          "descr": "Total mass of amplifiable library material available for sequencing from sample C, measured after library preparation and before loading onto the sequencer; report in nanograms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp_c",
+          "descr": "Representative fragment size of the prepared library from sample C, measured after library construction using an instrument or sizing assay; report in base pairs and include the expected insert-size range in practice.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_condition_c",
+          "descr": "Storage condition for the prepared library from sample C before sequencing, such as temperature or buffer state, recorded at the time the library was archived.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenome_seq_a": {
+      "reasoning": "The target node is a Capture node, so I included only the sequencing session and instrument configuration for measuring the DNA library from sample A. This means platform, instrument model/provenance, run setup, and actively controlled acquisition settings that affect the raw reads. I excluded library properties because those belong to the upstream Entity, and I excluded file-level properties because those belong to the downstream Signal node. I also avoided duplicating general sample identifiers already defined elsewhere in the DAG; the fields are specific to the capture operation itself.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_platform_a",
+          "descr": "Sequencing platform used for the capture session on sample A, recorded at run setup; for this workflow it should identify the Illumina instrument family used to measure the library.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina",
+            "nanopore",
+            "pacbio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sequencer_model_a",
+          "descr": "Instrument model used for the sequencing run on sample A, recorded as part of capture configuration; e.g. a specific Illumina NovaSeq model designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number_a",
+          "descr": "Serial number of the sequencing instrument used for sample A, recorded to support instrument traceability and maintenance records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_identifier_a",
+          "descr": "Sequencing run ID for the capture session on sample A, e.g. a flow-cell or run-lane identifier assigned by the instrument or LIMS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp_a",
+          "descr": "Configured read length for the sequencing capture on sample A, measured at run setup and reported in base pairs per read; use the nominal run configuration such as 150 bp or 250 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_a",
+          "descr": "Sequencing chemistry or kit version used during the capture of sample A, recorded at run setup because it determines how the instrument acquires the signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pm_a",
+          "descr": "Library loading concentration used for the sequencing run on sample A, measured or set immediately before instrument loading and reported in picomolar; typical values depend on platform and library normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_generation_method_a",
+          "descr": "Cluster or flow-cell loading method used during the sequencing capture of sample A, describing how library molecules were prepared for signal acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_success_a",
+          "descr": "Whether the sequencing session for sample A completed successfully and produced raw reads suitable for downstream file generation, assessed at the end of the capture run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenome_seq_b": {
+      "reasoning": "The target node is a Capture node, so I included only instrument/session configuration for the sequencing run on sample B: platform, model, serial number, run ID, read length, chemistry, loading concentration, and loading/cluster method plus a success indicator. I excluded upstream library attributes and downstream raw-read file properties, since those belong to the library Entity and Signal nodes respectively. To avoid DAG-wide field collisions, I used B-specific field names rather than reusing the A-run metadata names.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_platform_b",
+          "descr": "Sequencing platform used for the capture session on sample B, recorded at run setup; for this workflow it should identify the Illumina instrument family used to measure the library.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina",
+            "nanopore",
+            "pacbio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sequencer_model_b",
+          "descr": "Instrument model used for the sequencing run on sample B, recorded as part of capture configuration; e.g. a specific Illumina NovaSeq model designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number_b",
+          "descr": "Serial number of the sequencing instrument used for sample B, recorded to support instrument traceability and maintenance records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_identifier_b",
+          "descr": "Sequencing run ID for the capture session on sample B, e.g. a flow-cell or run-lane identifier assigned by the instrument or LIMS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp_b",
+          "descr": "Configured read length for the sequencing capture on sample B, measured at run setup and reported in base pairs per read; use the nominal run configuration such as 150 bp or 250 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_b",
+          "descr": "Sequencing chemistry or kit version used during the capture of sample B, recorded at run setup because it determines how the instrument acquires the signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pm_b",
+          "descr": "Library loading concentration used for the sequencing run on sample B, measured or set immediately before instrument loading and reported in picomolar; typical values depend on platform and library normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_generation_method_b",
+          "descr": "Cluster or flow-cell loading method used during the sequencing capture of sample B, describing how library molecules were prepared for signal acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_success_b",
+          "descr": "Whether the sequencing session for sample B completed successfully and produced raw reads suitable for downstream file generation, assessed at the end of the capture run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenome_seq_c": {
+      "reasoning": "The target node is a Capture node, so I included only the controlled sequencing-session configuration for sample C: platform, instrument identity, run identifier, read length, chemistry, loading concentration, loading/cluster method, and whether the capture succeeded. I excluded upstream library attributes and downstream raw read file properties because those belong to the Entity and Signal nodes, respectively. I also used C-specific field names to avoid collisions with the sequencing metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_platform_c",
+          "descr": "Sequencing platform used for the capture session on sample C, recorded at run setup; for this workflow it should identify the Illumina instrument family used to measure the library.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina",
+            "nanopore",
+            "pacbio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sequencer_model_c",
+          "descr": "Instrument model used for the sequencing run on sample C, recorded as part of capture configuration; e.g. a specific Illumina NovaSeq model designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number_c",
+          "descr": "Serial number of the sequencing instrument used for sample C, recorded to support instrument traceability and maintenance records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_identifier_c",
+          "descr": "Sequencing run ID for the capture session on sample C, e.g. a flow-cell or run-lane identifier assigned by the instrument or LIMS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp_c",
+          "descr": "Configured read length for the sequencing capture on sample C, measured at run setup and reported in base pairs per read; use the nominal run configuration such as 150 bp or 250 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_c",
+          "descr": "Sequencing chemistry or kit version used during the capture of sample C, recorded at run setup because it determines how the instrument acquires the signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pm_c",
+          "descr": "Library loading concentration used for the sequencing run on sample C, measured or set immediately before instrument loading and reported in picomolar; typical values depend on platform and library normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_generation_method_c",
+          "descr": "Cluster or flow-cell loading method used during the sequencing capture of sample C, describing how library molecules were prepared for signal acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_success_c",
+          "descr": "Whether the sequencing session for sample C completed successfully and produced raw reads suitable for downstream file generation, assessed at the end of the capture run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_reads_a": {
+      "reasoning": "The target node is a Signal node, so I included only raw data artefact properties: file format, file size, read structure/dimensions, storage location, and technical quality metrics. I excluded sequencing platform and run settings because those belong to the upstream Capture node, and I excluded biological interpretation because that belongs downstream. I also avoided repeating any upstream sample or library identifiers beyond a file-to-origin reference, since the signal should describe the artefact itself rather than the process that generated it.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_id_a",
+          "descr": "Unique identifier for the raw read file generated from sample A, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_file_format_a",
+          "descr": "File format of the raw reads for sample A at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_size_bytes_a",
+          "descr": "On-disk size of the raw read artefact for sample A, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_read_count_a",
+          "descr": "Total number of reads contained in the raw FASTQ artefact for sample A, counted from the file contents after sequencing and before downstream trimming.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_base_count_bp_a",
+          "descr": "Total number of base pairs represented in the raw read file for sample A, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_average_read_length_bp_a",
+          "descr": "Average read length in the raw read file for sample A, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_storage_uri_a",
+          "descr": "Storage location or access URI for the raw read artefact for sample A, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_quality_flag_a",
+          "descr": "Technical quality status of the raw read file for sample A at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_reads_b": {
+      "reasoning": "The target node is a Signal node, so I limited the metadata to the raw file artefact itself: format, size, read counts/dimensions, storage location, and technical quality status. I excluded sequencing instrument settings and library preparation details because those belong upstream to Capture and Entity nodes. I used B-specific field names to avoid colliding with the raw-read metadata already generated for sample A.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_id_b",
+          "descr": "Unique identifier for the raw read file generated from sample B, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_file_format_b",
+          "descr": "File format of the raw reads for sample B at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_size_bytes_b",
+          "descr": "On-disk size of the raw read artefact for sample B, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_read_count_b",
+          "descr": "Total number of reads contained in the raw FASTQ artefact for sample B, counted from the file contents after sequencing and before downstream trimming.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_base_count_bp_b",
+          "descr": "Total number of base pairs represented in the raw read file for sample B, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_average_read_length_bp_b",
+          "descr": "Average read length in the raw read file for sample B, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_storage_uri_b",
+          "descr": "Storage location or access URI for the raw read artefact for sample B, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_quality_flag_b",
+          "descr": "Technical quality status of the raw read file for sample B at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_reads_c": {
+      "reasoning": "The target node is a Signal node, so I included only raw-data artefact properties: file identity, format, size, read-count/dimension metrics, storage location, and a technical quality flag. I excluded capture settings and upstream library properties because they belong to the sequencing Capture and library Entity nodes, not the signal itself. I also used C-specific field names to avoid repeating or colliding with the raw-read metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_id_c",
+          "descr": "Unique identifier for the raw read file generated from sample C, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_file_format_c",
+          "descr": "File format of the raw reads for sample C at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_size_bytes_c",
+          "descr": "On-disk size of the raw read artefact for sample C, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_read_count_c",
+          "descr": "Total number of reads contained in the raw FASTQ artefact for sample C, counted from the file contents after sequencing and before downstream trimming.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_base_count_bp_c",
+          "descr": "Total number of base pairs represented in the raw read file for sample C, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_average_read_length_bp_c",
+          "descr": "Average read length in the raw read file for sample C, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_storage_uri_c",
+          "descr": "Storage location or access URI for the raw read artefact for sample C, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_quality_flag_c",
+          "descr": "Technical quality status of the raw read file for sample C at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_qc_trim_a": {
+      "reasoning": "The target node is a Process, so I included only the trimming operation parameters and a process-level output quality indicator for sample A. That means fields describing the software/tool used, adapter or quality thresholds, minimum length settings, retained fraction, and whether the trimming output was acceptable. I excluded raw-read file properties because those belong to the upstream Signal node, and I excluded downstream trimmed-read artefact properties because they belong to the Signal node produced by this process. I also used A-specific field names to avoid collisions with any earlier process metadata in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "trim_tool_name_a",
+          "descr": "Name of the read trimming or QC software used for sample A, recorded at the time of processing; e.g. a program such as fastp or cutadapt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_tool_version_a",
+          "descr": "Software version of the trimming tool used for sample A, recorded to support reproducibility and provenance; e.g. '0.23.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_adapter_sequences_a",
+          "descr": "Adapter or contaminant sequence set applied during trimming of sample A reads, recorded as sequence names or motifs used by the trimming software.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_quality_threshold_phred_a",
+          "descr": "Minimum per-base quality threshold used to trim or filter sample A reads, measured in Phred score units at processing time; typical values are in the teens to twenties.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_min_length_bp_a",
+          "descr": "Minimum read length retained after trimming for sample A, reported in base pairs; reads shorter than this threshold were discarded or flagged during processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_n_base_cutoff_a",
+          "descr": "Maximum allowed ambiguous base count or cutoff rule applied during trimming of sample A, recorded as the process parameter controlling how Ns are handled.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_retention_fraction_a",
+          "descr": "Fraction of input reads retained after trimming for sample A, calculated at the end of the process as a basic output quality indicator; report as a value between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_qc_status_a",
+          "descr": "Overall QC status of the trimming process for sample A, assigned after processing based on whether the output was suitable for downstream assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_qc_trim_b": {
+      "reasoning": "The target node is a Process, so I limited metadata to the trimming/QC procedure for sample B: software identity, version, adapter/contaminant specification, quality thresholds, minimum length, ambiguity handling, retained fraction, and overall QC status. I excluded raw-read properties because those belong upstream to the Signal node, and I excluded trimmed-read artefact properties because those belong downstream to the Signal produced by this process. I used B-specific field names to avoid collisions with the corresponding A-step metadata already generated.",
+      "md_schema": [
+        {
+          "field_id": "trim_tool_name_b",
+          "descr": "Name of the read trimming or QC software used for sample B, recorded at the time of processing; e.g. a program such as fastp or cutadapt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_tool_version_b",
+          "descr": "Software version of the trimming tool used for sample B, recorded to support reproducibility and provenance; e.g. '0.23.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_adapter_sequences_b",
+          "descr": "Adapter or contaminant sequence set applied during trimming of sample B reads, recorded as sequence names or motifs used by the trimming software.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_quality_threshold_phred_b",
+          "descr": "Minimum per-base quality threshold used to trim or filter sample B reads, measured in Phred score units at processing time; typical values are in the teens to twenties.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_min_length_bp_b",
+          "descr": "Minimum read length retained after trimming for sample B, reported in base pairs; reads shorter than this threshold were discarded or flagged during processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_n_base_cutoff_b",
+          "descr": "Maximum allowed ambiguous base count or cutoff rule applied during trimming of sample B, recorded as the process parameter controlling how Ns are handled.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_retention_fraction_b",
+          "descr": "Fraction of input reads retained after trimming for sample B, calculated at the end of the process as a basic output quality indicator; report as a value between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_qc_status_b",
+          "descr": "Overall QC status of the trimming process for sample B, assigned after processing based on whether the output was suitable for downstream assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_qc_trim_c": {
+      "reasoning": "The target node is a Process, so I included only trimming/QC parameters and a process-level outcome for sample C: tool identity and version, adapter/contaminant specification, quality and length thresholds, ambiguous-base handling, retained fraction, and overall QC status. I excluded upstream raw-read properties and downstream trimmed-read artefact properties because those belong to the Signal nodes surrounding this process. I used C-specific field names to avoid collisions with previously generated read-QC metadata for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "trim_tool_name_c",
+          "descr": "Name of the read trimming or QC software used for sample C, recorded at the time of processing; e.g. a program such as fastp or cutadapt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_tool_version_c",
+          "descr": "Software version of the trimming tool used for sample C, recorded to support reproducibility and provenance; e.g. '0.23.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_adapter_sequences_c",
+          "descr": "Adapter or contaminant sequence set applied during trimming of sample C reads, recorded as sequence names or motifs used by the trimming software.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_quality_threshold_phred_c",
+          "descr": "Minimum per-base quality threshold used to trim or filter sample C reads, measured in Phred score units at processing time; typical values are in the teens to twenties.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_min_length_bp_c",
+          "descr": "Minimum read length retained after trimming for sample C, reported in base pairs; reads shorter than this threshold were discarded or flagged during processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_n_base_cutoff_c",
+          "descr": "Maximum allowed ambiguous base count or cutoff rule applied during trimming of sample C, recorded as the process parameter controlling how Ns are handled.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_retention_fraction_c",
+          "descr": "Fraction of input reads retained after trimming for sample C, calculated at the end of the process as a basic output quality indicator; report as a value between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_qc_status_c",
+          "descr": "Overall QC status of the trimming process for sample C, assigned after processing based on whether the output was suitable for downstream assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "trimmed_reads_a": {
+      "reasoning": "The target node is a Signal node, so I included only the properties of the trimmed FASTQ artefact itself: file identity, format, size, read counts/dimensions, storage location, and a technical quality flag. I excluded trimming parameters because those belong to the upstream Process node, and I excluded assembly details because those belong to downstream Process/Derivative nodes. I also used A-specific names to avoid collisions with raw-read and QC metadata already generated earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_read_file_id_a",
+          "descr": "Unique identifier for the trimmed read file generated from sample A, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_file_format_a",
+          "descr": "File format of the trimmed reads for sample A at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_read_file_size_bytes_a",
+          "descr": "On-disk size of the trimmed read artefact for sample A, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_read_count_a",
+          "descr": "Total number of reads contained in the trimmed FASTQ artefact for sample A, counted from the file contents after QC trimming and before downstream assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_base_count_bp_a",
+          "descr": "Total number of base pairs represented in the trimmed read file for sample A, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_average_read_length_bp_a",
+          "descr": "Average read length in the trimmed read file for sample A, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_storage_uri_a",
+          "descr": "Storage location or access URI for the trimmed read artefact for sample A, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_quality_flag_a",
+          "descr": "Technical quality status of the trimmed read file for sample A at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "trimmed_reads_b": {
+      "reasoning": "The target node is a Signal node, so I restricted metadata to the trimmed FASTQ artefact itself: file identity, format, size, read-count and length summaries, storage URI, and a technical quality flag. I excluded trimming parameters because those are Process-node metadata, and I excluded assembly/provenance outputs because those belong downstream. I used B-specific field names to avoid collisions with the A trimmed-read signal already generated.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_read_file_id_b",
+          "descr": "Unique identifier for the trimmed read file generated from sample B, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_file_format_b",
+          "descr": "File format of the trimmed reads for sample B at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_read_file_size_bytes_b",
+          "descr": "On-disk size of the trimmed read artefact for sample B, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_read_count_b",
+          "descr": "Total number of reads contained in the trimmed FASTQ artefact for sample B, counted from the file contents after QC trimming and before downstream assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_base_count_bp_b",
+          "descr": "Total number of base pairs represented in the trimmed read file for sample B, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_average_read_length_bp_b",
+          "descr": "Average read length in the trimmed read file for sample B, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_storage_uri_b",
+          "descr": "Storage location or access URI for the trimmed read artefact for sample B, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_quality_flag_b",
+          "descr": "Technical quality status of the trimmed read file for sample B at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "trimmed_reads_c": {
+      "reasoning": "The target node is a Signal node, so I included only the trimmed FASTQ artefact properties: file identity, format, size, read-count and base-count summaries, storage URI, and a technical quality flag. I excluded trimming process settings because those belong to the upstream Process node, and I excluded assembly details because those belong downstream. I used C-specific names to avoid collisions with the trimmed-read metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_read_file_id_c",
+          "descr": "Unique identifier for the trimmed read file generated from sample C, e.g. a FASTQ filename or LIMS file accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_file_format_c",
+          "descr": "File format of the trimmed reads for sample C at the time of data release or storage; for this workflow it should typically be FASTQ or a FASTQ-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "fq",
+            "fq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_read_file_size_bytes_c",
+          "descr": "On-disk size of the trimmed read artefact for sample C, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_read_count_c",
+          "descr": "Total number of reads contained in the trimmed FASTQ artefact for sample C, counted from the file contents after QC trimming and before downstream assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_base_count_bp_c",
+          "descr": "Total number of base pairs represented in the trimmed read file for sample C, summed across all reads at the file level; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_average_read_length_bp_c",
+          "descr": "Average read length in the trimmed read file for sample C, calculated from the FASTQ artefact contents; report in base pairs per read.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_storage_uri_c",
+          "descr": "Storage location or access URI for the trimmed read artefact for sample C, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_quality_flag_c",
+          "descr": "Technical quality status of the trimmed read file for sample C at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "assembly_a": {
+      "reasoning": "The target node is a Process, so I included only the assembly operation details for sample A: assembler identity, version, key parameters, and an assembly-level output quality indicator. I excluded trimmed-read properties because those belong to the upstream Signal node, and I excluded contig file properties because those belong to the downstream Signal node produced by assembly. I also used A-specific names to avoid collisions with earlier process metadata in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name_a",
+          "descr": "Name of the metagenome assembler used for sample A, recorded at the time of the assembly process; e.g. MEGAHIT, metaSPAdes, or another assembler.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version_a",
+          "descr": "Version of the assembly software used for sample A, recorded to support reproducibility and provenance; e.g. '1.2' or 'v1.2.9'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_kmer_list_a",
+          "descr": "K-mer sizes or k-mer schedule used by the assembler for sample A, recorded as the assembly parameter set; report the values used during graph construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_min_contig_length_bp_a",
+          "descr": "Minimum contig length threshold applied during or after assembly for sample A, reported in base pairs; contigs shorter than this threshold were filtered or not reported.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_memory_limit_gb_a",
+          "descr": "Memory limit or memory setting used for the assembly of sample A, reported in gigabytes and measured as the configured process constraint.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_thread_count_a",
+          "descr": "Number of CPU threads used for the assembly of sample A, recorded as an active process setting that can affect runtime and output behavior.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_n50_bp_a",
+          "descr": "Assembly N50 value for sample A, calculated at the end of the assembly process as a quality indicator summarizing contig continuity; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_qc_status_a",
+          "descr": "Overall assembly QC status for sample A, assigned after assembly based on whether the contig set was suitable for downstream binning and analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "assembly_b": {
+      "reasoning": "The target node is a Process, so I included only the assembly operation details for sample B: assembler identity and version, core parameterization, and a process-level output quality indicator. I excluded trimmed-read inputs because those belong to the upstream Signal node, and I excluded contig outputs because those belong to the downstream Signal node. I also used B-specific names to avoid collisions with the assembly metadata already generated for sample A.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name_b",
+          "descr": "Name of the metagenome assembler used for sample B, recorded at the time of the assembly process; e.g. MEGAHIT, metaSPAdes, or another assembler.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version_b",
+          "descr": "Version of the assembly software used for sample B, recorded to support reproducibility and provenance; e.g. '1.2' or 'v1.2.9'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_kmer_list_b",
+          "descr": "K-mer sizes or k-mer schedule used by the assembler for sample B, recorded as the assembly parameter set; report the values used during graph construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_min_contig_length_bp_b",
+          "descr": "Minimum contig length threshold applied during or after assembly for sample B, reported in base pairs; contigs shorter than this threshold were filtered or not reported.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_memory_limit_gb_b",
+          "descr": "Memory limit or memory setting used for the assembly of sample B, reported in gigabytes and measured as the configured process constraint.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_thread_count_b",
+          "descr": "Number of CPU threads used for the assembly of sample B, recorded as an active process setting that can affect runtime and output behavior.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_n50_bp_b",
+          "descr": "Assembly N50 value for sample B, calculated at the end of the assembly process as a quality indicator summarizing contig continuity; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_qc_status_b",
+          "descr": "Overall assembly QC status for sample B, assigned after assembly based on whether the contig set was suitable for downstream binning and analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "assembly_c": {
+      "reasoning": "The target node is a Process, so I included only the assembly operation details for sample C: assembler identity and version, core assembly parameters, resource settings, and an output QC indicator. I excluded trimmed-read inputs because they belong to the upstream Signal node, and I excluded contig properties because they belong to the downstream Signal node produced by this process. I used C-specific field names to avoid collisions with the assembly metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name_c",
+          "descr": "Name of the metagenome assembler used for sample C, recorded at the time of the assembly process; e.g. MEGAHIT, metaSPAdes, or another assembler.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version_c",
+          "descr": "Version of the assembly software used for sample C, recorded to support reproducibility and provenance; e.g. '1.2' or 'v1.2.9'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_kmer_list_c",
+          "descr": "K-mer sizes or k-mer schedule used by the assembler for sample C, recorded as the assembly parameter set; report the values used during graph construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_min_contig_length_bp_c",
+          "descr": "Minimum contig length threshold applied during or after assembly for sample C, reported in base pairs; contigs shorter than this threshold were filtered or not reported.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_memory_limit_gb_c",
+          "descr": "Memory limit or memory setting used for the assembly of sample C, reported in gigabytes and measured as the configured process constraint.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_thread_count_c",
+          "descr": "Number of CPU threads used for the assembly of sample C, recorded as an active process setting that can affect runtime and output behavior.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_n50_bp_c",
+          "descr": "Assembly N50 value for sample C, calculated at the end of the assembly process as a quality indicator summarizing contig continuity; report in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_qc_status_c",
+          "descr": "Overall assembly QC status for sample C, assigned after assembly based on whether the contig set was suitable for downstream binning and analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "contigs_a": {
+      "reasoning": "The target node is a Signal node, so I included only the contig artefact properties: file identity, format, size, sequence-count/dimension summaries, storage location, and a technical quality flag. I excluded assembly parameters because those belong to the upstream Process node, and I excluded binning details because those belong downstream. I used A-specific field names to avoid collisions with the raw and trimmed read signals already generated earlier.",
+      "md_schema": [
+        {
+          "field_id": "contig_file_id_a",
+          "descr": "Unique identifier for the assembled contig file derived from sample A, e.g. a FASTA filename or LIMS accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_file_format_a",
+          "descr": "File format of the contig artefact for sample A at the time of data release or storage; for this workflow it should typically be FASTA or a FASTA-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_file_size_bytes_a",
+          "descr": "On-disk size of the contig artefact for sample A, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count_a",
+          "descr": "Total number of contigs in the assembled contig file for sample A, counted from the FASTA artefact after assembly and before downstream binning.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_total_length_bp_a",
+          "descr": "Sum of all contig lengths in the assembled contig file for sample A, reported in base pairs and measured from the file contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp_a",
+          "descr": "Contig N50 value for sample A calculated from the FASTA artefact contents; report in base pairs as a file-level continuity metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_storage_uri_a",
+          "descr": "Storage location or access URI for the contig artefact for sample A, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_quality_flag_a",
+          "descr": "Technical quality status of the contig file for sample A at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "contigs_b": {
+      "reasoning": "The target node is a Signal node, so I included only the contig artefact properties: file identity, format, size, contig-count and length summaries, storage URI, and a technical quality flag. I excluded assembly parameters because those belong to the upstream Process node, and I excluded binning or MAG-quality details because those belong downstream. I used B-specific field names to avoid collisions with the contig metadata already generated for sample A.",
+      "md_schema": [
+        {
+          "field_id": "contig_file_id_b",
+          "descr": "Unique identifier for the assembled contig file derived from sample B, e.g. a FASTA filename or LIMS accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_file_format_b",
+          "descr": "File format of the contig artefact for sample B at the time of data release or storage; for this workflow it should typically be FASTA or a FASTA-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_file_size_bytes_b",
+          "descr": "On-disk size of the contig artefact for sample B, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count_b",
+          "descr": "Total number of contigs in the assembled contig file for sample B, counted from the FASTA artefact after assembly and before downstream binning.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_total_length_bp_b",
+          "descr": "Sum of all contig lengths in the assembled contig file for sample B, reported in base pairs and measured from the file contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp_b",
+          "descr": "Contig N50 value for sample B calculated from the FASTA artefact contents; report in base pairs as a file-level continuity metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_storage_uri_b",
+          "descr": "Storage location or access URI for the contig artefact for sample B, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_quality_flag_b",
+          "descr": "Technical quality status of the contig file for sample B at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "contigs_c": {
+      "reasoning": "The target node is a Signal node, so I included only the contig artefact properties: file identity, format, size, contig-count and length summaries, storage URI, and a technical quality flag. I excluded assembly parameters because those belong to the upstream Process node, and I excluded binning or MAG-quality details because those belong downstream. I used C-specific field names to avoid collisions with the contig metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "contig_file_id_c",
+          "descr": "Unique identifier for the assembled contig file derived from sample C, e.g. a FASTA filename or LIMS accession; use a stable string that can be used to retrieve the exact artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_file_format_c",
+          "descr": "File format of the contig artefact for sample C at the time of data release or storage; for this workflow it should typically be FASTA or a FASTA-compressed variant.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_file_size_bytes_c",
+          "descr": "On-disk size of the contig artefact for sample C, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count_c",
+          "descr": "Total number of contigs in the assembled contig file for sample C, counted from the FASTA artefact after assembly and before downstream binning.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_total_length_bp_c",
+          "descr": "Sum of all contig lengths in the assembled contig file for sample C, reported in base pairs and measured from the file contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp_c",
+          "descr": "Contig N50 value for sample C calculated from the FASTA artefact contents; report in base pairs as a file-level continuity metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_storage_uri_c",
+          "descr": "Storage location or access URI for the contig artefact for sample C, such as an object-store path or repository accession used to retrieve the file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_quality_flag_c",
+          "descr": "Technical quality status of the contig file for sample C at the signal level, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "binning_algo1_a": {
+      "reasoning": "The target node is a Process, so I included only the binning procedure details for sample A under algorithm 1: software provenance, key parameter settings, input contig constraints, and a process-level binning outcome indicator. I excluded contig file properties because those belong to the upstream Signal node, and I excluded bin outputs because the actual binned genomes belong to the downstream Derivative node. I also used A/algorithm-1-specific names to avoid collisions with earlier assembly and trimming process metadata.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_a1",
+          "descr": "Name of the genome binning software used for sample A under binning strategy 1, recorded at the time the binning process was performed; e.g. MetaBAT2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_a1",
+          "descr": "Version of the binning software used for sample A under algorithm 1, recorded to support reproducibility and provenance; e.g. '2.15'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_a1",
+          "descr": "Parameter set or key options used for binning sample A contigs under algorithm 1, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_a1",
+          "descr": "Minimum contig length included in the binning input for sample A under algorithm 1, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_a1",
+          "descr": "Maximum number of bins requested or allowed for sample A under algorithm 1, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_a1",
+          "descr": "Number of CPU threads used for binning sample A contigs under algorithm 1, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_a1",
+          "descr": "Primary clustering metric or evidence type used by algorithm 1 when grouping contigs for sample A, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_a1",
+          "descr": "Overall QC status of the binning process for sample A under algorithm 1, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "binning_algo1_b": {
+      "reasoning": "The target node is a Process, so I included only the binning procedure details for sample B under algorithm 1: software provenance, configuration, input contig constraints, runtime settings, and a process-level QC indicator. I excluded contig file properties because those belong to the upstream Signal node, and I excluded the resulting bins because they belong to the downstream Derivative node. I used B/algorithm-1-specific names to avoid collisions with the metadata already generated for sample A and other earlier workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_b1",
+          "descr": "Name of the genome binning software used for sample B under binning strategy 1, recorded at the time the binning process was performed; e.g. MetaBAT2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_b1",
+          "descr": "Version of the binning software used for sample B under algorithm 1, recorded to support reproducibility and provenance; e.g. '2.15'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_b1",
+          "descr": "Parameter set or key options used for binning sample B contigs under algorithm 1, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_b1",
+          "descr": "Minimum contig length included in the binning input for sample B under algorithm 1, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_b1",
+          "descr": "Maximum number of bins requested or allowed for sample B under algorithm 1, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_b1",
+          "descr": "Number of CPU threads used for binning sample B contigs under algorithm 1, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_b1",
+          "descr": "Primary clustering metric or evidence type used by algorithm 1 when grouping contigs for sample B, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_b1",
+          "descr": "Overall QC status of the binning process for sample B under algorithm 1, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "binning_algo1_c": {
+      "reasoning": "The target node is a Process, so I included only the binning procedure details for sample C under algorithm 1: software provenance, parameterization, input contig threshold, runtime settings, clustering metric, and a process-level QC flag. I excluded contig and bin outputs because those belong to the upstream Signal and downstream Derivative nodes, respectively. I used C/algorithm-1-specific names to avoid collisions with earlier binning metadata generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_c1",
+          "descr": "Name of the genome binning software used for sample C under binning strategy 1, recorded at the time the binning process was performed; e.g. MetaBAT2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_c1",
+          "descr": "Version of the binning software used for sample C under algorithm 1, recorded to support reproducibility and provenance; e.g. '2.15'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_c1",
+          "descr": "Parameter set or key options used for binning sample C contigs under algorithm 1, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_c1",
+          "descr": "Minimum contig length included in the binning input for sample C under algorithm 1, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_c1",
+          "descr": "Maximum number of bins requested or allowed for sample C under algorithm 1, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_c1",
+          "descr": "Number of CPU threads used for binning sample C contigs under algorithm 1, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_c1",
+          "descr": "Primary clustering metric or evidence type used by algorithm 1 when grouping contigs for sample C, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_c1",
+          "descr": "Overall QC status of the binning process for sample C under algorithm 1, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "bins_algo1_a": {
+      "reasoning": "The target node is a Derivative node, so I included only computed-result properties of the bin set itself: file identity, format, size, bin counts/dimensions, storage location, and derivative-quality indicators. I excluded binning software and parameters because those belong to the upstream Process node, and I excluded raw contig properties because those belong to the upstream Signal node. I used A/algorithm-1-specific names to avoid collisions with the earlier derivative or signal metadata in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_a1",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample A by algorithm 1, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_a1",
+          "descr": "File format of the binned genome artefact for sample A under algorithm 1 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_a1",
+          "descr": "On-disk size of the binned genome artefact for sample A under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_a1",
+          "descr": "Number of genome bins produced for sample A under algorithm 1, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_a1",
+          "descr": "Sum of the lengths of all genome bins produced for sample A under algorithm 1, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_a1",
+          "descr": "Storage location or access URI for the binned genome artefact for sample A under algorithm 1, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_a1",
+          "descr": "Technical quality status of the binned genome derivative for sample A under algorithm 1, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_a1",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample A under algorithm 1, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bins_algo1_b": {
+      "reasoning": "The target node is a Derivative node, so I limited metadata to computed-result properties of the bin set itself: file identity, format, size, bin counts and continuity summaries, storage location, and a derivative-quality flag. I excluded binning software and parameter settings because those belong to the upstream Process node, and I excluded contig/input properties because those belong to the upstream Signal node. I used B/algorithm-1-specific names to avoid collisions with the derivative metadata already generated for sample A.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_b1",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample B by algorithm 1, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_b1",
+          "descr": "File format of the binned genome artefact for sample B under algorithm 1 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_b1",
+          "descr": "On-disk size of the binned genome artefact for sample B under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_b1",
+          "descr": "Number of genome bins produced for sample B under algorithm 1, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_b1",
+          "descr": "Sum of the lengths of all genome bins produced for sample B under algorithm 1, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_b1",
+          "descr": "Storage location or access URI for the binned genome artefact for sample B under algorithm 1, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_b1",
+          "descr": "Technical quality status of the binned genome derivative for sample B under algorithm 1, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_b1",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample B under algorithm 1, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bins_algo1_c": {
+      "reasoning": "The target node is a Derivative node, so I included only computed-result properties of the binned genome set itself: file identity, format, size, bin counts and continuity summary, storage location, and a derivative-quality flag. I excluded binning software and parameter settings because those belong to the upstream Process node, and I excluded contig/input properties because those belong to the upstream Signal node. I used C/algorithm-1-specific names to avoid collisions with the derivative metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_c1",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample C by algorithm 1, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_c1",
+          "descr": "File format of the binned genome artefact for sample C under algorithm 1 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_c1",
+          "descr": "On-disk size of the binned genome artefact for sample C under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_c1",
+          "descr": "Number of genome bins produced for sample C under algorithm 1, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_c1",
+          "descr": "Sum of the lengths of all genome bins produced for sample C under algorithm 1, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_c1",
+          "descr": "Storage location or access URI for the binned genome artefact for sample C under algorithm 1, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_c1",
+          "descr": "Technical quality status of the binned genome derivative for sample C under algorithm 1, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_c1",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample C under algorithm 1, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_algo2_a": {
+      "reasoning": "The target node is a Process, so I included only the alternative binning procedure details for sample A under algorithm 2: software provenance, configuration, input contig threshold, runtime settings, clustering metric, and a process-level QC indicator. I excluded the contig input and bin output artefacts because those belong to the upstream Signal and downstream Derivative nodes, respectively. I also used A/algorithm-2-specific names to avoid collisions with earlier binning metadata for algorithm 1 and with other process nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_a2",
+          "descr": "Name of the genome binning software used for sample A under binning strategy 2, recorded at the time the binning process was performed; e.g. MaxBin2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_a2",
+          "descr": "Version of the binning software used for sample A under algorithm 2, recorded to support reproducibility and provenance; e.g. '2.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_a2",
+          "descr": "Parameter set or key options used for binning sample A contigs under algorithm 2, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_a2",
+          "descr": "Minimum contig length included in the binning input for sample A under algorithm 2, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_a2",
+          "descr": "Maximum number of bins requested or allowed for sample A under algorithm 2, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_a2",
+          "descr": "Number of CPU threads used for binning sample A contigs under algorithm 2, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_a2",
+          "descr": "Primary clustering metric or evidence type used by algorithm 2 when grouping contigs for sample A, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_a2",
+          "descr": "Overall QC status of the binning process for sample A under algorithm 2, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "binning_algo2_b": {
+      "reasoning": "The target node is a Process, so I included only the alternative binning procedure details for sample B under algorithm 2: software provenance, configuration, input contig threshold, runtime settings, clustering metric, and a process-level QC indicator. I excluded the contig input and bin output artefacts because those belong to the upstream Signal and downstream Derivative nodes, respectively. I used B/algorithm-2-specific names to avoid collisions with earlier binning metadata for algorithm 1 and with other process nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_b2",
+          "descr": "Name of the genome binning software used for sample B under binning strategy 2, recorded at the time the binning process was performed; e.g. MaxBin2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_b2",
+          "descr": "Version of the binning software used for sample B under algorithm 2, recorded to support reproducibility and provenance; e.g. '2.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_b2",
+          "descr": "Parameter set or key options used for binning sample B contigs under algorithm 2, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_b2",
+          "descr": "Minimum contig length included in the binning input for sample B under algorithm 2, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_b2",
+          "descr": "Maximum number of bins requested or allowed for sample B under algorithm 2, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_b2",
+          "descr": "Number of CPU threads used for binning sample B contigs under algorithm 2, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_b2",
+          "descr": "Primary clustering metric or evidence type used by algorithm 2 when grouping contigs for sample B, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_b2",
+          "descr": "Overall QC status of the binning process for sample B under algorithm 2, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "binning_algo2_c": {
+      "reasoning": "The target node is a Process, so I included only the alternative binning procedure details for sample C under algorithm 2: software provenance, configuration, input contig threshold, runtime settings, clustering metric, and a process-level QC indicator. I excluded the contig input and bin output artefacts because those belong to the upstream Signal and downstream Derivative nodes, respectively. I used C/algorithm-2-specific names to avoid collisions with earlier binning metadata for algorithm 1 and with other process nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name_c2",
+          "descr": "Name of the genome binning software used for sample C under binning strategy 2, recorded at the time the binning process was performed; e.g. MaxBin2 or another binning package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version_c2",
+          "descr": "Version of the binning software used for sample C under algorithm 2, recorded to support reproducibility and provenance; e.g. '2.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_parameter_set_c2",
+          "descr": "Parameter set or key options used for binning sample C contigs under algorithm 2, recorded as the process configuration that controls clustering behavior.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_min_contig_length_bp_c2",
+          "descr": "Minimum contig length included in the binning input for sample C under algorithm 2, reported in base pairs; contigs shorter than this threshold were excluded from clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_max_bins_c2",
+          "descr": "Maximum number of bins requested or allowed for sample C under algorithm 2, recorded as a binning constraint or stopping criterion where applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_thread_count_c2",
+          "descr": "Number of CPU threads used for binning sample C contigs under algorithm 2, recorded as an active process setting that affects runtime and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_cluster_metric_c2",
+          "descr": "Primary clustering metric or evidence type used by algorithm 2 when grouping contigs for sample C, such as coverage, tetranucleotide frequency, or a combined metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_qc_status_c2",
+          "descr": "Overall QC status of the binning process for sample C under algorithm 2, assigned after clustering based on whether the run produced usable genome bins for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "bins_algo2_a": {
+      "reasoning": "The target node is a Derivative node, so I included only computed-result properties of the binned genome set itself: file identity, format, size, bin counts and continuity summaries, storage location, and a derivative-quality flag. I excluded binning software and parameters because those belong to the upstream Process node, and I excluded contig/input properties because those belong to the upstream Signal node. I used A/algorithm-2-specific names to avoid collisions with the derivative metadata already generated for algorithm 1 and the other workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_a2",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample A by algorithm 2, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_a2",
+          "descr": "File format of the binned genome artefact for sample A under algorithm 2 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_a2",
+          "descr": "On-disk size of the binned genome artefact for sample A under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_a2",
+          "descr": "Number of genome bins produced for sample A under algorithm 2, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_a2",
+          "descr": "Sum of the lengths of all genome bins produced for sample A under algorithm 2, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_a2",
+          "descr": "Storage location or access URI for the binned genome artefact for sample A under algorithm 2, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_a2",
+          "descr": "Technical quality status of the binned genome derivative for sample A under algorithm 2, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_a2",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample A under algorithm 2, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bins_algo2_b": {
+      "reasoning": "The target node is a Derivative node, so I included only computed-result properties of the binned genome set itself: file identity, format, size, bin counts and continuity summaries, storage location, and a derivative-quality flag. I excluded binning software and parameters because those belong to the upstream Process node, and I excluded contig/input properties because those belong to the upstream Signal node. I used B/algorithm-2-specific names to avoid collisions with the derivative metadata already generated for algorithm 1 and the other workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_b2",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample B by algorithm 2, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_b2",
+          "descr": "File format of the binned genome artefact for sample B under algorithm 2 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_b2",
+          "descr": "On-disk size of the binned genome artefact for sample B under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_b2",
+          "descr": "Number of genome bins produced for sample B under algorithm 2, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_b2",
+          "descr": "Sum of the lengths of all genome bins produced for sample B under algorithm 2, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_b2",
+          "descr": "Storage location or access URI for the binned genome artefact for sample B under algorithm 2, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_b2",
+          "descr": "Technical quality status of the binned genome derivative for sample B under algorithm 2, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_b2",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample B under algorithm 2, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bins_algo2_c": {
+      "reasoning": "The target node is a Derivative node, so I included only computed-result properties of the binned genome set itself: file identity, format, size, bin counts and continuity summaries, storage location, and a derivative-quality flag. I excluded binning software and parameters because those belong to the upstream Process node, and I excluded contig/input properties because those belong to the upstream Signal node. I used C/algorithm-2-specific names to avoid collisions with the derivative metadata already generated for algorithm 1 and the other workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "bin_set_file_id_c2",
+          "descr": "Unique identifier for the genome-bin artefact produced from sample C by algorithm 2, e.g. a FASTA archive or LIMS accession; use a stable string that can retrieve the exact derivative file set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_set_file_format_c2",
+          "descr": "File format of the binned genome artefact for sample C under algorithm 2 at the time of storage or release; typically FASTA or an archive of FASTA files.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fa",
+            "fna",
+            "fasta_gz",
+            "fa_gz",
+            "tar",
+            "zip",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_set_file_size_bytes_c2",
+          "descr": "On-disk size of the binned genome artefact for sample C under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_count_c2",
+          "descr": "Number of genome bins produced for sample C under algorithm 2, counted from the derivative artefact after clustering and before quality assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_total_length_bp_c2",
+          "descr": "Sum of the lengths of all genome bins produced for sample C under algorithm 2, reported in base pairs and measured from the bin artefact contents.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_storage_uri_c2",
+          "descr": "Storage location or access URI for the binned genome artefact for sample C under algorithm 2, such as an object-store path or repository accession used to retrieve the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_derivative_quality_flag_c2",
+          "descr": "Technical quality status of the binned genome derivative for sample C under algorithm 2, indicating whether the artefact passed basic file integrity and content checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "binning_summary_n50_bp_c2",
+          "descr": "Derivative-level N50 or analogous continuity summary for the binned genomes from sample C under algorithm 2, calculated from the bin artefact contents and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mag_qc_a1": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample A under algorithm 1: QC tool identity and version, reference set provenance, thresholds, and process outcome status. I excluded the binned genome properties because those belong to the upstream Derivative node, and I excluded the resulting completeness/contamination numbers because those belong to the downstream Derivative node. I used A/algorithm-1-specific names to avoid collisions with earlier process metadata in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_a1",
+          "descr": "Name of the quality-assessment software used for sample A under binning algorithm 1, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_a1",
+          "descr": "Version of the MAG QC software used for sample A under algorithm 1, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_a1",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample A bins under algorithm 1, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_a1",
+          "descr": "Completeness threshold used to judge bins from sample A under algorithm 1, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_a1",
+          "descr": "Maximum contamination threshold used to judge bins from sample A under algorithm 1, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_a1",
+          "descr": "Number of bins from sample A under algorithm 1 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_a1",
+          "descr": "Overall QC status of the MAG evaluation for sample A under algorithm 1, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_qc_b1": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample B under algorithm 1: QC tool identity and version, reference set provenance, thresholds, evaluated-bin count, and process outcome status. I excluded binned genome properties because those belong to the upstream Derivative node, and I excluded the completeness and contamination outputs because those belong to the downstream Derivative node. I used B/algorithm-1-specific names to avoid collisions with the QC metadata already generated for sample A and other prior process nodes.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_b1",
+          "descr": "Name of the quality-assessment software used for sample B under binning algorithm 1, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_b1",
+          "descr": "Version of the MAG QC software used for sample B under algorithm 1, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_b1",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample B bins under algorithm 1, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_b1",
+          "descr": "Completeness threshold used to judge bins from sample B under algorithm 1, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_b1",
+          "descr": "Maximum contamination threshold used to judge bins from sample B under algorithm 1, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_b1",
+          "descr": "Number of bins from sample B under algorithm 1 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_b1",
+          "descr": "Overall QC status of the MAG evaluation for sample B under algorithm 1, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_qc_c1": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample C under algorithm 1: QC tool identity and version, reference set provenance, thresholds, evaluated-bin count, and process outcome status. I excluded binned genome properties because those belong to the upstream Derivative node, and I excluded the completeness and contamination outputs because those belong to the downstream Derivative node. I used C/algorithm-1-specific names to avoid collisions with the QC metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_c1",
+          "descr": "Name of the quality-assessment software used for sample C under binning algorithm 1, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_c1",
+          "descr": "Version of the MAG QC software used for sample C under algorithm 1, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_c1",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample C bins under algorithm 1, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_c1",
+          "descr": "Completeness threshold used to judge bins from sample C under algorithm 1, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_c1",
+          "descr": "Maximum contamination threshold used to judge bins from sample C under algorithm 1, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_c1",
+          "descr": "Number of bins from sample C under algorithm 1 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_c1",
+          "descr": "Overall QC status of the MAG evaluation for sample C under algorithm 1, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_qc_a2": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample A under algorithm 2: QC software identity and version, reference set provenance, evaluation thresholds, evaluated-bin count, and process outcome status. I excluded binned genome properties because those belong to the upstream Derivative node, and I excluded completeness and contamination outputs because those belong to the downstream Derivative node. I used A/algorithm-2-specific names to avoid collisions with the QC metadata already generated for algorithm 1 and with other process nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_a2",
+          "descr": "Name of the quality-assessment software used for sample A under binning algorithm 2, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_a2",
+          "descr": "Version of the MAG QC software used for sample A under algorithm 2, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_a2",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample A bins under algorithm 2, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_a2",
+          "descr": "Completeness threshold used to judge bins from sample A under algorithm 2, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_a2",
+          "descr": "Maximum contamination threshold used to judge bins from sample A under algorithm 2, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_a2",
+          "descr": "Number of bins from sample A under algorithm 2 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_a2",
+          "descr": "Overall QC status of the MAG evaluation for sample A under algorithm 2, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_qc_b2": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample B under algorithm 2: QC software identity and version, reference set provenance, evaluation thresholds, evaluated-bin count, and process outcome status. I excluded binned genome properties because those belong to the upstream Derivative node, and I excluded completeness and contamination outputs because those belong to the downstream Derivative node. I used B/algorithm-2-specific names to avoid collisions with the QC metadata already generated for algorithm 1 and other workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_b2",
+          "descr": "Name of the quality-assessment software used for sample B under binning algorithm 2, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_b2",
+          "descr": "Version of the MAG QC software used for sample B under algorithm 2, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_b2",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample B bins under algorithm 2, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_b2",
+          "descr": "Completeness threshold used to judge bins from sample B under algorithm 2, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_b2",
+          "descr": "Maximum contamination threshold used to judge bins from sample B under algorithm 2, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_b2",
+          "descr": "Number of bins from sample B under algorithm 2 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_b2",
+          "descr": "Overall QC status of the MAG evaluation for sample B under algorithm 2, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_qc_c2": {
+      "reasoning": "The target node is a Process, so I included only the MAG quality-assessment procedure for sample C under algorithm 2: QC software identity and version, reference set provenance, evaluation thresholds, evaluated-bin count, and process outcome status. I excluded binned genome properties because those belong to the upstream Derivative node, and I excluded completeness and contamination outputs because those belong to the downstream Derivative node. I used C/algorithm-2-specific names to avoid collisions with the QC metadata already generated for algorithm 1 and the other workflow steps.",
+      "md_schema": [
+        {
+          "field_id": "mag_qc_tool_name_c2",
+          "descr": "Name of the quality-assessment software used for sample C under binning algorithm 2, recorded at the time the QC process was performed; e.g. CheckM or a similar MAG evaluation tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_tool_version_c2",
+          "descr": "Version of the MAG QC software used for sample C under algorithm 2, recorded to support reproducibility and provenance; e.g. '1.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_reference_set_name_c2",
+          "descr": "Name or identifier of the reference lineage set or database used to assess sample C bins under algorithm 2, recorded as part of the QC process configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_completeness_threshold_pct_c2",
+          "descr": "Completeness threshold used to judge bins from sample C under algorithm 2, reported as a percentage; bins meeting or exceeding this value are considered sufficiently complete for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_contamination_threshold_pct_c2",
+          "descr": "Maximum contamination threshold used to judge bins from sample C under algorithm 2, reported as a percentage; bins above this value are considered too contaminated for the workflow's purposes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_bin_count_evaluated_c2",
+          "descr": "Number of bins from sample C under algorithm 2 that were evaluated by the MAG QC process, counted at the start of assessment.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_qc_qc_status_c2",
+          "descr": "Overall QC status of the MAG evaluation for sample C under algorithm 2, assigned after assessment based on whether the evaluated bins met the study's quality criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_a1": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample A under algorithm 1: completeness and contamination values, plus derivative-level summaries and any bin-level eligibility flag. I excluded QC software, thresholds, and reference database details because those belong to the upstream Process node. I also excluded the binned genome artifact itself because that belongs to the upstream Derivative node. I used A/algorithm-1-specific names to avoid collisions with earlier derivative fields and to keep the metrics clearly tied to this QC result node.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_a1",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample A under algorithm 1, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_a1",
+          "descr": "File format of the MAG metrics artefact for sample A under algorithm 1 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_a1",
+          "descr": "On-disk size of the MAG metrics artefact for sample A under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_a1",
+          "descr": "Estimated genome completeness for sample A bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_a1",
+          "descr": "Estimated genome contamination for sample A bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_a1",
+          "descr": "Number of bins from sample A under algorithm 1 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_a1",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample A under algorithm 1, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_a1",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample A under algorithm 1, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_b1": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample B under algorithm 1: the metrics artefact identity and format, file size, completeness and contamination values, a high-quality-bin count summary, storage location, and a result quality flag. I excluded QC software, thresholds, and reference set details because those belong to the upstream Process node. I also excluded the binned genome artefact itself because that belongs to the upstream Derivative node. I used B/algorithm-1-specific names to avoid collisions with the metrics metadata already generated for sample A.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_b1",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample B under algorithm 1, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_b1",
+          "descr": "File format of the MAG metrics artefact for sample B under algorithm 1 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_b1",
+          "descr": "On-disk size of the MAG metrics artefact for sample B under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_b1",
+          "descr": "Estimated genome completeness for sample B bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_b1",
+          "descr": "Estimated genome contamination for sample B bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_b1",
+          "descr": "Number of bins from sample B under algorithm 1 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_b1",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample B under algorithm 1, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_b1",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample B under algorithm 1, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_c1": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample C under algorithm 1: the metrics artefact identity and format, file size, completeness and contamination values, a high-quality-bin count summary, storage location, and a result quality flag. I excluded QC software, thresholds, and reference set details because those belong to the upstream Process node. I also excluded the binned genome artefact itself because that belongs to the upstream Derivative node. I used C/algorithm-1-specific names to avoid collisions with the metrics metadata already generated for samples A and B.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_c1",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample C under algorithm 1, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_c1",
+          "descr": "File format of the MAG metrics artefact for sample C under algorithm 1 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_c1",
+          "descr": "On-disk size of the MAG metrics artefact for sample C under algorithm 1, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_c1",
+          "descr": "Estimated genome completeness for sample C bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_c1",
+          "descr": "Estimated genome contamination for sample C bins generated by algorithm 1, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_c1",
+          "descr": "Number of bins from sample C under algorithm 1 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_c1",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample C under algorithm 1, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_c1",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample C under algorithm 1, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_a2": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample A under algorithm 2: the metrics artefact identity and format, file size, completeness and contamination values, a high-quality-bin count summary, storage location, and a result quality flag. I excluded QC software, thresholds, and reference set details because those belong to the upstream Process node. I also excluded the binned genome artefact itself because that belongs to the upstream Derivative node. I used A/algorithm-2-specific names to avoid collisions with the metrics metadata already generated for algorithm 1 and with other DAG steps.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_a2",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample A under algorithm 2, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_a2",
+          "descr": "File format of the MAG metrics artefact for sample A under algorithm 2 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_a2",
+          "descr": "On-disk size of the MAG metrics artefact for sample A under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_a2",
+          "descr": "Estimated genome completeness for sample A bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_a2",
+          "descr": "Estimated genome contamination for sample A bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_a2",
+          "descr": "Number of bins from sample A under algorithm 2 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_a2",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample A under algorithm 2, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_a2",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample A under algorithm 2, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_b2": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample B under algorithm 2: the metrics artefact identity and format, file size, completeness and contamination values, a high-quality-bin count summary, storage location, and a result quality flag. I excluded QC software, thresholds, and reference set details because those belong to the upstream Process node. I also excluded the binned genome artefact itself because that belongs to the upstream Derivative node. I used B/algorithm-2-specific names to avoid collisions with the metrics metadata already generated for algorithm 1 and with other DAG steps.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_b2",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample B under algorithm 2, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_b2",
+          "descr": "File format of the MAG metrics artefact for sample B under algorithm 2 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_b2",
+          "descr": "On-disk size of the MAG metrics artefact for sample B under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_b2",
+          "descr": "Estimated genome completeness for sample B bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_b2",
+          "descr": "Estimated genome contamination for sample B bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_b2",
+          "descr": "Number of bins from sample B under algorithm 2 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_b2",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample B under algorithm 2, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_b2",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample B under algorithm 2, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "mag_metrics_c2": {
+      "reasoning": "The target node is a Derivative node, so I included only computed MAG quality outputs for sample C under algorithm 2: the metrics artefact identity and format, file size, completeness and contamination values, a high-quality-bin count summary, storage location, and a result quality flag. I excluded QC software, thresholds, and reference set details because those belong to the upstream Process node. I also excluded the binned genome artefact itself because that belongs to the upstream Derivative node. I used C/algorithm-2-specific names to avoid collisions with the metrics metadata already generated for algorithm 1 and with other DAG steps.",
+      "md_schema": [
+        {
+          "field_id": "mag_metrics_file_id_c2",
+          "descr": "Unique identifier for the MAG metrics result artefact for sample C under algorithm 2, e.g. a table row ID, TSV filename, or LIMS accession; use a stable string that retrieves the exact metric record set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_file_format_c2",
+          "descr": "File format of the MAG metrics artefact for sample C under algorithm 2 at storage or release time; typically TSV, CSV, JSON, or another structured result format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_metrics_file_size_bytes_c2",
+          "descr": "On-disk size of the MAG metrics artefact for sample C under algorithm 2, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_completeness_pct_c2",
+          "descr": "Estimated genome completeness for sample C bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_contamination_pct_c2",
+          "descr": "Estimated genome contamination for sample C bins generated by algorithm 2, computed from the MAG QC derivative output and reported as a percentage at the end of the quality-assessment workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_high_quality_bin_count_c2",
+          "descr": "Number of bins from sample C under algorithm 2 that met the study's completeness and contamination criteria, counted from the QC result set as a derivative-level summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_storage_uri_c2",
+          "descr": "Storage location or access URI for the MAG metrics artefact for sample C under algorithm 2, such as an object-store path or repository accession used to retrieve the result table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_metrics_quality_flag_c2",
+          "descr": "Technical or scientific quality status of the MAG metrics result for sample C under algorithm 2, indicating whether the QC outputs are usable for downstream comparison and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "metadata_table_build": {
+      "reasoning": "The target node is a Process that combines already-derived MAG metrics and binning provenance into a structured table, so I included only table-construction provenance: software used to build the table, version, script or pipeline identifier, input record count, and output formatting/options. I excluded sample-level MAG metrics, binning parameters, and raw/binned artefacts because those belong to upstream Process/Derivative/Signal nodes and would duplicate already-generated fields. I also kept the fields generic enough to describe the table-building operation across all samples and algorithms rather than repeating per-sample content.",
+      "md_schema": [
+        {
+          "field_id": "table_build_software_name",
+          "descr": "Name of the software or scripting environment used to build the MAG metadata table from binning provenance and quality metrics, recorded at the time the table was assembled; e.g. R, Python, or a workflow tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_build_software_version",
+          "descr": "Version of the software used to build the MAG metadata table, recorded for provenance and reproducibility; e.g. '4.4.0' for R or '3.11' for Python.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_build_script_id",
+          "descr": "Identifier, filename, or repository path of the script or pipeline used to combine the MAG metrics and provenance into the final metadata table; use a stable string such as a script name or Git commit label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_build_input_record_count",
+          "descr": "Number of MAG result records combined into the metadata table at build time, counted from the inputs provided by the upstream QC and binning steps.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_output_format",
+          "descr": "Structured format used for the final metadata table produced by this process, recorded at table creation; for example TSV, CSV, or XLSX.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_column_schema_version",
+          "descr": "Version or revision identifier for the column schema applied when building the metadata table, recorded to track changes in field definitions across table releases.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_build_success",
+          "descr": "Whether the metadata table build completed successfully and produced a valid structured table ready for downstream comparative analysis, assessed at process completion.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_build_notes",
+          "descr": "Optional free-text notes about table harmonization, missing-value handling, or provenance merging decisions made during the metadata table build step.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "The target node is a Derivative representing the final comparative metadata table, so I included only properties of the table artefact itself: file identity, format, size, row/column counts, storage location, and table-level quality/consistency indicators. I excluded the underlying sample, binning, and MAG metric content because those belong to earlier Entity/Process/Derivative nodes and were already generated elsewhere in the DAG. I also avoided repeating table-build provenance from the upstream Process node and focused on the reusable table artefact that downstream comparative analysis consumes.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_file_id",
+          "descr": "Unique identifier for the comparative MAG metadata table artefact, e.g. a table filename, accession, or LIMS record ID; use a stable string that retrieves the exact released table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_file_format",
+          "descr": "File format of the comparative metadata table at storage or release time; for this workflow it should typically be TSV, CSV, XLSX, or another structured tabular format.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metadata_table_file_size_bytes",
+          "descr": "On-disk size of the metadata table artefact, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_row_count",
+          "descr": "Total number of records in the comparative metadata table, counted from the released artefact and representing all sample-by-algorithm combinations or comparable rows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_column_count",
+          "descr": "Total number of columns in the comparative metadata table, counted from the released artefact and reflecting the final schema used for comparison.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_storage_uri",
+          "descr": "Storage location or access URI for the comparative metadata table, such as an object-store path, file server path, or repository accession used to retrieve the artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_integrity_flag",
+          "descr": "Technical integrity status of the metadata table artefact at release time, indicating whether the table passed basic file and schema checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "metadata_table_schema_version",
+          "descr": "Version or revision identifier for the released metadata table schema, recorded to track changes in column definitions and table layout across releases.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "compare_adaptation": {
+      "reasoning": "The target node is a Process, so I included only the analysis procedure metadata for comparing adaptation across geographic environments: software environment, analysis script, input table reference, model/statistical settings, and a process-level outcome flag. I excluded the table contents and any derived comparative results because those belong to the upstream Derivative table and downstream Derivative summary nodes, respectively. I also avoided reusing software or table provenance fields already generated for earlier process nodes by keeping this node focused on the comparative analysis step itself.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or analysis environment used to compare genetic diversity and adaptation strategies across locations, recorded at the time the comparative analysis was run; e.g. R, Python, or a statistical toolkit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the software used for the comparative adaptation analysis, recorded to support reproducibility and provenance; e.g. '4.4.0' or '3.11'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_script_id",
+          "descr": "Identifier, filename, notebook label, or repository path for the script or pipeline used to perform the comparative adaptation analysis; use a stable string such as a script name or Git commit label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_input_table_id",
+          "descr": "Identifier of the metadata table consumed by the comparative analysis, linking this process back to the upstream table artefact; use the table file ID or equivalent stable reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_statistical_method",
+          "descr": "Primary statistical or comparative method used to evaluate differences in genetic diversity and adaptation strategies across geographic environments, recorded as an operational method name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_grouping_variable",
+          "descr": "Grouping variable used to stratify comparisons in the adaptation analysis, such as geographic location, environment type, or site class, recorded at analysis setup time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_significance_threshold_p",
+          "descr": "P-value or analogous significance threshold used to decide whether comparative differences were considered meaningful in the adaptation analysis, reported as a numeric cutoff.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_qc_status",
+          "descr": "Overall success or validity status of the comparative analysis step, assigned after execution based on whether the comparison completed and produced interpretable results.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "comparative_summary": {
+      "reasoning": "The target node is a Derivative representing the final summarized comparative result, so I included only summary-artifact properties: file identity, format, size, summary dimensions, storage location, and a result-quality flag. I excluded the underlying table contents and analysis settings because those belong to the upstream table and process nodes, and I excluded raw comparative computations because those are already abstracted into the summary result itself. I also kept the fields generic enough to represent the final reportable output without duplicating upstream provenance.",
+      "md_schema": [
+        {
+          "field_id": "comparative_summary_file_id",
+          "descr": "Unique identifier for the comparative summary artefact, e.g. a report filename, accession, or LIMS record ID; use a stable string that retrieves the exact released summary output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_summary_file_format",
+          "descr": "File format of the comparative summary artefact at storage or release time; for this workflow it should typically be PDF, HTML, TSV, CSV, or another reportable structured format.",
+          "type": "categorical",
+          "allowed_values": [
+            "pdf",
+            "html",
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparative_summary_file_size_bytes",
+          "descr": "On-disk size of the comparative summary artefact, measured in bytes at storage time; used as a technical integrity and transfer metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_summary_section_count",
+          "descr": "Number of major sections, panels, or result blocks contained in the comparative summary artefact, counted from the released output at the end of the analysis workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_summary_storage_uri",
+          "descr": "Storage location or access URI for the comparative summary artefact, such as an object-store path, report server link, or repository accession used to retrieve the output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_summary_quality_flag",
+          "descr": "Technical or scientific quality status of the comparative summary result, indicating whether the output is suitable for interpretation and reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "comparative_summary_schema_version",
+          "descr": "Version or revision identifier for the summary output schema or report template, recorded to track changes in the structure of the comparative result across releases.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

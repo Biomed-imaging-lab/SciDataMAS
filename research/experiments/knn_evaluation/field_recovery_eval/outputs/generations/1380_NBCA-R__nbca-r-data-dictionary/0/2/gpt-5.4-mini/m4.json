@@ -1,0 +1,1135 @@
+{
+  "md_name": "prostate_radiotherapy_registry_workflow",
+  "md_description": "This DAG models a clinical registry workflow for prostate cancer patients undergoing radiotherapy, starting from patient records and producing an analysis-ready metadata table. It captures patient demographics, comorbidities, detailed radiotherapy treatment plans, per-session attendance and adverse reactions, and follow-up outcomes. The processed dataset supports evaluation of associations between radiotherapy protocols and patient outcomes such as survival and quality of life.",
+  "fields_per_node": {
+    "prostate_cancer_patient_registry": {
+      "reasoning": "This is an Entity node, so I included only intrinsic registry-population fields that describe what the cohort is before any extraction or processing: the disease focus, treatment context, population source, and registry scope. I excluded demographics, treatment plans, session events, outcomes, and any file/process details because those belong to downstream Capture/Process/Signal/Derivative nodes. No fields were blocked by already_generated, so I avoided only territories owned by other nodes and kept identifiers generic at this root entity layer.",
+      "md_schema": [
+        {
+          "field_id": "disease_focus",
+          "descr": "Primary clinical indication represented by the registry population at the time the cohort is defined; for this workflow it should identify prostate cancer (for example, localized prostate adenocarcinoma). Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "prostate_cancer"
+          ]
+        },
+        {
+          "field_id": "treatment_context",
+          "descr": "Therapeutic context defining why patients are included in the registry population; record the modality under study before extraction begins. For this workflow it refers to radiotherapy for prostate cancer. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiotherapy"
+          ]
+        },
+        {
+          "field_id": "registry_population_description",
+          "descr": "Free-text description of the source population represented by this entity, including the fact that it is the pre-extraction registry population of prostate cancer patients undergoing radiotherapy. Measured/assigned at cohort definition time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_scope",
+          "descr": "Clinical and institutional scope of the registry population, such as single-center, multi-center, regional, or national coverage. This describes the registry itself rather than any extracted record.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_center",
+            "multi_center",
+            "regional",
+            "national"
+          ]
+        }
+      ]
+    },
+    "registry_cohort_extraction": {
+      "reasoning": "This is a Process node, so I included only extraction-operation fields: eligibility logic, source-to-cohort linkage behavior, abstraction method, and cohort assembly characteristics. I excluded patient demographics, treatment-plan content, session events, outcomes, and file-level artifacts because those belong to upstream Entity/Capture nodes or downstream Entity/Signal/Derivative nodes. I also avoided repeating any root identifiers or population descriptors already owned by the registry entity; instead I focused on how records are selected and transferred into the longitudinal cohort.",
+      "md_schema": [
+        {
+          "field_id": "eligibility_criteria_description",
+          "descr": "Operational description of how eligible prostate cancer patients are selected from the clinical registry before cohort assembly, including any inclusion/exclusion logic used during abstraction. Record at the point of extraction. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linked_record_types",
+          "descr": "Types of registry records linked to each extracted patient during cohort creation, for example demographics, treatment plans, session events, and follow-up outcomes. This describes the abstraction scope of the process, not the contents of those records. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_plans",
+            "session_events",
+            "follow_up_outcomes",
+            "all_available_record_types"
+          ]
+        },
+        {
+          "field_id": "extraction_method",
+          "descr": "Method used to abstract data from the registry into the longitudinal cohort, such as manual chart review, semi-automated abstraction, or direct database query. Record at the time the cohort is generated. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_chart_review",
+            "semi_automated_abstraction",
+            "direct_database_query",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "cohort_longitudinality",
+          "descr": "Whether extracted patient records are organized as a one-time cross-sectional pull or as a longitudinal cohort with repeated observations across time. For this workflow, the value should reflect the temporal structure established by the extraction process. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "cross_sectional",
+            "longitudinal"
+          ]
+        }
+      ]
+    },
+    "registry_cohort_entity": {
+      "reasoning": "This is an Entity node representing the assembled cohort record, so I included only intrinsic properties of the linked record itself: the unit of representation, what domains are linked within the record, and the temporal grain/structure of the cohort entity. I excluded actual demographic values, treatment doses, session counts, adverse event details, and outcome measurements because those belong to downstream capture/derivative nodes. I also avoided repeating extraction-method details from the upstream process and kept identifiers generic to the cohort record rather than patient-level identifiers.",
+      "md_schema": [
+        {
+          "field_id": "record_unit",
+          "descr": "The basic analytic unit represented by this entity record, indicating that the stored object is a patient-level cohort record rather than a session-level or plan-level record. Assigned when the linked cohort entity is created. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level_cohort_record"
+          ]
+        },
+        {
+          "field_id": "linked_domain_types",
+          "descr": "Clinical domains that are present in the cohort-level record and can be linked through the patient identifier at this stage, such as demographics, treatment plans, session events, adverse reactions, and follow-up outcomes. This describes record composition, not field values. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_plans",
+            "session_events",
+            "adverse_reactions",
+            "follow_up_outcomes"
+          ]
+        },
+        {
+          "field_id": "cohort_temporal_structure",
+          "descr": "Temporal organization of the cohort entity, indicating whether the record stores a single snapshot or repeated observations across the treatment and follow-up timeline. Measured as the record design at creation time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_snapshot",
+            "longitudinal"
+          ]
+        },
+        {
+          "field_id": "linkage_completeness_description",
+          "descr": "Free-text description of how completely the cohort entity links the available registry domains for each patient, for example whether some patients have missing treatment plans or incomplete follow-up. This is a property of the assembled entity structure, not the underlying values.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "demographics_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement-session and instrument/configuration aspects of how demographics are read from the registry: source registry system, abstraction mode, configuration of the capture session, and human-readable notes about the data-read operation. I excluded the actual demographic values (age, ethnicity, comorbidities) because those belong to the downstream Signal, and I avoided adding downstream file-format or quality fields. No already_generated fields constrained the naming here, but I stayed within capture territory and did not repeat entity-level identifiers.",
+      "md_schema": [
+        {
+          "field_id": "source_registry_system",
+          "descr": "The clinical registry or database system from which demographic information is read for each enrolled patient during the capture session; use a stable registry name if available. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstraction_mode",
+          "descr": "How the demographic data are read from the registry at capture time, such as manual abstraction by staff or direct database retrieval. This describes the active capture operation, not the content of the demographics. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "direct_database_read",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "capture_session_description",
+          "descr": "Brief operational description of the demographics read session, including which patient records were queried and any registry screen or interface used during capture. Record at capture time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_operator_role",
+          "descr": "Role of the person or team performing the demographics capture, for example registry abstraction team or clinical data curator. This documents the active measurement session. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "demographics_signal": {
+      "reasoning": "This is a Signal node, so I included only raw-data artifact properties: file/table format, record size, structure, source location, and basic technical completeness/quality indicators. I excluded the underlying demographic content itself, capture-session settings, and any normalized or analytical fields because those belong to the Capture, Process, or Derivative nodes. No already_generated fields were provided here, so I focused on describing the raw structured table as a reusable data artefact.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Technical format of the raw demographics artefact produced by capture, for example CSV, TSV, JSON, or database table export. Record at the point the signal is created. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "database_table",
+            "excel"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Storage size of the raw demographics signal in bytes at creation or archival time; use this to describe the physical artefact size rather than its scientific content. Typical values depend on cohort size and registry export volume. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_count",
+          "descr": "Number of demographic rows or patient records contained in the raw signal table at the time of export. This is a technical size measure of the artefact, not a clinical outcome. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Total number of columns present in the raw demographics signal table at the time it is emitted for downstream normalization. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_location",
+          "descr": "Storage location or path for the raw demographics artefact, such as a file system path, object-store URI, or database reference. Record the location of the signal as stored. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_flag",
+          "descr": "Technical indicator of whether the raw demographics artefact passed basic completeness checks at the signal stage, for example no missing file chunks or truncated rows. This is a raw-data quality flag, not a clinical quality measure. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "truncated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "treatment_plan_capture": {
+      "reasoning": "I corrected the prior collision by removing the duplicated field name capture_operator_role. This Capture node now contains only capture-specific fields that describe how treatment plan information is read from the source record: source system, abstraction mode, source plan identifier, and capture session timing. I kept out dose/volume/fractionation content because that belongs to the Signal, and I avoided any repeated operator-role field to satisfy the DAG-wide uniqueness constraint.",
+      "md_schema": [
+        {
+          "field_id": "source_patient_record_system",
+          "descr": "The patient record system or registry module from which radiotherapy plan details are read during the capture session. Use a stable system name if available. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_abstraction_mode",
+          "descr": "How radiotherapy plan information is captured from the patient record, such as manual abstraction by registry staff or direct electronic record retrieval. This describes the active capture method, not the plan content itself. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "direct_electronic_retrieval",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "plan_record_identifier",
+          "descr": "Identifier of the treatment plan record read during capture, for example a plan ID or encounter-linked plan code (e.g., PLAN_1024). This is the source-side identifier used at extraction time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_session_timestamp",
+          "descr": "Date and/or time when the treatment plan capture session was performed, recorded at the point of abstraction from the patient record. Use ISO 8601 if possible (for example 2026-08-18T09:30:00). Type: string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treatment_plan_signal": {
+      "reasoning": "This is a Signal node, so I kept the scope to raw radiotherapy plan artefact properties only, but I had to avoid every field name already used elsewhere in the DAG. To resolve collisions, I introduced semantically equivalent, node-specific names that still describe the raw signal: format, size, row/column counts, storage location, and raw completeness. I excluded plan dose/volume/fractionation content because that belongs to downstream analytical nodes, and I did not include capture settings or operator information because those are upstream Capture-node concerns.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_format",
+          "descr": "Technical format of the raw radiotherapy plan artefact produced by capture, for example CSV, TSV, JSON, Parquet, or database table export. Record at the point the signal is created. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "database_table",
+            "excel"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "Storage size of the raw radiotherapy plan signal in bytes at creation or archival time; use this to describe the physical artefact size rather than its scientific content. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_record_count",
+          "descr": "Number of plan rows or treatment-plan records contained in the raw signal table at the time of export. This is a technical size measure of the artefact, not a clinical variable. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_column_count",
+          "descr": "Total number of columns present in the raw radiotherapy plan signal table when exported for downstream normalization. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_data_location",
+          "descr": "Storage location or path for the raw radiotherapy plan artefact, such as a file system path, object-store URI, or database reference. Record the location of the signal as stored. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_completeness_flag",
+          "descr": "Technical indicator of whether the raw radiotherapy plan artefact passed basic completeness checks at the signal stage, for example no missing file chunks or truncated rows. This is a raw-data quality flag, not a clinical quality measure. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "truncated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "session_event_capture": {
+      "reasoning": "This is a Capture node, so I included only how per-session treatment events are actively read from the registry timeline: source timeline/system, event abstraction mode, session granularity, and operator/session context. I excluded attendance counts, adverse reaction details, and any summarized adherence/toxicity indicators because those belong to the downstream Signal or Derivative nodes. I also avoided field names previously used in other steps by choosing capture-specific names that do not collide with prior generic operator/file fields.",
+      "md_schema": [
+        {
+          "field_id": "source_registry_timeline_system",
+          "descr": "The registry timeline, encounter log, or event ledger from which radiotherapy session events are read during capture. Use a stable source-system name if available. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_abstraction_mode",
+          "descr": "How session events are captured from the registry timeline, such as manual abstraction by registry staff or direct event-log retrieval. This describes the active capture method, not the event content itself. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "direct_event_log_retrieval",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "session_granularity",
+          "descr": "The level at which treatment events are captured, indicating whether each row corresponds to a treatment session, a daily encounter, or another event unit. Record the granularity at capture time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "session",
+            "daily_encounter",
+            "other_event_unit"
+          ]
+        },
+        {
+          "field_id": "capture_session_notes",
+          "descr": "Free-text operational notes about the session-event capture run, including any timeline filters, date window used, or special handling of repeated attendance records. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "session_event_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the per-session event table: technical format, size, record/column counts, storage location, and a technical completeness flag. I excluded attendance status, adverse reaction details, and any adherence or toxicity summaries because those belong to downstream analytical outputs. I also avoided all previously colliding generic field names by using signal-specific identifiers tied to the session-event artefact.",
+      "md_schema": [
+        {
+          "field_id": "session_event_file_format",
+          "descr": "Technical format of the raw session-event artefact produced by capture, for example CSV, TSV, JSON, Parquet, or database table export. Record at the point the signal is created. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "database_table",
+            "excel"
+          ]
+        },
+        {
+          "field_id": "session_event_file_size_bytes",
+          "descr": "Storage size of the raw session-event signal in bytes at creation or archival time; use this to describe the physical artefact size rather than its scientific content. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_record_count",
+          "descr": "Number of session-event rows or treatment-event records contained in the raw signal table at the time of export. This is a technical size measure of the artefact, not a clinical variable. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_column_count",
+          "descr": "Total number of columns present in the raw session-event signal table when exported for downstream aggregation. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_data_location",
+          "descr": "Storage location or path for the raw session-event artefact, such as a file system path, object-store URI, or database reference. Record the location of the signal as stored. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_completeness_flag",
+          "descr": "Technical indicator of whether the raw session-event artefact passed basic completeness checks at the signal stage, for example no missing file chunks or truncated rows. This is a raw-data quality flag, not a clinical quality measure. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "truncated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "followup_outcome_capture": {
+      "reasoning": "This is a Capture node, so I included only how follow-up outcomes are actively read at scheduled registry follow-up points: follow-up source system, abstraction mode, follow-up schedule description, and the timing window used for capture. I excluded survival status values, quality of life scores, and any summary endpoints because those belong to the downstream Signal or Derivative nodes. I also avoided previously colliding generic operator/file fields and stayed within the active measurement-session territory of the capture step.",
+      "md_schema": [
+        {
+          "field_id": "source_followup_registry_system",
+          "descr": "The registry module, follow-up database, or clinical record source from which outcome information is read during the follow-up capture session. Use a stable source-system name if available. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_abstraction_mode",
+          "descr": "How follow-up outcomes are captured, such as manual abstraction, direct database retrieval, or hybrid capture. This describes the active capture method, not the outcome content itself. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "direct_database_retrieval",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "followup_schedule_description",
+          "descr": "Operational description of the scheduled follow-up points used for outcome capture, such as 3-month, 6-month, and annual visits. Record the schedule as it was applied when the capture occurred. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_capture_window_days",
+          "descr": "Number of days around each scheduled follow-up point during which outcome records are considered part of the capture window, for example ±14 days. Record at capture-time policy level. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "followup_outcome_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the follow-up outcomes table: technical format, size, record/column counts, storage location, and a raw completeness flag. I excluded survival status, quality of life scores, or endpoint definitions because those belong to downstream processed outputs. I also used follow-up-specific field names to avoid collisions with earlier generic signal metadata already generated in other steps.",
+      "md_schema": [
+        {
+          "field_id": "followup_outcome_file_format",
+          "descr": "Technical format of the raw follow-up outcome artefact produced by capture, for example CSV, TSV, JSON, Parquet, or database table export. Record at the point the signal is created. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "database_table",
+            "excel"
+          ]
+        },
+        {
+          "field_id": "followup_outcome_file_size_bytes",
+          "descr": "Storage size of the raw follow-up outcome signal in bytes at creation or archival time; use this to describe the physical artefact size rather than its scientific content. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_outcome_record_count",
+          "descr": "Number of follow-up outcome rows or records contained in the raw signal table at the time of export. This is a technical size measure of the artefact, not a clinical variable. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_outcome_column_count",
+          "descr": "Total number of columns present in the raw follow-up outcome signal table when exported for downstream processing. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_outcome_data_location",
+          "descr": "Storage location or path for the raw follow-up outcome artefact, such as a file system path, object-store URI, or database reference. Record the location of the signal as stored. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_outcome_completeness_flag",
+          "descr": "Technical indicator of whether the raw follow-up outcome artefact passed basic completeness checks at the signal stage, for example no missing file chunks or truncated rows. This is a raw-data quality flag, not a clinical quality measure. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "truncated",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "demographics_normalization": {
+      "reasoning": "This is a Process node, so I included only transformation details for standardizing demographic fields: normalization method, variable harmonization scope, rules for age/ethnicity/comorbidity standardization, and a process-level quality indicator. I excluded source record properties, raw signal file properties, and the normalized output fields themselves because those belong to the upstream Signal and downstream Derivative nodes. I also avoided previously generated generic operator/file names and focused on how the demographic data are transformed for analysis.",
+      "md_schema": [
+        {
+          "field_id": "normalization_method",
+          "descr": "Method used to standardize demographic fields into consistent categorical and numeric formats, such as rule-based recoding, dictionary mapping, or script-driven transformation. Record at the time the process runs. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_recoding",
+            "dictionary_mapping",
+            "script_driven_transformation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "variables_standardized",
+          "descr": "Demographic variable domains transformed by this process, for example age, ethnicity, and comorbidity indicators. This describes the scope of normalization, not the normalized values themselves. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "age",
+            "ethnicity",
+            "comorbidity",
+            "all_demographics"
+          ]
+        },
+        {
+          "field_id": "age_standardization_rule",
+          "descr": "Rule used to standardize age for cohort analysis, such as age in years at diagnosis or age at registry entry. Specify the measurement point used by the process. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ethnicity_standardization_scheme",
+          "descr": "Controlled vocabulary or recoding scheme applied to ethnicity fields during normalization, for example a registry-defined ethnicity mapping. Record the scheme used at process time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comorbidity_encoding_scheme",
+          "descr": "Encoding scheme used to standardize comorbidities, such as binary flags, index-based coding, or mapped condition categories. Record the scheme applied during normalization. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_quality_flag",
+          "descr": "Process-level indicator of whether the demographic normalization step completed successfully and produced internally consistent standardized fields. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "demographics_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the normalized demographic dataset: the transformed variable set, data shape, encoding conventions, and a scientific/analytic readiness indicator. I excluded raw demographic values and process mechanics because those belong to the upstream Signal and Process nodes, respectively. I also avoided repeating any generic file-format or storage-location fields from the raw signal layer and focused on what a downstream analyst needs to interpret the normalized demographic output.",
+      "md_schema": [
+        {
+          "field_id": "normalized_variable_set",
+          "descr": "Set of demographic variables present in the normalized output, such as age, ethnicity, and comorbidity indicators, after standardization for cohort integration. This describes the computed variable content of the derivative dataset. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "age",
+            "ethnicity",
+            "comorbidity",
+            "age_ethnicity_comorbidity"
+          ]
+        },
+        {
+          "field_id": "normalized_record_count",
+          "descr": "Number of patient records in the normalized demographic derivative after processing. This is the output row count at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalized_column_count",
+          "descr": "Total number of columns in the normalized demographic derivative after standardization. This is the output width at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "age_units",
+          "descr": "Units used for standardized age in the derivative dataset, typically years. Record the units assigned by the normalization process. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "years"
+          ]
+        },
+        {
+          "field_id": "ethnicity_encoding_scheme",
+          "descr": "Encoding used for standardized ethnicity categories in the derivative output, such as collapsed registry categories or harmonized controlled vocabulary. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comorbidity_representation",
+          "descr": "Representation used for comorbidity information in the derivative output, for example binary flags, count summaries, or encoded categories. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "binary_flags",
+            "count_summary",
+            "encoded_categories"
+          ]
+        },
+        {
+          "field_id": "analytic_readiness_flag",
+          "descr": "Indicator of whether the normalized demographic derivative is ready to be integrated with other registry-derived data for analysis. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    },
+    "treatment_plan_normalization": {
+      "reasoning": "This is a Process node, so I kept only treatment-plan transformation specifics and replaced the colliding generic field names with treatment-plan-specific identifiers. I included dose-unit conversion, target-volume label harmonization, and fractionation schedule encoding because they describe how plans are standardized across patients and protocols. I excluded raw plan values and downstream normalized outputs, and I avoided any field names already used elsewhere in the DAG, including the previously colliding normalization_method and normalization_quality_flag.",
+      "md_schema": [
+        {
+          "field_id": "treatment_plan_transformation_method",
+          "descr": "Method used to standardize radiotherapy plan fields, such as rule-based conversion, controlled vocabulary mapping, or script-driven transformation. Record at the time the process runs. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_conversion",
+            "controlled_vocabulary_mapping",
+            "script_driven_transformation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "dose_unit_conversion_target",
+          "descr": "Target dose unit used after standardization, typically Gy or cGy, chosen so plans can be compared across patients and protocols. Specify the standardized unit applied by the process. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "gy",
+            "cgy"
+          ]
+        },
+        {
+          "field_id": "target_volume_labeling_scheme",
+          "descr": "Controlled labeling scheme applied to target volumes during normalization, such as harmonized prostate/seminal vesicle/pelvic nodal labels. Record the scheme used at process time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_schedule_encoding",
+          "descr": "Representation used to standardize fractionation schedules, for example total dose plus number of fractions or dose per fraction plus total fractions. Record the encoding scheme applied during normalization. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "total_dose_and_fraction_count",
+            "dose_per_fraction_and_total_fractions",
+            "schedule_string"
+          ]
+        },
+        {
+          "field_id": "treatment_plan_standardization_status",
+          "descr": "Process-level indicator of whether treatment-plan standardization completed successfully and produced internally consistent standardized fields. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "treatment_plan_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the standardized treatment-plan dataset and avoided any generic derivative names that had already collided in prior steps. I kept only treatment-plan-specific output structure, unit/label encodings, and a readiness indicator with a unique field name. I excluded upstream raw signal properties and process mechanics because those belong to Signal and Process nodes, respectively.",
+      "md_schema": [
+        {
+          "field_id": "treatment_plan_normalized_protocol_variables",
+          "descr": "Set of standardized radiotherapy protocol variables present in the derivative output, such as dose, target volume labels, and fractionation schedule after normalization. This describes the computed content of the derivative dataset. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "dose",
+            "target_volume_labels",
+            "fractionation_schedule",
+            "dose_target_volume_fractionation"
+          ]
+        },
+        {
+          "field_id": "treatment_plan_dose_units",
+          "descr": "Units used for standardized dose values in the derivative dataset, typically Gy or cGy. Record the units assigned by the normalization process. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "gy",
+            "cgy"
+          ]
+        },
+        {
+          "field_id": "treatment_plan_target_volume_label_scheme",
+          "descr": "Harmonized labeling convention used for target volumes in the derivative output, for example prostate, seminal vesicles, or pelvic nodes. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_plan_fractionation_representation",
+          "descr": "Representation used for standardized fractionation schedules in the derivative output, such as total dose plus fraction count or dose per fraction plus total fractions. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "total_dose_and_fraction_count",
+            "dose_per_fraction_and_total_fractions",
+            "schedule_string"
+          ]
+        },
+        {
+          "field_id": "treatment_plan_analysis_readiness_status",
+          "descr": "Indicator of whether the normalized treatment-plan derivative is ready for comparative protocol analysis. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    },
+    "session_event_aggregation": {
+      "reasoning": "This is a Process node, so I included only the aggregation mechanics and summary definitions for transforming raw session events into patient-level indicators: the summarization method, adherence and toxicity aggregation rules, and a process-level output-quality indicator. I excluded raw attendance/adverse-reaction values and the final patient-level indicators themselves because those belong to the upstream Signal and downstream Derivative nodes. I also avoided earlier colliding generic field names by using aggregation-specific names rather than normalized/process labels already used elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "aggregation_method",
+          "descr": "Method used to summarize per-session treatment events into patient-level indicators, such as counting, recoding, or rule-based summarization. Record at the time the process runs. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "count_based",
+            "rule_based_summary",
+            "script_driven_aggregation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "adherence_summary_rule",
+          "descr": "Rule used to convert session attendance records into a patient-level adherence indicator, for example proportion of attended sessions, missed-session count, or completion status. Describe the rule applied during aggregation. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "toxicity_summary_rule",
+          "descr": "Rule used to summarize adverse reactions into a patient-level toxicity indicator, such as highest-grade event, event count, or binary toxicity presence. Describe the rule applied during aggregation. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_window_description",
+          "descr": "Description of the session window included in the aggregation, such as all treatment sessions during the radiotherapy course or a specified date range. Record the temporal scope used at process time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_quality_flag",
+          "descr": "Process-level indicator of whether the session-event aggregation completed successfully and produced internally consistent patient-level summaries. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "session_event_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the aggregated treatment-event dataset: the derived adherence/toxicity feature set, output size, representation of the summary metrics, and a readiness indicator. I excluded raw session attendance/adverse-reaction values and the aggregation mechanics because those belong to the upstream Signal and Process nodes. I also avoided reusing earlier generic count/readiness field names by making the identifiers specific to the session-event derivative artifact.",
+      "md_schema": [
+        {
+          "field_id": "session_event_feature_set",
+          "descr": "Set of aggregated treatment-event features present in the derivative output, such as attendance-based adherence indicators and toxicity summaries derived from session records. This describes the computed content of the derivative dataset. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "adherence",
+            "toxicity",
+            "adherence_toxicity",
+            "attendance_and_adverse_reaction_summary"
+          ]
+        },
+        {
+          "field_id": "session_event_derivative_record_count",
+          "descr": "Number of patient-level rows in the aggregated treatment-event derivative after processing. This is the output row count at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_event_derivative_column_count",
+          "descr": "Total number of columns in the aggregated treatment-event derivative after summarization. This is the output width at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adherence_metric_type",
+          "descr": "Type of adherence metric encoded in the derivative output, such as proportion attended, missed-session count, or completion status. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "proportion_attended",
+            "missed_session_count",
+            "completion_status",
+            "binary_adherence"
+          ]
+        },
+        {
+          "field_id": "toxicity_metric_type",
+          "descr": "Type of toxicity metric encoded in the derivative output, such as highest observed grade, event count, or binary toxicity presence. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "highest_grade",
+            "event_count",
+            "binary_presence",
+            "severity_score"
+          ]
+        },
+        {
+          "field_id": "summary_time_basis",
+          "descr": "Time basis used for the aggregated treatment-event derivative, such as per treatment course or per patient follow-up window. Record the basis of the derived summary. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "per_treatment_course",
+            "per_patient_window",
+            "per_calendar_period"
+          ]
+        },
+        {
+          "field_id": "session_event_analytic_ready_flag",
+          "descr": "Indicator of whether the aggregated treatment-event derivative is ready for merge with other registry-derived data for analysis. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    },
+    "followup_outcome_processing": {
+      "reasoning": "This is a Process node, so I included only the harmonization mechanics for follow-up outcomes: endpoint definition method, survival endpoint construction, quality-of-life metric harmonization, observation-window handling, and a process-level quality indicator. I excluded raw follow-up values and the final survival/QoL outputs because those belong to the upstream Signal and downstream Derivative nodes. I also avoided previously colliding generic field names by using process-specific identifiers tied to outcome harmonization rather than normalization or aggregation labels already used elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "processing_method",
+          "descr": "Method used to harmonize follow-up outcomes into survival endpoints and quality-of-life metrics, such as rule-based endpoint derivation, score mapping, or script-driven harmonization. Record at the time the process runs. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_harmonization",
+            "score_mapping",
+            "script_driven_transformation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "survival_endpoint_definition",
+          "descr": "Definition applied to construct the survival endpoint during processing, such as overall survival, progression-free survival, or censoring-based time-to-event. Describe the endpoint rule used at process time. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_of_life_metric_harmonization",
+          "descr": "Harmonization approach used for quality-of-life measures, such as converting questionnaire scores to a common scale or mapping to a unified metric family. Record the approach applied during processing. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "observation_window_basis",
+          "descr": "Basis used to define observation windows for outcome harmonization, such as scheduled follow-up visits, months since treatment start, or fixed post-treatment intervals. Record the temporal basis at process time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "scheduled_followup_visits",
+            "months_since_treatment_start",
+            "fixed_post_treatment_intervals"
+          ]
+        },
+        {
+          "field_id": "processing_quality_flag",
+          "descr": "Process-level indicator of whether the follow-up outcome harmonization completed successfully and produced internally consistent endpoints and metrics. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "followup_outcome_derivative": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the processed follow-up dataset: the endpoint set, survival and quality-of-life representations, output shape, and a readiness indicator. I excluded raw follow-up values and the harmonization mechanics because those belong to the upstream Signal and Process nodes. I also avoided repeating earlier generic count/readiness field names by making the identifiers specific to the follow-up outcome derivative artifact.",
+      "md_schema": [
+        {
+          "field_id": "followup_endpoint_set",
+          "descr": "Set of processed follow-up endpoints present in the derivative output, such as survival endpoints and harmonized quality-of-life measures ready for joint analysis. This describes the computed content of the derivative dataset. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival",
+            "quality_of_life",
+            "survival_and_quality_of_life"
+          ]
+        },
+        {
+          "field_id": "followup_derivative_record_count",
+          "descr": "Number of patient-level rows in the processed follow-up outcome derivative after processing. This is the output row count at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_derivative_column_count",
+          "descr": "Total number of columns in the processed follow-up outcome derivative after harmonization. This is the output width at the derivative stage. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "survival_endpoint_type",
+          "descr": "Type of survival endpoint represented in the derivative output, for example overall survival or progression-free survival. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "overall_survival",
+            "progression_free_survival",
+            "disease_specific_survival",
+            "time_to_event"
+          ]
+        },
+        {
+          "field_id": "quality_of_life_scale_name",
+          "descr": "Name of the standardized quality-of-life scale represented in the derivative output, if applicable, such as a harmonized registry-specific or questionnaire-derived scale. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "observation_window_encoding",
+          "descr": "Encoding used for observation windows in the derivative output, such as months from treatment start or fixed follow-up intervals. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "months_from_treatment_start",
+            "fixed_intervals",
+            "scheduled_visit_windows"
+          ]
+        },
+        {
+          "field_id": "followup_analytic_ready_flag",
+          "descr": "Indicator of whether the processed follow-up outcome derivative is ready to be merged with other registry-derived data for analysis. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    },
+    "analysis_ready_merge": {
+      "reasoning": "This is a Process node, so I included only merge-operation fields: which standardized inputs are combined, the join key strategy, merge cardinality/coverage, and a process-level merge-quality indicator. I excluded the contents of the merged table itself because those belong to the downstream analysis-ready dataset derivative. I also avoided previously generated generic process names that collided elsewhere and kept the fields specific to the cohort-table assembly operation.",
+      "md_schema": [
+        {
+          "field_id": "merge_inputs",
+          "descr": "Standardized upstream data domains combined by this process, specifically demographics, treatment plans, session summaries, and outcome summaries. This describes the sources being merged, not their values. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_plans",
+            "session_summaries",
+            "outcome_summaries",
+            "all_standardized_inputs"
+          ]
+        },
+        {
+          "field_id": "merge_key_strategy",
+          "descr": "Key strategy used to join standardized inputs into a single cohort table, such as patient identifier joins or patient-plus-timepoint joins. Record the join logic applied at process time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_id",
+            "patient_id_plus_timepoint",
+            "patient_id_plus_episode",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "merge_cardinality",
+          "descr": "Cardinality of the merge operation, indicating whether the result is one-to-one, one-to-many, many-to-one, or many-to-many across inputs. Record the effective merge structure at process time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "one_to_one",
+            "one_to_many",
+            "many_to_one",
+            "many_to_many"
+          ]
+        },
+        {
+          "field_id": "merge_coverage_description",
+          "descr": "Description of how completely the standardized inputs were merged into the analysis-ready cohort table, including any domains or records that could not be joined. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "merge_quality_flag",
+          "descr": "Process-level indicator of whether the merge completed successfully and produced a coherent analysis-ready cohort table. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "analysis_ready_dataset": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the integrated cohort table: the combined feature domains, output shape, identifier continuity, and an analysis-readiness indicator. I excluded upstream merge mechanics and source-specific record details because those belong to the Process node and earlier derivatives. I also avoided generic count/readiness field names already used in other steps by using dataset-specific identifiers tied to the integrated analysis-ready output.",
+      "md_schema": [
+        {
+          "field_id": "integrated_feature_domains",
+          "descr": "Registry-derived feature domains present in the integrated patient-level dataset, such as standardized demographics, treatment plan variables, session summaries, and outcome summaries. This describes the computed content of the final integrated derivative. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_plans",
+            "session_summaries",
+            "outcome_summaries",
+            "all_registry_derived_features"
+          ]
+        },
+        {
+          "field_id": "analysis_ready_patient_count",
+          "descr": "Number of patient-level records in the integrated analysis-ready dataset after merge and integration. This is the final output row count. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_ready_variable_count",
+          "descr": "Total number of variables or columns in the integrated analysis-ready dataset after combining all registry-derived features. This is the final output width. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "patient_identifier_scheme",
+          "descr": "Identifier scheme used to maintain patient continuity across merged registry-derived features, for example a consistent registry patient ID or pseudonymized patient key. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "timepoint_structure",
+          "descr": "Temporal structure of the integrated dataset, indicating whether the final table is patient-level only or includes repeated timepoints/episodes. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "patient_level_longitudinal",
+            "patient_timepoint_panel"
+          ]
+        },
+        {
+          "field_id": "protocol_outcome_analysis_ready_flag",
+          "descr": "Indicator of whether the integrated dataset is ready for protocol-outcome analysis. This is a final derivative quality flag. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    },
+    "metadata_table_generation": {
+      "reasoning": "This is a Process node generating documentation from the analysis-ready dataset, so I included only metadata-production fields: catalog coverage, variable dictionary method, definition standard, and documentation quality. I excluded the underlying clinical variables and the metadata table itself because those belong to the downstream Derivative node. I also avoided previously generated generic process names and any file/storage fields, keeping the scope strictly on how variable documentation is created from the final dataset.",
+      "md_schema": [
+        {
+          "field_id": "metadata_generation_method",
+          "descr": "Method used to generate the metadata table from the analysis-ready dataset, such as rule-based extraction, template-driven documentation, or script-driven dictionary creation. Record at process time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_extraction",
+            "template_driven_documentation",
+            "script_driven_dictionary_creation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "catalog_scope",
+          "descr": "Scope of variables included in the metadata table, for example all dataset variables or only clinically relevant fields. This describes documentation coverage rather than dataset content. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "all_variables",
+            "clinical_variables_only",
+            "analysis_variables_only",
+            "subset_by_domain"
+          ]
+        },
+        {
+          "field_id": "clinical_definition_standard",
+          "descr": "Standard or convention used to write clinical definitions in the metadata table, such as registry-specific definitions, controlled terminology, or study-defined variable descriptions. Record the standard applied during generation. Type: string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "format_documentation_included",
+          "descr": "Whether the metadata table includes documentation of variable formats such as data type, units, and allowed values. This is a process-level documentation option, not a property of the dataset values. Type: bool.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_quality_flag",
+          "descr": "Process-level indicator of whether the metadata table generation completed successfully and produced a consistent variable dictionary for the analysis-ready dataset. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "passed_with_warnings",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-output properties of the final documentation artifact: table scope, number of documented variables, presence of formats/definitions, and a final documentation readiness indicator. I excluded the generation method and dataset content because those belong to the upstream process and integrated dataset. I also avoided generic count/readiness names already used elsewhere by using metadata-table-specific identifiers for the documentation output.",
+      "md_schema": [
+        {
+          "field_id": "documented_variable_scope",
+          "descr": "Scope of variables documented in the metadata table, indicating whether it covers all variables in the registry-derived dataset or only selected clinical/analysis fields. This describes the content coverage of the derivative documentation artifact. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "all_variables",
+            "clinical_variables_only",
+            "analysis_variables_only",
+            "subset_by_domain"
+          ]
+        },
+        {
+          "field_id": "documented_variable_count",
+          "descr": "Number of variables described in the metadata table. This is the output size of the documentation artifact rather than the size of the dataset itself. Type: int.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "has_variable_formats",
+          "descr": "Whether the metadata table includes variable formats such as data type, units, or coding/encoding notes. This is a structural property of the documentation output. Type: bool.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "has_clinical_definitions",
+          "descr": "Whether the metadata table includes clinical definitions or study-specific descriptions for the documented variables. This is a structural property of the documentation output. Type: bool.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_format",
+          "descr": "Format used for the final metadata table, such as tabular spreadsheet, CSV, or database table representation. Record the artifact format at output time. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "json",
+            "database_table"
+          ]
+        },
+        {
+          "field_id": "metadata_table_ready_flag",
+          "descr": "Indicator of whether the final metadata table is complete and ready for downstream sharing or registry documentation use. Type: categorical.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "ready_with_caveats",
+            "not_ready"
+          ]
+        }
+      ]
+    }
+  }
+}

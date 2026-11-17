@@ -1,0 +1,678 @@
+{
+  "md_name": "soil_single_amplified_genome_workflow",
+  "md_description": "Workflow for generating and processing bacterial single amplified genomes from diverse soil samples. The pipeline begins with soil collection under recorded environmental conditions, proceeds through microbial cell isolation and whole genome amplification, generates sequencing reads via next-generation sequencing, and reconstructs draft genomes with assembly software. The resulting data support analyses of bacterial diversity and functional potential in soil ecosystems and nutrient cycling.",
+  "fields_per_node": {
+    "soil_sample": {
+      "reasoning": "For the soil_sample Entity node, I included only intrinsic sample-origin and collection-context fields: site/location, collection date, soil type, and environmental conditions recorded at collection. I excluded any isolation, amplification, sequencing, read, or assembly fields because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided identifiers that would be repeated elsewhere in the DAG (e.g., generic experiment/sample IDs if already generated) and kept the schema focused on what the soil specimen is and where/under what conditions it was collected.",
+      "md_schema": [
+        {
+          "field_id": "collection_site",
+          "descr": "Geographic and study-site description of where the soil specimen was collected; provide a stable site name and/or local landmark plus coordinates if available (e.g., 'Oak Ridge forest plot A', 35.93,-84.31). Record at the time of sampling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_coordinates",
+          "descr": "Sampling location coordinates for the soil specimen, recorded at collection time as latitude/longitude in decimal degrees (e.g., 35.9301,-84.3124). Typical range: latitude -90 to 90, longitude -180 to 180.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date when the soil specimen was collected from the field site, recorded in ISO 8601 date format (YYYY-MM-DD), e.g., 2026-08-18.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_environment_type",
+          "descr": "Categorical description of the soil ecosystem or land-use context of the collected specimen, recorded at sampling time. Use one value that best matches the site environment.",
+          "type": "categorical",
+          "allowed_values": [
+            "agricultural_soil",
+            "forest_soil",
+            "grassland_soil",
+            "wetland_soil",
+            "desert_soil",
+            "urban_soil",
+            "permafrost_soil",
+            "other"
+          ]
+        },
+        {
+          "field_id": "soil_texture_class",
+          "descr": "Observed or reported soil texture class for the collected specimen, describing the physical makeup of the sampled soil at collection time.",
+          "type": "categorical",
+          "allowed_values": [
+            "sand",
+            "sandy_loam",
+            "loam",
+            "silt_loam",
+            "silt",
+            "clay_loam",
+            "clay",
+            "peat",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_temperature_celsius",
+          "descr": "Ambient air or field temperature at the moment of soil collection, in degrees Celsius. Record the temperature measured onsite during sampling; typical range depends on site but commonly -20 to 50.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_soil_moisture_percent",
+          "descr": "Soil moisture content at collection time, reported as percent water content (% w/w or equivalent field estimate used in the study). Record the value measured onsite or from field notes; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_ph",
+          "descr": "Soil pH measured or reported for the specimen at collection time. Record the field or sample pH associated with the soil specimen; typical range 0 to 14.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_habitat_notes",
+          "descr": "Free-text notes capturing relevant collection-time environmental conditions that characterize the soil specimen, such as recent rainfall, vegetation cover, elevation, or disturbance history; use this only for contextual details not captured by other fields.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_preservation_method",
+          "descr": "Method used to preserve the soil specimen after collection and before downstream processing, if applicable (e.g., chilled, frozen, dried, or transported on ice). This describes the stored state of the Entity after collection, not the processing protocol.",
+          "type": "categorical",
+          "allowed_values": [
+            "on_ice",
+            "refrigerated",
+            "frozen",
+            "air_dried",
+            "preservative_added",
+            "other"
+          ]
+        }
+      ]
+    },
+    "bacterial_cell_isolation": {
+      "reasoning": "For the bacterial_cell_isolation Process node, I included only workflow parameters that describe how cells were physically separated from the soil matrix and prepared as a single-cell genome template. That territory includes isolation method, key separation settings, enrichment/selection criteria, and an output quality indicator for the isolation step. I excluded soil-origin fields because those belong to the upstream soil_sample Entity, and I excluded amplification, sequencing, and genome properties because they belong to downstream nodes. I also avoided any fields already generated for soil_sample, such as collection site or environmental conditions, to prevent duplication across the DAG.",
+      "md_schema": [
+        {
+          "field_id": "cell_isolation_method",
+          "descr": "Primary method used to separate bacterial cells from the soil matrix before whole genome amplification, recorded for this process step (e.g., density gradient, filtration, microfluidic sorting, fluorescence-activated cell sorting, or manual enrichment).",
+          "type": "categorical",
+          "allowed_values": [
+            "density_gradient",
+            "filtration",
+            "microfluidic_sorting",
+            "fluorescence_activated_cell_sorting",
+            "manual_enrichment",
+            "other"
+          ]
+        },
+        {
+          "field_id": "isolation_buffer_composition",
+          "descr": "Buffer or suspension medium used during physical cell isolation from soil, including major components and concentrations when relevant (e.g., phosphate-buffered saline, sterile saline, lysis-protective buffer). Record the composition used in this process step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "isolation_temperature_celsius",
+          "descr": "Temperature at which the cell isolation procedure was performed, in degrees Celsius, measured during the process step; typical range depends on protocol and is often 4 to 37.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "isolation_duration_minutes",
+          "descr": "Total elapsed time for the bacterial cell isolation procedure, in minutes, measured from initiation of separation to recovery of the isolated cell fraction; typical range is protocol-dependent and often 5 to 240.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "enrichment_target",
+          "descr": "Target cellular fraction or selection criterion used during isolation, describing which bacterial cells were intended to be recovered from the soil matrix (e.g., total bacterial cells, intact single cells, low-biomass fraction).",
+          "type": "categorical",
+          "allowed_values": [
+            "total_bacterial_cells",
+            "intact_single_cells",
+            "low_biomass_fraction",
+            "spore_enriched_fraction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "isolation_recovery_yield_percent",
+          "descr": "Estimated fraction of target cells recovered after isolation, reported as percent (%). Measure or estimate this at the end of the isolation step as an indicator of process efficiency; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "isolation_quality_flag",
+          "descr": "Overall quality assessment of the isolation outcome at the end of the process step, used to indicate whether the recovered cell fraction was suitable for downstream whole genome amplification.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "isolated_bacterial_cell": {
+      "reasoning": "For the isolated_bacterial_cell Entity node, I included only intrinsic properties of the recovered cell/template that matter before whole genome amplification: identity/composition of the isolate, viability/integrity, biomass/cell count, and contamination status. I excluded isolation protocol parameters because those belong to the upstream bacterial_cell_isolation Process, and I excluded amplification kit or sequencing settings because those belong downstream. I also avoided duplicating soil collection or isolation efficiency fields already generated for upstream nodes.",
+      "md_schema": [
+        {
+          "field_id": "cell_identity_type",
+          "descr": "Best available description of the recovered biological entity after isolation, indicating whether the template is a single bacterial cell, a microbe-rich enriched fraction, or a mixed cellular preparation. Record this state immediately after isolation and before whole genome amplification.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_bacterial_cell",
+            "microbe_rich_fraction",
+            "mixed_cell_preparation",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cell_morphology_notes",
+          "descr": "Free-text description of the observed cell morphology or preparation appearance for the isolated template, recorded before whole genome amplification (e.g., coccoid, rod-shaped, clustered, intact, lysed). Use microscopy or preparation notes if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "template_integrity_flag",
+          "descr": "Assessment of whether the isolated bacterial cell/template appeared intact and suitable for downstream whole genome amplification at the time of transfer to the amplification step.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_damaged",
+            "lysed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "template_cell_count",
+          "descr": "Estimated number of bacterial cells present in the isolated preparation immediately before whole genome amplification. Use a count from microscopy, sorting logs, or preparation estimate; typical range is 1 for a true single-cell template to higher values for enriched fractions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "template_contamination_level",
+          "descr": "Estimated level of non-target material present in the isolated preparation before whole genome amplification, such as soil debris, eukaryotic cells, or extracellular DNA.",
+          "type": "categorical",
+          "allowed_values": [
+            "none_detected",
+            "low",
+            "moderate",
+            "high",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_condition_before_amplification",
+          "descr": "Condition under which the isolated bacterial cell template was held between isolation and whole genome amplification, if applicable (e.g., on ice, refrigerated, frozen, immediate transfer). Describe the entity's state before the next process step.",
+          "type": "categorical",
+          "allowed_values": [
+            "immediate_transfer",
+            "on_ice",
+            "refrigerated",
+            "frozen",
+            "other"
+          ]
+        }
+      ]
+    },
+    "whole_genome_amplification": {
+      "reasoning": "For the whole_genome_amplification Process node, I included only parameters describing how DNA was amplified from the isolated bacterial cell: kit/reagent identity, reaction setup, cycling/incubation conditions, and a process-level quality indicator. I excluded properties of the input isolated cell/template because those belong to the upstream Entity node, and I excluded properties of the amplified DNA product because those belong to the downstream amplified_dna_entity. I also avoided repeating any already generated collection or isolation fields.",
+      "md_schema": [
+        {
+          "field_id": "wga_kit_name",
+          "descr": "Name of the whole genome amplification kit used to amplify DNA from the isolated bacterial cell during this process step (e.g., manufacturer kit name). Record the kit applied for the amplification reaction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_kit_manufacturer",
+          "descr": "Manufacturer or vendor of the whole genome amplification kit used in this process step. Include the company that supplied the kit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_reaction_volume_ul",
+          "descr": "Total reaction volume used for whole genome amplification, in microliters (µL), measured at reaction setup before incubation; typical range is protocol-dependent and often 1 to 50 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_input_template_amount",
+          "descr": "Amount of isolated bacterial cell material or DNA template added to the whole genome amplification reaction, measured at setup. Report as the protocol-specific input quantity used in this process step (e.g., cell count or DNA mass/volume if applicable).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_incubation_temperature_celsius",
+          "descr": "Incubation temperature used during whole genome amplification, in degrees Celsius, measured while the amplification reaction was running; typical range depends on kit and is often 25 to 42.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_incubation_duration_minutes",
+          "descr": "Total incubation time for the whole genome amplification reaction, in minutes, measured from reaction start to completion; typical range depends on kit and is often 30 to 480.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wga_termination_method",
+          "descr": "Method used to terminate or inactivate the whole genome amplification reaction at the end of the process step (e.g., heat inactivation, reagent neutralization, holding on ice).",
+          "type": "categorical",
+          "allowed_values": [
+            "heat_inactivation",
+            "chemical_inactivation",
+            "on_ice",
+            "kit_specific_stop_reagent",
+            "other"
+          ]
+        },
+        {
+          "field_id": "wga_process_quality_flag",
+          "descr": "Overall quality assessment of the amplification reaction at the end of the process step, indicating whether the amplified product was suitable for downstream sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "amplified_dna_entity": {
+      "reasoning": "For the amplified_dna_entity Entity node, I included only intrinsic properties of the amplified DNA product itself: product identity/state, concentration, total yield, fragment size distribution, purity, and storage condition before sequencing. I excluded amplification protocol details because those belong to the upstream whole_genome_amplification Process, and I excluded sequencing instrument settings because those belong downstream to the capture step. I also avoided repeating kit, incubation, or cell-isolation fields already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "amplified_dna_state",
+          "descr": "State of the DNA after whole genome amplification and before sequencing, describing the material as amplified genomic DNA prepared for library construction or direct sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "amplified_genomic_dna",
+            "amplification_product",
+            "library_input_dna",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "amplified_dna_concentration_ng_per_ul",
+          "descr": "Concentration of the amplified DNA template before sequencing, measured in nanograms per microliter (ng/µL) at the time the sequencing input was prepared; typical range depends on assay and is often 0.01 to 1000 ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplified_dna_total_yield_ng",
+          "descr": "Total mass of amplified DNA recovered from the amplification process, reported in nanograms (ng) at the time the product was quantified before sequencing; typical range is protocol-dependent and often 0.1 to 10000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplified_dna_fragment_size_bp",
+          "descr": "Representative fragment size or size distribution of the amplified DNA product, reported in base pairs (bp) as measured before sequencing input preparation (e.g., modal size or average fragment length). Typical range depends on kit and processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplified_dna_purity_ratio",
+          "descr": "Spectrophotometric purity ratio of the amplified DNA product measured before sequencing, typically A260/A280 or a similar purity metric used in this study; common values are approximately 1.5 to 2.2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplified_dna_storage_condition",
+          "descr": "Condition under which the amplified DNA was stored after amplification and before sequencing, if applicable (e.g., refrigerated, frozen, dried, immediate sequencing).",
+          "type": "categorical",
+          "allowed_values": [
+            "immediate_sequencing",
+            "on_ice",
+            "refrigerated",
+            "frozen",
+            "dried",
+            "other"
+          ]
+        },
+        {
+          "field_id": "amplified_dna_contamination_flag",
+          "descr": "Assessment of whether the amplified DNA product showed evidence of contamination or non-target amplification before sequencing; record at product QC time.",
+          "type": "categorical",
+          "allowed_values": [
+            "clean",
+            "minor_contamination",
+            "significant_contamination",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "next_generation_sequencing": {
+      "reasoning": "For the next_generation_sequencing Capture node, I included only instrument/session configuration fields that describe how the amplified DNA template was measured: platform identity, manufacturer/model/serial, chemistry, read configuration, run setup, and capture-level output quality. I excluded properties of the amplified DNA input because those belong to the upstream amplified_dna_entity, and I excluded file-level attributes such as FASTQ size or storage path because those belong to the downstream raw_reads Signal node. I also avoided repeating any kit, amplification, or sample-collection fields already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_platform_name",
+          "descr": "Name of the next-generation sequencing platform used to measure the amplified DNA template during this capture session (e.g., Illumina MiSeq, NovaSeq, Oxford Nanopore MinION). Record the instrument family actually used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture step. Include the company that produced the platform.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_instrument_model",
+          "descr": "Instrument model used for the sequencing run, recorded for the capture session (e.g., specific sequencer model).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the capture session, recorded exactly as printed on the instrument or in run logs (format example: 'SN123456').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_type",
+          "descr": "Sequencing chemistry or reagent system used on the instrument during this capture session (e.g., SBS, nanopore, semiconductor).",
+          "type": "categorical",
+          "allowed_values": [
+            "sbs",
+            "nanopore",
+            "semiconductor",
+            "pyrosequencing",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sequencing_read_length_bp",
+          "descr": "Configured read length for the sequencing run, in base pairs (bp), measured as the intended read length set at the instrument or run setup stage; typical range depends on platform and is often 50 to 30000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_read_type",
+          "descr": "Read structure configured for the sequencing run, describing whether reads were generated as single-end, paired-end, or long-read output.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "mate_pair",
+            "long_read",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sequencing_run_duration_hours",
+          "descr": "Total duration of the sequencing run, in hours, measured from run start to run completion for this capture session; typical range is platform-dependent and often 0.5 to 72 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_lane_or_flowcell_id",
+          "descr": "Identifier of the lane, flow cell, or equivalent consumable used for the sequencing capture session; use the platform-specific identifier string recorded in the run log.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_capture_quality_flag",
+          "descr": "Overall quality assessment of the sequencing capture session at completion, indicating whether the run produced usable raw reads for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "For the raw_reads Signal node, I included only file- and read-level properties of the digital sequencing artefact: file format, file size, read counts, base-call dimensions, technical quality metrics, compression/storage details, and a raw-data integrity flag. I excluded sequencing instrument settings because those belong to the upstream next_generation_sequencing Capture node, and I excluded assembly or biological interpretation fields because those belong downstream to the genome_assembly Process and assembled_genome Derivative nodes. I also avoided duplicating any sample, amplification, or capture fields already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_format",
+          "descr": "File format of the raw sequencing reads produced directly by the sequencing instrument, recorded for the digital artefact (e.g., FASTQ, BAM, BCL).",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fq",
+            "bam",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_reads_file_size_bytes",
+          "descr": "Total size of the raw sequencing reads file(s) in bytes, measured after instrument output and before downstream assembly or filtering; typical range depends on run depth and platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_total_read_count",
+          "descr": "Total number of sequencing reads contained in the raw data artefact, measured from the raw instrument output before trimming or assembly; typical range is platform- and depth-dependent.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_total_base_count_bp",
+          "descr": "Total number of bases in the raw sequencing reads, reported in base pairs (bp) from the instrument output before processing; typical range depends on run depth and read length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_mean_read_length_bp",
+          "descr": "Mean read length of the raw sequencing reads, in base pairs (bp), calculated from the unprocessed instrument output; typical range depends on platform and run settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_quality_score_mean",
+          "descr": "Mean base-call quality score for the raw sequencing reads, computed from the instrument output before downstream filtering or assembly; commonly reported on the Phred scale and typically ranges from 0 to 40+ depending on platform and run quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_adapter_content_flag",
+          "descr": "Assessment of whether adapter sequence contamination is present in the raw reads file(s), recorded as a technical quality flag for the raw data artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "none_detected",
+            "low",
+            "moderate",
+            "high",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "raw_reads_storage_path",
+          "descr": "File system path, URI, or object-store location where the raw reads artefact is stored, recorded for the digital file after sequencing and before downstream processing. Example formats include '/data/run1/sampleA.fastq.gz' or 's3://bucket/path/'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_compression_format",
+          "descr": "Compression format used for the raw reads file(s), if any, recorded for the artefact as stored (e.g., gzip, bzip2, none).",
+          "type": "categorical",
+          "allowed_values": [
+            "gzip",
+            "bzip2",
+            "zstd",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_reads_integrity_flag",
+          "descr": "Assessment of whether the raw sequencing file(s) were complete and readable at the time of metadata capture, used as a technical integrity check for the artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "corrupted",
+            "partial",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "genome_assembly": {
+      "reasoning": "For the genome_assembly Process node, I included only assembly workflow parameters and process-level outcomes: assembler identity/version, key algorithm settings, input read handling, and assembly quality indicators. I excluded raw read file properties because those belong to the upstream raw_reads Signal, and I excluded the assembled contig/genome properties because those belong to the downstream assembled_genome Derivative. I also avoided repeating any sequencing platform, amplification, or collection fields already generated elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name",
+          "descr": "Name of the assembly software used to reconstruct draft genomes and contigs from the raw sequencing reads during this process step (e.g., SPAdes, MEGAHIT, Flye). Record the software package actually run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version",
+          "descr": "Version of the assembly software used in this process step, recorded exactly as executed (e.g., '3.15.5').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_repository",
+          "descr": "Repository or source reference for the assembly software used in this process step, such as a DOI, GitHub URL, or package distribution reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_input_read_count",
+          "descr": "Number of raw sequencing reads supplied to the assembly process, measured at the start of the run after any optional filtering or subsampling but before contig construction; typical range is platform- and dataset-dependent.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_input_read_type",
+          "descr": "Type of read input provided to the assembler, describing whether the assembly used single-end, paired-end, mate-pair, or long-read data.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "mate_pair",
+            "long_read",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembly_kmer_size",
+          "descr": "K-mer size or k-mer set used by the assembly algorithm, recorded as configured for this process step; use the integer k value applied during contig reconstruction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_min_contig_length_bp",
+          "descr": "Minimum contig length threshold used during assembly or post-assembly filtering, in base pairs (bp); contigs shorter than this threshold are excluded or not reported. Typical range is platform- and assembler-dependent.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_polishing_method",
+          "descr": "Optional polishing or correction method applied during or after assembly to improve draft genome accuracy (e.g., none, read-based polishing, consensus correction).",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "read_based_polishing",
+            "consensus_correction",
+            "hybrid_polishing",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembly_run_duration_minutes",
+          "descr": "Total time required to complete the genome assembly process, in minutes, measured from job start to final output generation; typical range depends on dataset size and hardware.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_flag",
+          "descr": "Overall quality assessment of the assembly process outcome, indicating whether the resulting draft assembly was suitable for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "assembled_genome": {
+      "reasoning": "For the assembled_genome Derivative node, I included only computed-result properties of the draft genome itself: contig/scaffold statistics, genome completeness and contamination, size, GC content, and taxonomic/quality summaries that are outputs of assembly-based reconstruction. I excluded assembler settings because those belong to the upstream genome_assembly Process, and I excluded raw-read and sequencing instrument properties because they belong to upstream Signal/Capture nodes. I also avoided any collection, isolation, or amplification fields already generated elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "assembled_genome_format",
+          "descr": "Format of the assembled genome output artifact, recorded for the computed draft genome result (e.g., FASTA, multi-FASTA, GenBank).",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "multi_fasta",
+            "genbank",
+            "gff_plus_fasta",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembled_genome_contig_count",
+          "descr": "Total number of contigs in the assembled draft genome, measured from the final assembly output after any filtering or polishing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_scaffold_count",
+          "descr": "Total number of scaffolds in the assembled draft genome, if scaffolding was performed; otherwise report the contig count if scaffolds are not applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_total_length_bp",
+          "descr": "Total length of the assembled draft genome in base pairs (bp), measured from the final computed assembly output; typical range for bacterial draft genomes is approximately 0.5 to 15 million bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_n50_bp",
+          "descr": "N50 contig length of the assembled draft genome in base pairs (bp), computed from the final assembly output as a standard contiguity metric; typical range depends on assembly quality and genome complexity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_gc_content_percent",
+          "descr": "GC content of the assembled draft genome, reported as percent GC (%), computed from the final assembly output; typical range for bacteria is roughly 20 to 80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_completeness_percent",
+          "descr": "Estimated completeness of the assembled draft genome as a percent (%), computed after assembly using standard genome completeness assessment methods; typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_contamination_percent",
+          "descr": "Estimated contamination of the assembled draft genome as a percent (%), computed after assembly to quantify non-target sequence content; typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_taxonomic_assignment",
+          "descr": "Best available taxonomic assignment inferred from the assembled draft genome, recorded after assembly for downstream diversity analysis (e.g., genus or species-level call when supported).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_genome_quality_flag",
+          "descr": "Overall quality assessment of the assembled draft genome at the end of derivative generation, indicating whether it is suitable for downstream diversity and functional analyses.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "failed"
+          ]
+        }
+      ]
+    }
+  }
+}

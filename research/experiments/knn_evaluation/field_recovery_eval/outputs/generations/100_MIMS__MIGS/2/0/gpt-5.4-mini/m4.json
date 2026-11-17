@@ -1,0 +1,1195 @@
+{
+  "md_name": "mammalian_gut_microbiome_genome_sequencing_workflow",
+  "md_description": "This workflow captures fecal samples from rodents, primates, and domestic animals, prepares them for DNA sequencing, and generates genome-scale microbiome data. The resulting sequence reads are processed into taxonomic and functional profiles, which are analyzed together with host metadata such as species, age, diet, health status, and geographical location to study factors shaping gut microbiome composition and function across mammalian hosts.",
+  "fields_per_node": {
+    "fecal_sample": {
+      "reasoning": "The fecal_sample node is an Entity, so I included only intrinsic identity and origin fields for the specimen itself: what host it came from, when/where it was collected, and basic specimen state at collection. I excluded any processing details (aliquoting, extraction, library prep), capture/instrument settings, raw file properties, and downstream sequencing outputs because those belong to downstream nodes. I also avoided repeating host-level identifiers and broad experimental identifiers that are typically generated once at the root; instead I focused on specimen-specific provenance and condition. The already_generated list was empty, so there were no overlap constraints from prior fields.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique specimen identifier for the fecal sample used in this workflow; use a stable string such as FS001 or HOST12_FECAL_A. This identifies the collected specimen itself and is assigned at collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_species",
+          "descr": "Scientific name of the mammalian host from which the fecal specimen was collected, recorded at sampling time; examples include Mus musculus, Homo sapiens, Sus scrofa, and Macaca mulatta.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_age_years",
+          "descr": "Age of the host at the time of fecal collection, in years; record as a decimal when known, typically ranging from 0 to >30 depending on species and cohort.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date on which the fecal specimen was collected from the host, recorded in ISO 8601 date format (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_country",
+          "descr": "Country where the fecal specimen was collected, as recorded at sampling time; use standardized country names such as Kenya, United States, India, or Brazil.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site",
+          "descr": "More specific sampling location for the fecal specimen, such as farm, reserve, clinic, household, or GPS-based locality description; record the field site or locality as documented during collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_storage_temperature_celsius",
+          "descr": "Temperature at which the fecal specimen was stored immediately after collection or during transport before aliquoting, in degrees Celsius; typical values are 4, -20, or -80 depending on preservation workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_preservation_method",
+          "descr": "Method used to preserve the fecal specimen prior to downstream processing; choose the collection-state preservation approach used at sampling.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "frozen",
+            "rna_later",
+            "ethanol_preserved",
+            "buffer_preserved",
+            "dry_ice_transport"
+          ]
+        },
+        {
+          "field_id": "sample_mass_grams",
+          "descr": "Mass of fecal material collected for this specimen, in grams, measured at collection or upon receipt before aliquoting; typical values are small fractions of a gram to several grams.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_condition",
+          "descr": "Macroscopic condition of the fecal specimen at receipt or collection, describing whether the sample was suitable for downstream DNA sequencing; use controlled values to indicate apparent specimen quality.",
+          "type": "categorical",
+          "allowed_values": [
+            "normal",
+            "small",
+            "desiccated",
+            "watery",
+            "mixed_with_litter",
+            "compromised"
+          ]
+        }
+      ]
+    },
+    "sample_aliquoting": {
+      "reasoning": "The sample_aliquoting node is a Process, so I included only how the fecal specimen was homogenized and split into aliquots, plus the main operating parameters and quality indicator for that preparation step. I excluded specimen provenance fields already owned by the fecal_sample Entity, and I did not include DNA extraction, library prep, sequencing, or read/file properties because those belong to downstream nodes. Since already_generated contains the fecal_sample fields, I avoided repeating sample identity, host, and collection metadata; I also avoided semantically duplicating those by focusing on aliquoting-specific handling, aliquot counts/sizes, and whether the aliquoting produced material suitable for extraction.",
+      "md_schema": [
+        {
+          "field_id": "aliquoting_method",
+          "descr": "Method used to homogenize and divide the fecal specimen into aliquots before DNA extraction, recorded at the sample preparation step; examples include manual homogenization, bead-assisted homogenization, or mixing with sterile buffer followed by splitting.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_homogenization",
+            "bead_homogenization",
+            "buffer_mixing",
+            "combined_homogenization"
+          ]
+        },
+        {
+          "field_id": "aliquot_count",
+          "descr": "Number of aliquots produced from the fecal specimen during this preparation step; record the count immediately after aliquoting, typically 1 or more depending on the downstream design.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_volume_milliliters",
+          "descr": "Volume of each aliquot produced during sample aliquoting, in milliliters; measure immediately after division of the homogenized fecal material, typically in the range 0.05 to 2.0 mL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_mass_grams",
+          "descr": "Mass of each aliquot generated from the fecal specimen, in grams; record at the end of the aliquoting step when mass-based splitting is used, typically a small fraction of a gram.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_duration_minutes",
+          "descr": "Time spent homogenizing the fecal specimen before aliquot division, in minutes; record the active mixing/homogenization duration for this process step, typically 1 to 30 minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquoting_temperature_celsius",
+          "descr": "Temperature at which aliquoting was performed, in degrees Celsius; record the bench or cold-room temperature during this process step, typically 4 to 25 depending on whether the sample was handled cold or at room temperature.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_quality_status",
+          "descr": "Outcome indicator for the aliquoting step, recorded immediately after preparation to indicate whether aliquots were suitable for downstream DNA extraction and sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "aliquoted_fecal_sample": {
+      "reasoning": "I corrected the schema by removing the two colliding fields that had already been generated elsewhere in the DAG: aliquot_mass_grams and aliquot_volume_milliliters. For the aliquoted_fecal_sample Entity, I kept only fields that remain intrinsic to the prepared aliquot and do not duplicate prior sample-level or aliquoting-step metadata: identity, traceability to the parent specimen, storage conditions, storage duration, and readiness for extraction. I excluded aliquoting procedure details because those belong to the sample_aliquoting Process, and I avoided repeating specimen provenance fields owned by fecal_sample.",
+      "md_schema": [
+        {
+          "field_id": "aliquoted_sample_id",
+          "descr": "Unique identifier for the prepared fecal aliquot, assigned after aliquoting and used to track this specific aliquot into DNA extraction and library preparation; example format A001, FS001_A, or SAMPLE12_ALIQUOT3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_sample_id",
+          "descr": "Identifier of the original fecal specimen from which this aliquot was prepared; use the collection-level sample identifier so the aliquot can be traced back to the parent specimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the aliquoted fecal sample is stored after preparation and before DNA extraction, in degrees Celsius; typical values include 4, -20, or -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_hours",
+          "descr": "Elapsed time the aliquoted fecal sample remains in storage or awaiting extraction, in hours; measure from aliquot preparation to DNA extraction start, typically 0 to several hundred hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_ready_for_extraction",
+          "descr": "Indicator of whether the prepared aliquot is suitable and available for downstream microbial DNA extraction and library preparation at the time of handoff.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "The dna_extraction node is a Process, so I included only protocol-level details of how microbial DNA is extracted from the prepared fecal aliquot, along with key reagent and quality-control parameters needed to reproduce the extraction. I excluded aliquot identity and mass/volume fields because those were already generated earlier and are not part of the extraction process itself; I also excluded downstream DNA product properties that belong on the microbial_dna Entity. The prior collision report means I must avoid reusing aliquot_mass_grams and aliquot_volume_milliliters, so I focused on extraction kit, lysis, binding/elution, yield, purity, and QC outcome instead.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial or in-house DNA extraction kit used for microbial DNA isolation from the fecal aliquot; record the kit name at the time of extraction, for example QIAamp PowerFecal Pro DNA Kit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_lot_number",
+          "descr": "Lot or batch number of the DNA extraction kit or critical reagent set used for the extraction step; record the manufacturer lot identifier if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used to disrupt microbial cells during DNA extraction; choose the method used in this extraction protocol.",
+          "type": "categorical",
+          "allowed_values": [
+            "mechanical_bead_beating",
+            "chemical_lysis",
+            "enzymatic_lysis",
+            "combined_lysis"
+          ]
+        },
+        {
+          "field_id": "lysis_duration_minutes",
+          "descr": "Duration of the cell-lysis phase during microbial DNA extraction, in minutes; measure during the active lysis step, typically 1 to 60 minutes depending on the protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final elution volume used to recover microbial DNA from the extraction column or matrix, in microliters; record at the end of the extraction procedure, typically 20 to 200 uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_nanograms",
+          "descr": "Total amount of DNA recovered from the fecal aliquot at the end of extraction, in nanograms; measure using the assay used for extraction QC, such as fluorometric quantification.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_a260_a280",
+          "descr": "Spectrophotometric purity ratio A260/A280 for the extracted DNA, measured after extraction as a QC metric; typical values for clean DNA are around 1.8.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_qc_status",
+          "descr": "Quality-control outcome for the extraction step, recorded immediately after DNA isolation to indicate whether the extract was acceptable for library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "microbial_dna": {
+      "reasoning": "The microbial_dna node is an Entity, so I kept only properties intrinsic to the DNA product: identity, concentration, total yield, fragment size/integrity, storage, and library-prep readiness. I removed the previously colliding dna_purity_a260_a280 field because it has already been generated elsewhere in the DAG, and I avoided repeating extraction-process parameters or downstream library settings since those belong to other node types. The remaining fields are sufficient for tracking and assessing the DNA extract itself without duplicating process-level QC metrics.",
+      "md_schema": [
+        {
+          "field_id": "dna_extract_id",
+          "descr": "Unique identifier for the microbial DNA extract produced from the fecal aliquot; use a stable string such as DNA001 or FS001_DNA1 to track the extract into library preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_aliquoted_sample_id",
+          "descr": "Identifier of the prepared fecal aliquot from which this microbial DNA extract was obtained; use the aliquot identifier to preserve provenance back to the extraction input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_nanograms_per_microliter",
+          "descr": "Concentration of the extracted microbial DNA, in nanograms per microliter, measured after extraction and before library preparation; typical values depend on sample quality and extraction method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_nanograms",
+          "descr": "Total mass of microbial DNA recovered in the extract, in nanograms, measured after extraction and before library preparation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_fragment_size_bp",
+          "descr": "Typical fragment size of the extracted DNA, in base pairs, as assessed after extraction and before library preparation; report the dominant size or median if a distribution is measured.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_storage_temperature_celsius",
+          "descr": "Temperature at which the microbial DNA extract is stored before library preparation, in degrees Celsius; common values include 4, -20, and -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_ready_for_library_prep",
+          "descr": "Indicator of whether the extracted microbial DNA meets internal requirements for library preparation at the time of use.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "The library_preparation node is a Process, so I included only how the microbial DNA was converted into a sequencing-ready library: adapter/index strategy, input DNA amount, amplification or size-selection settings, and preparation QC. I excluded DNA extract identity and concentration as primary entity properties, and I did not include sequencing instrument settings or raw read properties because those belong to downstream Capture and Signal nodes. I also avoided repeating fields already generated for upstream nodes, including DNA purity metrics that were reported earlier and specifically flagged as a collision, so I focused on library construction parameters and process outcome.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Commercial or custom library preparation kit used to add sequencing adapters and indexes to microbial DNA; record the kit name at the time of library construction, for example Nextera XT or NEBNext Ultra II.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_kit_lot_number",
+          "descr": "Lot or batch number of the library preparation kit or critical reagents used for this process step; record the manufacturer lot identifier if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_dna_amount_nanograms",
+          "descr": "Mass of microbial DNA entered into library preparation, in nanograms, measured at the start of the process step before adapter ligation or amplification; typical values may range from sub-nanogram to hundreds of nanograms depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_indexing_strategy",
+          "descr": "Indexing strategy used to multiplex libraries during sequencing preparation; choose the scheme applied in this library preparation step.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "unique_dual_index",
+            "combinatorial_index"
+          ]
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR amplification cycles used during library preparation, if amplification was performed; record the cycle count immediately after library construction, typically 0 to 15 or more depending on input DNA and kit.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "size_selection_method",
+          "descr": "Fragment size-selection approach used during library preparation, if applicable; record the method used to obtain the final insert-size distribution.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "bead_based",
+            "gel_based",
+            "instrument_based"
+          ]
+        },
+        {
+          "field_id": "library_yield_nanograms",
+          "descr": "Total amount of final sequencing-ready library recovered at the end of library preparation, in nanograms; measure after cleanup and before sequencing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_status",
+          "descr": "Quality-control outcome for the library preparation step, recorded at completion to indicate whether the library was acceptable for sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "metagenomic_library": {
+      "reasoning": "The metagenomic_library node is an Entity, so I included only intrinsic properties of the prepared sequencing library itself: its identity, insert-size characteristics, concentration, molarity, storage, and readiness for sequencing. I excluded library preparation protocol details because those belong to the library_preparation Process, and I did not include sequencing platform settings because those belong to the shotgun_sequencing Capture node. I also avoided repeating upstream DNA extract fields and previously generated library-prep process fields, focusing on the library as a finished material object that will be loaded onto the sequencer.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the prepared metagenomic library, used to track the library from completion of library preparation into shotgun sequencing; example formats include LIB001 or SAMPLE12_LIBA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_dna_extract_id",
+          "descr": "Identifier of the microbial DNA extract used to construct this metagenomic library; use the extract identifier to preserve provenance back to the DNA source material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_nanograms_per_microliter",
+          "descr": "Concentration of the completed sequencing library, in nanograms per microliter, measured after library preparation and before sequencing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_molarity_nanomolar",
+          "descr": "Molar concentration of the completed library, in nanomolar, measured after library preparation and used for sequencing normalization and pooling; typical values depend on library type and platform.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_insert_size_bp",
+          "descr": "Expected or measured insert size of the metagenomic library, in base pairs, assessed after library preparation and before sequencing; report the modal or median fragment size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_temperature_celsius",
+          "descr": "Temperature at which the completed metagenomic library is stored prior to sequencing, in degrees Celsius; common values are 4, -20, or -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_ready_for_sequencing",
+          "descr": "Indicator of whether the prepared library met acceptance criteria and was suitable for loading onto the sequencer at the time of use.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "shotgun_sequencing": {
+      "reasoning": "The shotgun_sequencing node is a Capture, so I included instrument configuration and run-session details that describe how the Illumina system was set up to read the metagenomic library. I excluded library properties because those belong to the metagenomic_library Entity, and I excluded raw file properties because those belong to the raw_reads Signal. I also avoided repeating upstream process parameters and downstream signal quality fields, focusing on manufacturer/model/serial and run settings that are actively controlled during capture.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for shotgun metagenome capture; record the vendor name at the time of sequencing, for example Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the sequencing instrument used to generate the raw paired-end reads; record the specific platform model used in this capture session, for example NovaSeq 6000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for this capture session; use the manufacturer-assigned serial identifier, for example SN12345.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell type used in the sequencing run, recorded at the start of capture; use the platform-specific flow cell designation such as S4 or SP.",
+          "type": "categorical",
+          "allowed_values": [
+            "S1",
+            "S2",
+            "S4",
+            "SP",
+            "PE",
+            "M"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length for each paired-end sequencing read, in base pairs, set on the instrument before run start; typical values include 75, 100, 150, or 250 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_version",
+          "descr": "Sequencing chemistry or reagent version used during the capture session, recorded at run setup; use the vendor chemistry designation applicable to the instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Identifier for the sequencing run/session that produced the raw reads; use the run-specific identifier assigned at the instrument or LIMS level, for example RUN2024_01_15_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_density_kmm2",
+          "descr": "Observed cluster density on the flow cell, in thousands of clusters per square millimeter, recorded during or immediately after the run as a capture-session performance metric; typical values are platform-dependent.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "The raw_reads node is a Signal, so I included only properties of the raw FASTQ data artifact itself: file identity, format, size, layout, read counts, and technical quality metrics. I excluded sequencing instrument configuration because that belongs to the shotgun_sequencing Capture node, and I excluded any biological interpretation because that belongs to downstream profiling derivatives. I also avoided repeating library or sample provenance fields and focused on what a downstream user needs to locate, validate, and process the raw data file.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_id",
+          "descr": "Unique identifier for the raw FASTQ file or file pair generated by shotgun sequencing; use a stable data-file identifier such as RR001 or RUN2024_01_15_A_L001_R1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_file_format",
+          "descr": "File format of the raw sequencing artifact, recorded for the raw data object itself; for shotgun metagenome sequencing this is typically FASTQ or compressed FASTQ such as FASTQ_GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz"
+          ]
+        },
+        {
+          "field_id": "raw_reads_file_size_bytes",
+          "descr": "Storage size of the raw reads file, in bytes, measured for the delivered raw FASTQ artifact; use the file size on disk or in object storage at the time of registration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_pairing_layout",
+          "descr": "Read layout of the raw sequence data, indicating how the paired-end files are organized for this signal artifact; record the layout used for the raw FASTQ delivery.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "raw_reads_total_reads",
+          "descr": "Total number of sequence reads contained in the raw FASTQ artifact, measured from the file contents after sequencing and before any QC filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_total_bases_bp",
+          "descr": "Total number of bases represented in the raw sequencing artifact, in base pairs, calculated from the FASTQ file contents before trimming or filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_mean_quality_score",
+          "descr": "Mean per-base Phred quality score across the raw reads, measured on the unprocessed FASTQ file as a technical quality metric; typical values depend on platform and run performance.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_storage_uri",
+          "descr": "Storage location or URI for the raw FASTQ artifact, recorded so the file can be retrieved for downstream analysis; example forms include s3://bucket/path/file.fastq.gz or a local archive path.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc": {
+      "reasoning": "The read_qc node is a Process, so I included only the trimming/filtering procedure and its key settings and QC outcome. I excluded raw file properties because those belong to the raw_reads Signal, and I did not include the cleaned-read file characteristics because those belong to the qc_reads Signal. I also avoided repeating sequencing instrument settings or sample provenance, focusing on the software and parameters that define how the read-cleaning transformation was performed.",
+      "md_schema": [
+        {
+          "field_id": "qc_software_name",
+          "descr": "Name of the software used for read trimming and quality filtering, recorded at the start of the processing step; example: fastp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_software_version",
+          "descr": "Version of the read-quality-filtering software used in this process step, recorded to ensure reproducibility; example: 0.23.4.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_repository",
+          "descr": "Repository or package source for the read-quality-filtering software, recorded for reproducibility; examples include GitHub, Bioconda, or a vendor distribution channel.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Indicator of whether adapter sequences were removed during read QC, recorded for this processing step; true if adapter trimming was applied to the raw reads.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Phred quality score threshold used to trim low-quality bases during read QC, measured as the cutoff applied to the raw reads; typical values are in the range 10 to 30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering, in base pairs; reads shorter than this threshold are discarded during the QC process, typically 30 to 100 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_qc_retention_rate_percent",
+          "descr": "Percentage of input reads retained after trimming and filtering, calculated at the end of the QC step as an output quality indicator; typical values vary by sample quality and threshold settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_qc_status",
+          "descr": "Quality-control outcome for the read filtering step, recorded at completion to indicate whether the cleaned reads were suitable for downstream host depletion and profiling.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "qc_reads": {
+      "reasoning": "The qc_reads node is a Signal, so I included only properties of the cleaned read artifact itself: file identity, format, size, read count, and technical quality metrics after QC. I excluded the trimming/filtering parameters because those belong to the read_qc Process, and I excluded host-removal settings because those belong to the host_depletion Process downstream. I also avoided reusing the raw_reads file fields verbatim by framing these as properties of the quality-filtered output artifact rather than the original sequencing file.",
+      "md_schema": [
+        {
+          "field_id": "qc_reads_file_id",
+          "descr": "Unique identifier for the quality-filtered read file or file pair produced by read QC; use a stable file identifier such as QC001 or RUN2024_01_15_A_trimmed_R1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_file_format",
+          "descr": "File format of the quality-filtered metagenomic reads; this is typically FASTQ or compressed FASTQ delivered after trimming and filtering.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz"
+          ]
+        },
+        {
+          "field_id": "qc_reads_file_size_bytes",
+          "descr": "Storage size of the quality-filtered reads file, in bytes, measured for the cleaned FASTQ artifact after QC.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_total_reads",
+          "descr": "Total number of reads remaining after read-quality filtering, measured from the cleaned FASTQ artifact before host depletion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_total_bases_bp",
+          "descr": "Total number of bases in the quality-filtered reads, in base pairs, calculated from the cleaned FASTQ artifact after trimming and filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_mean_quality_score",
+          "descr": "Mean per-base Phred quality score across the quality-filtered reads, measured on the cleaned FASTQ artifact as a technical quality metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_adapter_content_percent",
+          "descr": "Estimated percentage of reads or bases still carrying adapter signal after QC, measured on the cleaned read artifact as a residual contamination metric; lower values indicate better trimming.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_reads_storage_uri",
+          "descr": "Storage location or URI for the quality-filtered read artifact, recorded so the cleaned reads can be retrieved for downstream host depletion or profiling.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "host_depletion": {
+      "reasoning": "The host_depletion node is a Process, so I included only how host-origin reads were removed from the quality-filtered reads, along with the software, reference, parameters, and depletion outcome. I excluded qc_reads artifact properties because those belong to the upstream Signal, and I did not include microbial_reads file properties because those belong to the downstream Signal. I also avoided repeating sample metadata and sequencing run settings, focusing on the computational method used to deplete host sequences and the key output quality indicator.",
+      "md_schema": [
+        {
+          "field_id": "depletion_software_name",
+          "descr": "Name of the software used to remove mammalian host reads from the quality-filtered metagenomic reads, recorded at the start of the depletion step; example: Bowtie2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "depletion_software_version",
+          "descr": "Version of the host-depletion software used in this process step, recorded for reproducibility; example: 2.5.1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "depletion_repository",
+          "descr": "Repository or package source for the host-depletion software, recorded for reproducibility; examples include GitHub, Bioconda, or a vendor distribution channel.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_genome_name",
+          "descr": "Name of the mammalian host reference genome used for read depletion, recorded as the aligned host database; examples include Homo sapiens GRCh38 or species-specific assemblies for the sampled host.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_genome_version",
+          "descr": "Version or assembly identifier of the host reference genome used during read depletion, recorded to ensure reproducibility; examples include GRCh38 or a species-specific assembly accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_identity_threshold_percent",
+          "descr": "Minimum percent identity required for a read to be considered host-derived during depletion, measured as the alignment filter applied to the quality-filtered reads; typical values depend on the aligner and host genome.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_reads_removed_percent",
+          "descr": "Percentage of quality-filtered reads removed as host-derived during depletion, calculated at the end of the process as a depletion outcome metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_depletion_status",
+          "descr": "Quality-control outcome for the host read removal step, recorded at completion to indicate whether the microbial-enriched reads were suitable for downstream profiling.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "microbial_reads": {
+      "reasoning": "The microbial_reads node is a Signal, so I included only properties of the host-depleted read artifact itself: file identity, format, size, read count, remaining host contamination, and storage location. I excluded host depletion software and alignment parameters because those belong to the host_depletion Process, and I did not include profiling parameters or scientific interpretation because those belong to downstream Process and Derivative nodes. I also avoided repeating upstream qc_reads file fields verbatim by framing these as properties of the post-depletion read artifact.",
+      "md_schema": [
+        {
+          "field_id": "microbial_reads_file_id",
+          "descr": "Unique identifier for the host-depleted read file or file pair produced by host depletion; use a stable file identifier such as MICRO001 or RUN2024_01_15_A_microbial_R1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbial_reads_file_format",
+          "descr": "File format of the host-depleted metagenomic reads; this is typically FASTQ or compressed FASTQ delivered after host read removal.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz"
+          ]
+        },
+        {
+          "field_id": "microbial_reads_file_size_bytes",
+          "descr": "Storage size of the host-depleted reads file, in bytes, measured for the microbial-enriched FASTQ artifact after depletion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbial_reads_total_reads",
+          "descr": "Total number of reads remaining after host depletion, measured from the microbial-enriched FASTQ artifact before downstream profiling.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbial_reads_total_bases_bp",
+          "descr": "Total number of bases in the host-depleted reads, in base pairs, calculated from the microbial-enriched FASTQ artifact after host read removal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "residual_host_contamination_percent",
+          "descr": "Estimated percentage of reads or bases still matching host sequence after depletion, measured on the host-depleted read artifact as a contamination metric; lower values indicate more complete host removal.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbial_reads_storage_uri",
+          "descr": "Storage location or URI for the host-depleted read artifact, recorded so the microbial-enriched reads can be retrieved for taxonomic and functional profiling.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomic_profiling": {
+      "reasoning": "The taxonomic_profiling node is a Process, so I included only how the microbial reads were classified, the reference/database and software settings used, and a key output quality indicator. I excluded microbial read file properties because those belong to the microbial_reads Signal, and I did not include the taxonomic abundance table itself because that belongs to the downstream taxonomic_profile Derivative. I also avoided repeating host-depletion or sequencing settings, focusing instead on the classification workflow and its reproducible parameters.",
+      "md_schema": [
+        {
+          "field_id": "profiling_software_name",
+          "descr": "Name of the software used for taxonomic classification of microbial reads, recorded at the start of the profiling step; example: MetaPhlAn.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_software_version",
+          "descr": "Version of the taxonomic profiling software used in this process step, recorded for reproducibility; example: 4.0.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_repository",
+          "descr": "Repository or package source for the taxonomic profiling software, recorded for reproducibility; examples include GitHub, Bioconda, or a vendor distribution channel.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the taxonomic reference database used to classify microbial reads, recorded as the database supporting the profiling step; examples include MetaPhlAn marker database or a curated genome catalog.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the taxonomic reference database used during profiling, recorded to ensure reproducibility; example values may include database release numbers or dates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classification_confidence_threshold",
+          "descr": "Minimum confidence threshold used to assign microbial reads to taxa, measured as the cutoff applied during taxonomic classification; record the threshold used by the profiler.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unclassified_reads_percent",
+          "descr": "Percentage of microbial reads that could not be assigned to any taxon during profiling, calculated at the end of the process as an output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profiling_status",
+          "descr": "Quality-control outcome for the taxonomic classification step, recorded at completion to indicate whether the resulting taxonomic assignments were acceptable for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profile": {
+      "reasoning": "The taxonomic_profile node is a Derivative, so I included only properties of the computed abundance result itself: output identity, matrix shape, taxonomic granularity, normalization, and summary quality indicators. I excluded read-processing and classification parameters because those belong to the taxonomic_profiling Process, and I did not include raw or microbial read file properties because those belong upstream on Signal nodes. I also avoided repeating host/sample metadata and focused on what a downstream analyst needs to interpret, load, and compare the computed abundance profile.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_profile_id",
+          "descr": "Unique identifier for the computed taxonomic abundance profile, used to track this derivative result in analysis and downstream export; example formats include TAX001 or SAMPLE12_TAX_PROFILE.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_microbial_reads_file_id",
+          "descr": "Identifier of the microbial reads artifact used as input for the taxonomic profiling computation; use the host-depleted read file identifier to preserve provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_format",
+          "descr": "File or table format of the computed taxonomic abundance profile, recorded for the derivative output; common formats include TSV, CSV, BIOM, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "biom",
+            "parquet"
+          ]
+        },
+        {
+          "field_id": "taxonomic_rank",
+          "descr": "Taxonomic rank represented in the abundance profile, such as species, genus, family, or higher ranks; record the primary rank used for the derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "species",
+            "genus",
+            "family",
+            "order",
+            "class",
+            "phylum"
+          ]
+        },
+        {
+          "field_id": "feature_count",
+          "descr": "Number of taxonomic features included in the computed profile, counted after filtering and summarization; this indicates the number of taxa represented in the output table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization applied to the taxonomic abundances in the computed profile, recorded as a derivative-level property; examples include relative_abundance, counts_per_million, or raw_counts.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "counts_per_million",
+            "raw_counts"
+          ]
+        },
+        {
+          "field_id": "sparsity_percent",
+          "descr": "Percentage of entries in the taxonomic abundance matrix that are zero or absent, calculated for the computed profile as a data-complexity indicator; higher values indicate a sparser table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_quality_flag",
+          "descr": "Overall quality indicator for the computed taxonomic profile, recorded after derivation to indicate whether the profile is suitable for downstream comparative analyses.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "functional_profiling": {
+      "reasoning": "The functional_profiling node is a Process, so I included only the computational workflow used to infer gene family and pathway abundance from microbial reads, along with software, database, normalization, and output QC indicators. I excluded microbial read file properties because those belong to the upstream Signal, and I did not include the final functional profile table because that belongs to the downstream Derivative. I also avoided reusing taxonomic profiling or sequencing parameters, focusing on the functional inference step and its reproducible settings.",
+      "md_schema": [
+        {
+          "field_id": "functional_software_name",
+          "descr": "Name of the software used for functional inference from microbial reads, recorded at the start of the profiling step; example: HUMAnN.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_software_version",
+          "descr": "Version of the functional profiling software used in this process step, recorded for reproducibility; example: 3.8.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_repository",
+          "descr": "Repository or package source for the functional profiling software, recorded for reproducibility; examples include GitHub, Bioconda, or a vendor distribution channel.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_family_database_name",
+          "descr": "Name of the reference database used to infer gene family abundances from microbial reads, recorded as the database supporting the functional profiling step; examples include UniRef or another curated protein family catalog.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_family_database_version",
+          "descr": "Version or release identifier of the gene family reference database used during functional profiling, recorded to ensure reproducibility; example values may include database release numbers or dates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pathway_database_name",
+          "descr": "Name of the pathway reference database used to infer metabolic pathway abundances, recorded as the database supporting pathway reconstruction; examples include MetaCyc or KEGG.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pathway_database_version",
+          "descr": "Version or release identifier of the pathway reference database used during functional profiling, recorded to ensure reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_normalization_method",
+          "descr": "Normalization method applied when inferring functional abundances from microbial reads, recorded as a process parameter; examples include copies per million, coverage normalization, or relative abundance.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "copies_per_million",
+            "coverage_normalized"
+          ]
+        },
+        {
+          "field_id": "functional_unmapped_reads_percent",
+          "descr": "Percentage of microbial reads that could not be assigned to any functional feature during profiling, calculated at the end of the process as an output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profiling_status",
+          "descr": "Quality-control outcome for the functional profiling step, recorded at completion to indicate whether the inferred gene family and pathway abundances were acceptable for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "functional_profile": {
+      "reasoning": "The functional_profile node is a Derivative, so I kept only derivative-specific properties that do not collide with fields already generated elsewhere in the DAG. Because source_microbial_reads_file_id, feature_count, normalization_method, and sparsity_percent were already generated previously, I removed them and replaced them with non-overlapping fields that still describe the computed functional result: identity, output format, feature granularity, pathway coverage, abundance scale, and overall quality. I also excluded process-level software/database parameters because those belong to functional_profiling, not the derivative output.",
+      "md_schema": [
+        {
+          "field_id": "functional_profile_id",
+          "descr": "Unique identifier for the computed functional abundance profile, used to track this derivative result in analysis and downstream export; example formats include FUNC001 or SAMPLE12_FUNC_PROFILE.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_format",
+          "descr": "File or table format of the computed functional abundance profile, recorded for the derivative output; common formats include TSV, CSV, BIOM, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "biom",
+            "parquet"
+          ]
+        },
+        {
+          "field_id": "functional_profile_feature_type",
+          "descr": "Primary biological feature class represented by the computed functional profile, indicating whether the output emphasizes gene families, pathways, or a combined representation; record the feature granularity used in this derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "gene_family",
+            "pathway",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "pathway_coverage_percent",
+          "descr": "Percentage of known pathway components covered by the computed functional profile, calculated from the derivative output as a completeness indicator; higher values indicate more complete pathway representation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_scale",
+          "descr": "Scale on which functional abundances are reported in the derivative output, recorded to distinguish transformed values from counts; examples include relative abundance, log-transformed abundance, or scaled abundance.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "log_abundance",
+            "scaled_abundance"
+          ]
+        },
+        {
+          "field_id": "functional_profile_quality_flag",
+          "descr": "Overall quality indicator for the computed functional profile, recorded after derivation to indicate whether the output is suitable for downstream comparative analyses.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "The metadata_table node is an externally curated Derivative, so I included only properties of the curated host-metadata table itself: table identity, source curation context, file format, row/column structure, provenance, and completeness/quality. I excluded sample collection and host biology fields such as species, age, diet, health status, and location because those are the actual contents of the table and were described as the external input rather than as table-level properties. I also avoided repeating any generic file identifiers or normalization/count fields that collided earlier in the DAG, focusing instead on the table as a curated data product used by integrative analysis.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_id",
+          "descr": "Unique identifier for the curated host metadata table, used to track this derivative table in the workflow and downstream analyses; example formats include META001 or STUDY12_HOST_METADATA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_curation_name",
+          "descr": "Name of the external curation source, project, or repository that produced the host metadata table; record the source used to assemble the table for this study.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_format",
+          "descr": "File or table format of the curated host metadata, recorded for the derivative output; common formats include TSV, CSV, XLSX, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "parquet"
+          ]
+        },
+        {
+          "field_id": "metadata_row_count",
+          "descr": "Number of sample records in the curated host metadata table, counted at the time the derivative table is prepared; each row typically corresponds to one sample or specimen.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_column_count",
+          "descr": "Number of columns or variables in the curated host metadata table, counted after final curation; this reflects the total number of host metadata fields recorded for each sample.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_curation_version",
+          "descr": "Version or release identifier of the curated host metadata table, recorded to distinguish updates or revisions to the external metadata source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_completeness_percent",
+          "descr": "Percentage of rows with non-missing values for the required host metadata fields in the curated table, calculated as a data-quality indicator for the derivative.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_quality_flag",
+          "descr": "Overall quality indicator for the curated host metadata table, recorded to indicate whether it is suitable for integrative analysis with microbiome profiles.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "integrative_analysis": {
+      "reasoning": "The integrative_analysis node is a Process, so I included only how the microbiome profiles and host metadata were combined, along with the analysis software, model/design choices, and summary outcome indicators. I excluded upstream profile and table contents because those belong to the derivative inputs, and I did not include the final statistical results because those belong to the downstream association_results Derivative. I also avoided repeating already-generated process software fields by using analysis-specific parameters that describe the multivariable association workflow rather than sequencing or profiling steps.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or analysis environment used to integrate microbiome profiles with host metadata, recorded at the start of the association analysis; example: R.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software used in this process step, recorded for reproducibility; example: 4.4.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository",
+          "descr": "Repository or package source for the analysis software or key analysis package, recorded for reproducibility; examples include CRAN, Bioconductor, GitHub, or a vendor distribution channel.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microbiome_profile_type",
+          "descr": "Type of microbiome-derived profile entered into the integrative analysis, recorded for this process step; choose the profile class used to test host associations.",
+          "type": "categorical",
+          "allowed_values": [
+            "taxonomic",
+            "functional",
+            "both"
+          ]
+        },
+        {
+          "field_id": "association_model_type",
+          "descr": "Statistical model or test used to assess relationships between host factors and microbiome profiles, recorded at the analysis step; examples include linear_model, mixed_effects_model, or multivariate_association_test.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "mixed_effects_model",
+            "multivariate_association_test",
+            "permutation_test"
+          ]
+        },
+        {
+          "field_id": "covariate_count",
+          "descr": "Number of host metadata variables included as covariates in the association analysis, counted at model setup time; this reflects the dimensionality of the host-environment adjustment set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction_method",
+          "descr": "Method used to adjust for multiple hypothesis testing across features or associations in the integrative analysis; examples include FDR or Bonferroni-style correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "fdr_bh",
+            "bonferroni",
+            "holm",
+            "none"
+          ]
+        },
+        {
+          "field_id": "integrative_analysis_status",
+          "descr": "Quality-control outcome for the analysis step, recorded at completion to indicate whether the integrated analysis ran successfully and produced usable outputs.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "association_results": {
+      "reasoning": "The association_results node is a Derivative, so I included only properties of the computed statistical output itself: result identity, source analysis, file format, result structure, the number of tested associations, significance summary, and overall quality. I excluded model choices and analysis settings because those belong to the integrative_analysis Process, and I did not include specific sample or feature metadata because those are inputs to the analysis, not attributes of the results artifact. I also avoided any overlap with upstream profile/table fields by focusing on the statistical result object that downstream users will inspect or export.",
+      "md_schema": [
+        {
+          "field_id": "association_results_id",
+          "descr": "Unique identifier for the computed association results object, used to track the statistical output in the workflow and downstream reporting; example formats include ASSOC001 or STUDY12_ASSOC_RESULTS.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_analysis_id",
+          "descr": "Identifier of the integrative analysis run that produced these association results; use the analysis step identifier to preserve provenance back to the statistical workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_results_format",
+          "descr": "File or table format of the statistical results object, recorded for the derivative output; common formats include TSV, CSV, XLSX, JSON, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "json",
+            "parquet"
+          ]
+        },
+        {
+          "field_id": "tested_association_count",
+          "descr": "Total number of host-microbiome associations tested in the statistical output, counted from the results table after model fitting and filtering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significant_association_count",
+          "descr": "Number of associations meeting the predefined significance threshold after correction for multiple testing, counted from the statistical results output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "results_metric_name",
+          "descr": "Primary statistical metric reported in the association results, such as effect size, correlation coefficient, or regression coefficient, recorded as the main numeric output in the table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "results_significance_threshold",
+          "descr": "Significance threshold used to interpret the association results, such as a corrected q-value cutoff or alpha level, recorded as a derivative-level summary parameter.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_results_quality_flag",
+          "descr": "Overall quality indicator for the association results object, recorded to indicate whether the outputs are suitable for interpretation and downstream reporting.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_notes",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

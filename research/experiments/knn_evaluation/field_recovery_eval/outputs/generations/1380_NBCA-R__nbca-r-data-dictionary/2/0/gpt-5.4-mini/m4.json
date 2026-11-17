@@ -1,0 +1,539 @@
+{
+  "md_name": "Pediatric Brain Tumor Radiotherapy Registry Pipeline",
+  "md_description": "This workflow captures pediatric brain tumor radiotherapy registry data from patient clinical records and treatment documentation, then harmonizes those fields into a standardized metadata table. It includes demographic and medical history variables, radiotherapy parameters, treatment modifications, side effects, and follow-up interventions to support analysis of tumor control and neurological outcomes in children.",
+  "fields_per_node": {
+    "pediatric_brain_tumor_patient": {
+      "reasoning": "This Entity node should only capture intrinsic patient identity/origin and baseline clinical attributes that are part of who the registry subject is, not what was captured or transformed later. Because downstream Capture nodes already own age/weight/history abstraction and treatment/toxicity details, I excluded procedural variables, radiotherapy specifics, side effects, interventions, file/table properties, and any workflow/software fields. I also avoided repeating any experiment identifiers in line with the rule that sample/subject/experiment identifiers are generated once at the root Entity node. The fields below therefore focus on pediatric patient identity, diagnosis context, and origin/status needed to anchor the registry record.",
+      "md_schema": [
+        {
+          "field_id": "patient_id",
+          "descr": "Unique registry subject identifier for the child patient in this dataset, formatted as a stable string such as 'PT-000123'. Use one ID per patient; this identifier anchors all downstream clinical abstractions and should be assigned at enrollment or registry entry.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "age_years_at_registry_entry",
+          "descr": "Patient age in years at the time the child is first entered into the radiotherapy registry. Record as a decimal if needed for infants/young children (for example, 3.5 years); typical pediatric range is 0 to 18 years.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sex_at_birth",
+          "descr": "Biological sex recorded in the source clinical record for the patient, captured as part of subject identity at registry entry and not as a treatment variable.",
+          "type": "categorical",
+          "allowed_values": [
+            "female",
+            "male",
+            "intersex",
+            "unknown",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "brain_tumor_diagnosis",
+          "descr": "Primary brain tumor diagnosis for the patient as documented in the clinical record, e.g. 'medulloblastoma', 'ependymoma', or 'glioma'. Capture the disease entity driving radiotherapy eligibility, not imaging or treatment details.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diagnosis_date",
+          "descr": "Date of the initial brain tumor diagnosis documented for the patient, using calendar date format (YYYY-MM-DD). This is the baseline disease date used to anchor the registry timeline.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "disease_site",
+          "descr": "Anatomic site of the primary brain tumor as recorded for the patient, such as 'cerebellum', 'brainstem', 'cerebrum', or 'posterior fossa'. Use the clinically documented site rather than radiation field information.",
+          "type": "categorical",
+          "allowed_values": [
+            "cerebellum",
+            "brainstem",
+            "cerebrum",
+            "posterior_fossa",
+            "ventricular_system",
+            "pineal_region",
+            "suprasellar_region",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "baseline_neurologic_status",
+          "descr": "Pre-radiotherapy neurologic status of the patient at registry entry, reflecting the child's intrinsic clinical condition before treatment abstraction. Examples include 'normal', 'mild_deficit', 'moderate_deficit', 'severe_deficit', or 'unknown'.",
+          "type": "categorical",
+          "allowed_values": [
+            "normal",
+            "mild_deficit",
+            "moderate_deficit",
+            "severe_deficit",
+            "unknown",
+            "not_recorded"
+          ]
+        },
+        {
+          "field_id": "patient_origin",
+          "descr": "Source setting from which the patient record entered the registry, indicating the clinical care origin of the subject record. Examples include 'single_center', 'multi_center', or 'referral_case'.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_center",
+            "multi_center",
+            "referral_case",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "demographic_history_capture": {
+      "reasoning": "This Capture node should describe the abstraction session and configured capture context for demographic and history variables, not the patient attributes themselves. Because the upstream Entity node owns the subject identity and intrinsic baseline properties, I excluded patient identifiers, diagnosis, and outcome variables. Because downstream Derivative/standardization nodes will hold harmonized outputs, I also excluded table/file properties and computed summaries. The fields below stay in the semantic territory of a capture operation: source record context, abstraction timing, clinician/operator details only insofar as they are part of the capture session, and the specific demographic/history variable set collected in this step.",
+      "md_schema": [
+        {
+          "field_id": "source_clinical_record_type",
+          "descr": "Type of source record abstracted for demographic and medical history data, describing the clinical documentation used during capture. Examples include 'electronic_health_record', 'paper_chart', 'tumor_registry_note', or 'mixed_source'.",
+          "type": "categorical",
+          "allowed_values": [
+            "electronic_health_record",
+            "paper_chart",
+            "tumor_registry_note",
+            "mixed_source",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "capture_date",
+          "descr": "Calendar date on which the registry abstraction step was performed for the demographic/history fields, formatted as YYYY-MM-DD. Record the date the operator or workflow extracted the source variables.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abstraction_operator_role",
+          "descr": "Role of the person or workflow performing the demographic/history abstraction, recorded as part of the capture session context. Examples include 'clinical_data_abstractor', 'nurse', 'physician', or 'automated_workflow'.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinical_data_abstractor",
+            "nurse",
+            "physician",
+            "automated_workflow",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "capture_method",
+          "descr": "Method used to obtain the demographic and medical history variables from the source record. Examples include 'manual_abstraction', 'semi_automated_extraction', or 'automated_extraction'.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "semi_automated_extraction",
+            "automated_extraction"
+          ]
+        },
+        {
+          "field_id": "captured_demographic_variables",
+          "descr": "Set of demographic/history variable groups targeted in this capture step, limited to the registry abstraction of patient age, weight, and medical history. Use this to indicate which variable families were read from the clinical record, not their values.",
+          "type": "categorical",
+          "allowed_values": [
+            "age",
+            "weight",
+            "medical_history",
+            "age_weight_medical_history"
+          ]
+        },
+        {
+          "field_id": "source_record_time_window",
+          "descr": "Time window of the source documentation used for abstraction, expressed as a relative clinical period such as 'baseline_at_diagnosis', 'pre_radiotherapy', or 'latest_available_before_treatment'. Use the window that the registry abstraction targeted for the demographic/history fields.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline_at_diagnosis",
+            "pre_radiotherapy",
+            "latest_available_before_treatment",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "radiotherapy_details_capture": {
+      "reasoning": "I removed the colliding cross-DAG field names and replaced them with radiotherapy-step-specific capture context fields that do not duplicate previous steps. The remaining fields stay in the Capture node’s territory by describing the treatment-document source, radiotherapy abstraction scope, and session context rather than patient attributes or downstream outputs. I kept the radiotherapy modality and treatment phase concepts because they are specific to this capture step, and I preserved the modification-types field because it captures what was read from treatment documentation during this operation.",
+      "md_schema": [
+        {
+          "field_id": "treatment_document_source",
+          "descr": "Type of radiotherapy documentation abstracted during this capture step. Examples include 'radiation_oncology_note', 'treatment_plan', 'dose_summary', 'simulation_report', or 'mixed_source'.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiation_oncology_note",
+            "treatment_plan",
+            "dose_summary",
+            "simulation_report",
+            "mixed_source",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "radiotherapy_modality",
+          "descr": "Radiotherapy modality recorded in the source documentation and read during this capture step, such as conventional photon therapy or particle therapy. This describes what treatment type was documented, not the delivered dose itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "photon",
+            "proton",
+            "electron",
+            "brachytherapy",
+            "mixed_modality",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "radiotherapy_abstraction_scope",
+          "descr": "Scope of treatment information captured from radiotherapy documentation in this step, indicating which treatment details were targeted for extraction. Use this to distinguish abstraction of dose, duration, and modification-related content from other registry content.",
+          "type": "categorical",
+          "allowed_values": [
+            "dose_and_fractionation",
+            "treatment_duration",
+            "on_treatment_modifications",
+            "dose_duration_and_modifications",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "treatment_phase",
+          "descr": "Phase of radiotherapy coverage represented by the source documentation used in this capture, such as initial course, boost phase, or re-irradiation. Use the clinical phase documented in the record to frame dose and duration abstraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "initial_course",
+            "boost_phase",
+            "re_irradiation",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "recorded_treatment_modification_types",
+          "descr": "Types of on-treatment modifications noted in the source documentation and abstracted in this step. This field captures whether the record included changes such as delay, interruption, dose reduction, or fractionation adjustment, without storing the detailed values themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "delay",
+            "interruption",
+            "dose_reduction",
+            "fractionation_adjustment",
+            "field_adjustment",
+            "supportive_care_change",
+            "no_modification_recorded",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "radiotherapy_record_complexity",
+          "descr": "Overall complexity of the radiotherapy documentation abstracted in this capture session, indicating whether the source was a simple single-course record or a more complex multi-phase or modified course. Use this to summarize the document set being read, not the patient’s clinical status.",
+          "type": "categorical",
+          "allowed_values": [
+            "simple_single_course",
+            "multi_phase_course",
+            "modified_course",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "toxicity_intervention_capture": {
+      "reasoning": "This Capture node should describe the abstraction session and source-context for toxicity and follow-up intervention review, not the patient baseline record, radiotherapy parameters, or the derived standardized table. I excluded identifiers, tumor diagnosis, dose/modality details, and downstream result fields because they belong to the Entity, radiotherapy Capture, or Derivative nodes. In response to the collision feedback, I also avoided previously generated generic capture field names such as capture_date, abstraction_operator_role, and source_record_time_window. The fields below are specific to the toxicity/intervention capture workflow: the follow-up record source, the adverse-event coding context, and the intervention documentation context needed to understand how side effects and subsequent actions were abstracted.",
+      "md_schema": [
+        {
+          "field_id": "follow_up_record_source",
+          "descr": "Type of follow-up documentation abstracted during this capture step for treatment-related side effects and interventions. Examples include 'follow_up_clinic_note', 'telephone_follow_up', 'hospitalization_record', 'toxicity_assessment_form', or 'mixed_source'.",
+          "type": "categorical",
+          "allowed_values": [
+            "follow_up_clinic_note",
+            "telephone_follow_up",
+            "hospitalization_record",
+            "toxicity_assessment_form",
+            "mixed_source",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "toxicity_assessment_method",
+          "descr": "Method used to identify and abstract treatment-related side effects from the follow-up records. Examples include clinician chart review, standardized toxicity grading review, or automated text extraction. This describes how adverse events were captured, not the toxicity values themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_chart_review",
+            "standardized_toxicity_grading_review",
+            "automated_text_extraction",
+            "semi_automated_extraction",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "toxicity_coding_system",
+          "descr": "Adverse-event or toxicity classification system referenced during abstraction of side effects from follow-up records. Examples include 'CTCAE', 'RTOG', or 'institution_specific'.",
+          "type": "categorical",
+          "allowed_values": [
+            "CTCAE",
+            "RTOG",
+            "institution_specific",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "intervention_documentation_source",
+          "descr": "Type of source documentation used to abstract subsequent interventions related to toxicity, such as medication changes, rehabilitation, admission, or procedure notes. This captures where intervention information was read from during the follow-up review.",
+          "type": "categorical",
+          "allowed_values": [
+            "follow_up_clinic_note",
+            "medication_record",
+            "procedure_note",
+            "rehabilitation_note",
+            "hospitalization_record",
+            "mixed_source",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "follow_up_assessment_interval",
+          "descr": "Clinical follow-up interval represented by the records used in this capture step, indicating when toxicity and intervention information were abstracted relative to therapy. Examples include 'during_treatment', 'end_of_treatment', 'first_follow_up', or 'long_term_follow_up'.",
+          "type": "categorical",
+          "allowed_values": [
+            "during_treatment",
+            "end_of_treatment",
+            "first_follow_up",
+            "long_term_follow_up",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "adverse_event_scope",
+          "descr": "Scope of side effects considered in this capture step, limited to treatment-related toxicities relevant to radiotherapy follow-up. Use this to specify whether the abstraction targeted neurologic, hematologic, gastrointestinal, dermatologic, or mixed toxicities.",
+          "type": "categorical",
+          "allowed_values": [
+            "neurologic",
+            "hematologic",
+            "gastrointestinal",
+            "dermatologic",
+            "mixed_toxicities",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "intervention_scope",
+          "descr": "Scope of subsequent interventions abstracted from follow-up records in response to side effects. Examples include supportive medications, treatment breaks, referral to rehabilitation, hospitalization, or procedure-based interventions.",
+          "type": "categorical",
+          "allowed_values": [
+            "supportive_medications",
+            "treatment_break",
+            "rehabilitation_referral",
+            "hospitalization",
+            "procedure",
+            "mixed_interventions",
+            "no_intervention_documented",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "structured_registry_fields": {
+      "reasoning": "This Derivative node should describe the compiled extracted clinical result itself, not the raw patient identity or the capture-session settings. Since the upstream Capture nodes already own source documents and abstraction context, I excluded source-record metadata, operator roles, and workflow timing. Because the downstream Process node handles harmonization/standardization, I also excluded any schema-normalization or ETL implementation details. The fields below focus on the compiled registry output: what variable families are included, how complete the extracted variable set is, and the quality/shape of the structured clinical extract before standardization.",
+      "md_schema": [
+        {
+          "field_id": "included_variable_families",
+          "descr": "Clinical variable families present in the compiled registry extract produced by this derivative step. Use this to indicate which types of extracted data were assembled into the structured record, not the original source documents.",
+          "type": "categorical",
+          "allowed_values": [
+            "demographics",
+            "treatment_parameters",
+            "toxicities",
+            "interventions",
+            "demographics_treatment_parameters",
+            "demographics_toxicities",
+            "demographics_interventions",
+            "treatment_parameters_toxicities",
+            "treatment_parameters_interventions",
+            "toxicities_interventions",
+            "all_families"
+          ]
+        },
+        {
+          "field_id": "extracted_variable_count",
+          "descr": "Total number of individual clinical variables successfully compiled into the structured registry output for the patient record. Count the extracted fields present in the derivative output after abstraction, typically spanning demographics, radiotherapy parameters, toxicities, and interventions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_variable_count",
+          "descr": "Number of expected clinical variables not present or not recoverable in the compiled registry extract. Count missing items across the same variable families represented in this derivative output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "structured_extract_completeness_percent",
+          "descr": "Percentage of expected clinical variables present in the compiled registry extract, calculated at the derivative output stage as (extracted_variable_count / expected_variable_count) x 100. Typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "harmonized_clinical_record_format",
+          "descr": "Technical representation of the compiled registry fields before downstream standardization, such as whether the derivative was assembled as a row-oriented record, JSON object, or wide table row. This describes the shape of the extracted clinical output, not the final standardized table.",
+          "type": "categorical",
+          "allowed_values": [
+            "row_record",
+            "json_object",
+            "wide_table_row",
+            "other"
+          ]
+        },
+        {
+          "field_id": "derivative_quality_flag",
+          "descr": "Overall quality indicator for the compiled registry extract based on internal consistency and completeness of the assembled clinical variables. Use this to mark whether the derivative output is suitable for downstream standardization.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "review",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "standardization_process": {
+      "reasoning": "This Process node should describe the computational harmonization operation: the software/runtime used, transformation settings, and schema-mapping behavior. It should not repeat patient-level content from Entity or extracted variable content from the Derivative node, and it should not include final table/file properties because those belong to the output Derivative. In line with the collision feedback, I avoided previously generated generic capture fields and focused on process-specific implementation details needed to reproduce the standardization step.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the ETL or harmonization software used for the standardization process, recorded as the computational agent that merges extracted registry fields into the metadata table. Example: 'registry_etl_pipeline'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version string for the standardization software used in this process step, such as 'v1.2.0'. Record the exact version applied when merging the extracted registry fields into the consistent schema.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Code repository or package source for the standardization software used in this process step, such as a Git URL or package registry identifier. This identifies the implementation used to harmonize the extracted fields.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_version",
+          "descr": "Version identifier of the target metadata schema produced by the standardization process. Use a stable label such as 'registry_schema_v1' to indicate the field layout applied during harmonization.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_rule_set",
+          "descr": "Set of transformation or mapping rules applied during standardization, describing how extracted registry fields were aligned to the target metadata schema. Examples include 'manual_crosswalk', 'rule_based_mapping', or 'codebook_driven_mapping'.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_crosswalk",
+            "rule_based_mapping",
+            "codebook_driven_mapping",
+            "hybrid_mapping",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "standardization_method",
+          "descr": "General method used to harmonize the extracted registry fields into a consistent metadata table. This captures the computational approach, such as direct column remapping, normalization, or validation-driven transformation.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_remap",
+            "normalization",
+            "validation_driven_transform",
+            "hybrid_transform",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "validation_step_performed",
+          "descr": "Indicates whether a validation check was run during the standardization process to confirm that the harmonized table conforms to the target schema and expected value constraints.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "standardization_output_granularity",
+          "descr": "Granularity of the standardized metadata produced by this process, indicating the unit of harmonization applied to the extracted registry fields. For this registry, the expected granularity is patient-level.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "visit_level",
+            "course_level",
+            "other"
+          ]
+        }
+      ]
+    },
+    "standardized_metadata_table": {
+      "reasoning": "This Derivative node should describe the final harmonized table artifact itself: its format, size/shape, record layout, completeness, and downstream usability. I excluded patient identity, clinical source details, raw extraction context, and software/process settings because those belong to Entity, Capture, or Process nodes already. I also avoided repeating fields that would collide with previously generated generic capture metadata. The fields below focus on the finalized table artifact needed for reuse in downstream analysis of treatment effects and outcomes.",
+      "md_schema": [
+        {
+          "field_id": "table_format",
+          "descr": "File or table serialization format of the harmonized patient-level metadata table, e.g. 'csv', 'tsv', 'parquet', or 'xlsx'. This describes how the standardized output is stored for downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "json",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient-level rows in the standardized metadata table. For this registry pipeline, each row should typically correspond to one patient record after harmonization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the harmonized patient-level metadata table after standardization. Count the full set of variables available for downstream analysis.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_file_size_bytes",
+          "descr": "Size of the standardized metadata table file in bytes at the time of output creation. Use this to capture the technical size of the harmonized derivative artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_delimiter",
+          "descr": "Delimiter used if the standardized table is stored as a text file. Examples include comma, tab, or semicolon. Only applicable when the output format is a delimited text table.",
+          "type": "categorical",
+          "allowed_values": [
+            "comma",
+            "tab",
+            "semicolon",
+            "pipe",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "analysis_ready_flag",
+          "descr": "Indicator of whether the standardized metadata table is suitable for downstream statistical or clinical outcome analysis without further structural cleaning. Set based on post-standardization checks.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "standardized_value_completeness_percent",
+          "descr": "Percentage of expected table values present after harmonization, calculated at the table level as observed non-missing values divided by expected values times 100. Typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "downstream_use_case",
+          "descr": "Primary intended analysis use for the standardized table, describing the downstream scientific purpose of this derivative artifact. Examples include 'treatment_effect_analysis', 'tumor_control_analysis', 'neurological_outcome_analysis', or a combined use case.",
+          "type": "categorical",
+          "allowed_values": [
+            "treatment_effect_analysis",
+            "tumor_control_analysis",
+            "neurological_outcome_analysis",
+            "combined_analysis",
+            "other"
+          ]
+        }
+      ]
+    }
+  }
+}

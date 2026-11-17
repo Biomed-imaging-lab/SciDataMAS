@@ -1,0 +1,1121 @@
+{
+  "md_name": "Pediatric Brain Tumor Radiotherapy Registry Workflow",
+  "md_description": "This DAG models a pediatric radiotherapy registry that captures baseline clinical characteristics, treatment details, toxicity, and follow-up interventions for children with brain tumors. The records are standardized and integrated into a unified patient-level dataset and then analyzed to support understanding of tumor control and neurological outcomes.",
+  "fields_per_node": {
+    "pediatric_brain_tumor_patient_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort identity/origin fields and excluded any capture, treatment, outcome, signal, process, or derived-analysis details. Because the cohort is the root patient-level entity, I focused on defining who is in the registry and the cohort’s eligibility framing, not what measurements were taken or how data were processed. I avoided duplicating downstream fields for demographics, radiotherapy details, toxicity, interventions, or standardized dataset structure, since those belong to capture/signal/process/derivative nodes and are already represented elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique registry cohort identifier for this pediatric brain tumor radiotherapy registry; use a stable string such as 'PBT-RT-0001'. Assigned at cohort enrollment/root entity level and used to link all downstream records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "patient_identifier",
+          "descr": "Unique patient identifier for each child in the cohort; use a stable de-identified string such as 'PT-000123'. Assigned once at cohort creation and reused across all linked registry records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cohort_definition",
+          "descr": "Short text describing the cohort membership rules for this registry, including pediatric brain tumor diagnosis and observation across radiotherapy and follow-up. Record at enrollment/root entity level as the cohort identity statement.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primary_diagnosis_category",
+          "descr": "Primary brain tumor diagnosis category used to define inclusion in the registry cohort, recorded at enrollment from source diagnosis documentation. Examples include medulloblastoma, glioma, ependymoma, or other pediatric CNS tumor categories.",
+          "type": "categorical",
+          "allowed_values": [
+            "medulloblastoma",
+            "glioma",
+            "ependymoma",
+            "other_pediatric_cns_tumor"
+          ]
+        },
+        {
+          "field_id": "age_at_registry_enrollment_years",
+          "descr": "Age in completed years when the patient enters the registry cohort, measured once at enrollment from source records. Typical pediatric range is 0 to 18 years; use numeric age in years.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "brain_tumor_laterality",
+          "descr": "Laterality or anatomical side classification of the brain tumor if recorded as part of cohort identity at baseline enrollment. Use only if applicable to the tumor designation captured in source records.",
+          "type": "categorical",
+          "allowed_values": [
+            "left",
+            "right",
+            "midline",
+            "bilateral",
+            "not_applicable"
+          ]
+        }
+      ]
+    },
+    "baseline_clinical_capture": {
+      "reasoning": "This is a Capture node, so I included fields for the measurement session and instrument/operator configuration used during baseline abstraction, not the patient’s intrinsic demographic or medical-history values themselves. Those demographics belong to the Signal/record content downstream, while this node should describe how the baseline clinical data were captured from source records. I avoided duplicating already_generated cohort/entity identifiers and any downstream signal/file properties. I also included the agent as operational capture metadata only insofar as it identifies the abstractor role and capture setting, per the workflow rules.",
+      "md_schema": [
+        {
+          "field_id": "abstraction_date",
+          "descr": "Date when baseline clinical abstraction was performed from source records into the registry capture system. Record as YYYY-MM-DD; this is the capture session date, not the patient visit date if different.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_operator_role",
+          "descr": "Role of the person performing the baseline clinical abstraction from source records at the time of capture. Use the registry-specific abstractor role rather than a patient attribute.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinical_registry_abstractor",
+            "medical_record_abstractor",
+            "nurse_abstractor",
+            "other"
+          ]
+        },
+        {
+          "field_id": "source_record_type",
+          "descr": "Type of source document(s) used for baseline clinical capture at abstraction time. Record the dominant source category reviewed for demographics and medical history, not the downstream data value content.",
+          "type": "categorical",
+          "allowed_values": [
+            "electronic_health_record",
+            "paper_chart",
+            "referral_note",
+            "discharge_summary",
+            "multisource",
+            "other"
+          ]
+        },
+        {
+          "field_id": "capture_method",
+          "descr": "Operational method used to obtain baseline clinical information during registry abstraction. Specify whether the capture was manual chart review, semi-automated extraction, or fully automated extraction at the time of capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_chart_review",
+            "semi_automated_extraction",
+            "automated_extraction",
+            "mixed_methods"
+          ]
+        },
+        {
+          "field_id": "abstraction_completion_status",
+          "descr": "Completion status of the baseline clinical capture session after source record review. Use this to indicate whether the abstraction was fully complete, partially complete, or required later correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrected",
+            "pending_verification"
+          ]
+        },
+        {
+          "field_id": "capture_quality_flag",
+          "descr": "Overall quality indicator for the baseline abstraction session, assessed immediately after capture to reflect missingness, ambiguity, or transcription issues in the captured registry entry. Do not use for source clinical severity.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "baseline_clinical_records": {
+      "reasoning": "This is a Signal node, so I included only raw digital file properties, storage/technical descriptors, and basic technical quality metrics for the baseline record artefact. I excluded the actual demographic and medical-history content because that belongs to the upstream capture/clinical domain and to the downstream unified/standardized tables, not to the raw signal container. I also avoided repeating cohort or patient identifiers already generated on the Entity node. No process settings are described here because this node is the stored raw data produced by capture, not the capture session itself.",
+      "md_schema": [
+        {
+          "field_id": "file_name",
+          "descr": "Original file name or export name of the raw baseline clinical record artefact as stored in the registry system; use a string such as 'baseline_clinical_records_2024_01.csv'. Record at file creation/storage time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw baseline clinical records at the time they are stored or exported. Examples include CSV, TSV, JSON, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw baseline clinical record file in bytes at storage time. Use an integer value measured on the saved digital artefact; typical values may range from thousands to millions of bytes depending on cohort size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient-level rows contained in the raw baseline clinical record file at the time of storage. Record the count of enrolled patients represented in the file, typically one row per patient.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the raw baseline clinical record file at storage time. This reflects the technical structure of the record artefact rather than the clinical meaning of the fields.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "encoding_type",
+          "descr": "Character encoding used by the raw baseline clinical record file when stored or exported. Capture at file preparation time; common examples include UTF-8 and ASCII.",
+          "type": "categorical",
+          "allowed_values": [
+            "utf_8",
+            "ascii",
+            "latin_1",
+            "other"
+          ]
+        },
+        {
+          "field_id": "data_completeness_flag",
+          "descr": "Technical completeness indicator for the raw baseline clinical record artefact, based on whether the file contains the expected baseline record structure for the enrolled cohort. Do not use for clinical completeness of individual variables.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "radiotherapy_treatment_capture": {
+      "reasoning": "I removed the colliding field ids already generated on earlier capture nodes and retained only radiotherapy-capture-specific operational metadata that does not duplicate prior schema. I kept the session date, source document type, protocol schema version, and whether mid-course modifications were reviewed because these remain within the capture node’s territory and are not repeated elsewhere in the DAG. I excluded the actual treatment modality/dose/duration values because those belong to the downstream raw Signal node, not the capture step.",
+      "md_schema": [
+        {
+          "field_id": "treatment_abstraction_date",
+          "descr": "Date when radiotherapy treatment information was abstracted from source records into the registry capture system. Record as YYYY-MM-DD; this is the capture-session date, not the treatment start date unless they are the same.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_treatment_document_type",
+          "descr": "Primary source document type reviewed during radiotherapy treatment capture. Record the dominant source used to abstract protocol details, such as treatment plan, oncology note, or delivery summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "radiotherapy_plan",
+            "treatment_delivery_record",
+            "oncology_progress_note",
+            "dosimetry_summary",
+            "multisource",
+            "other"
+          ]
+        },
+        {
+          "field_id": "protocol_version",
+          "descr": "Version or revision label of the radiotherapy protocol abstraction template used at the time of capture. Use a string such as 'v1.0' or 'RT-2024-02' to indicate the capture schema version, not the treatment plan version.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mid_course_modification_reviewed",
+          "descr": "Indicator of whether mid-course treatment modifications were explicitly reviewed during the radiotherapy capture session. This reflects capture scope, not whether a modification actually occurred.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "radiotherapy_treatment_records": {
+      "reasoning": "This is a Signal node, and because the standard raw file metadata fields were already generated elsewhere in the DAG, I excluded all previously used file-level identifiers and technical container fields. To avoid collisions, I generated only new content-specific technical metadata that can exist on this raw radiotherapy treatment record artefact without duplicating capture or process territory. I kept the scope on raw-record structure/content flags rather than treatment interpretation, and I did not include any operator or capture-session fields.",
+      "md_schema": [
+        {
+          "field_id": "treatment_course_count",
+          "descr": "Number of distinct radiotherapy treatment courses represented in the raw treatment record artefact at storage time. Use an integer count based on the exported source file structure; typical values may be 1 for one course or greater if the file contains multiple courses per patient.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_scheme_present",
+          "descr": "Indicator that the raw treatment record file contains fields for fractionation scheme or dose-per-fraction information. This is a technical content flag for the exported artefact, not the actual fractionation value.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protocol_change_count",
+          "descr": "Number of protocol change entries captured in the raw treatment record artefact at storage time. Count the distinct protocol-change annotations present in the file, if any.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "delivered_dose_units",
+          "descr": "Unit label used in the raw treatment record file for delivered dose values. Record the unit string exactly as represented in the source export, such as Gy or cGy.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_duration_unit",
+          "descr": "Unit label used in the raw treatment record file for treatment duration values. Record the unit string exactly as represented in the source export, such as days or weeks.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "clinical_content_quality_flag",
+          "descr": "Technical quality flag for the raw treatment record content, based on whether key treatment fields such as modality, dose, and duration are present and parseable in the exported artefact. Do not use for clinical outcome quality or capture-session quality.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "toxicity_outcome_capture": {
+      "reasoning": "This is a Capture node, so I included only follow-up abstraction session metadata describing how toxicity and neurological outcome observations were collected from source records. I excluded the actual side effect grades, neurological findings, and event timing values because those belong to the downstream raw Signal content. I also avoided fields already used elsewhere in the DAG, including general operator/capture-method labels, file properties, and cohort identifiers. The fields here focus on the follow-up capture context: when abstraction occurred, what source documents were reviewed, the review window, and whether the capture targeted toxicity, neurological outcomes, or both.",
+      "md_schema": [
+        {
+          "field_id": "toxicity_followup_abstraction_date",
+          "descr": "Date when toxicity and neurological outcome information was abstracted from follow-up clinical records into the registry capture system. Record as YYYY-MM-DD; this is the capture-session date, not necessarily the event date.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_source_record_type",
+          "descr": "Primary follow-up source document type reviewed during toxicity outcome capture. Record the dominant clinical source used to abstract side effects and neurological observations.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinic_followup_note",
+            "neurology_note",
+            "oncology_note",
+            "hospital_discharge_summary",
+            "multisource",
+            "other"
+          ]
+        },
+        {
+          "field_id": "followup_timepoint_category",
+          "descr": "Clinical follow-up timepoint category targeted by the abstraction session. Use the registry-defined follow-up interval represented in the source records, not the exact date of the adverse event.",
+          "type": "categorical",
+          "allowed_values": [
+            "on_treatment",
+            "end_of_treatment",
+            "early_followup",
+            "late_followup",
+            "unspecified"
+          ]
+        },
+        {
+          "field_id": "toxicity_domain_captured",
+          "descr": "Indicates which outcome domains were explicitly reviewed during the follow-up abstraction session. This describes capture scope, not the outcome itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "toxicity_only",
+            "neurological_outcomes_only",
+            "both"
+          ]
+        },
+        {
+          "field_id": "followup_abstraction_scope_note",
+          "descr": "Free-text note summarizing the follow-up abstraction scope or notable source-record limitations at capture time, such as incomplete follow-up documentation or mixed-source review.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_review_status",
+          "descr": "Status of the follow-up record review after abstraction. Use this to indicate whether the follow-up capture was complete, partially complete, corrected, or pending verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrected",
+            "pending_verification"
+          ]
+        },
+        {
+          "field_id": "followup_capture_quality_flag",
+          "descr": "Overall quality indicator for the follow-up abstraction session, based on source record clarity and consistency of the reviewed follow-up notes. Do not use for severity of toxicity or neurologic impairment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "toxicity_outcome_records": {
+      "reasoning": "This is a Signal node, so I included only raw artefact metadata for the follow-up records and avoided the actual toxicity or neurological observations, which are the record contents rather than the file metadata. I also excluded capture-session fields, operator labels, and patient identifiers already handled elsewhere. The fields focus on identifying the raw follow-up file, its technical structure, and its storage-level completeness so downstream users can load and assess the artefact.",
+      "md_schema": [
+        {
+          "field_id": "followup_file_name",
+          "descr": "Original file name or export name of the raw follow-up record artefact as stored in the registry system; use a string such as 'toxicity_outcome_records_2024_01.csv'. Record at file creation or export time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_file_format",
+          "descr": "Digital file format of the raw follow-up records at the time they are stored or exported. Examples include CSV, TSV, JSON, XLSX, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "followup_file_size_bytes",
+          "descr": "Size of the raw follow-up record file in bytes at storage time. Use an integer measured on the saved digital artefact; typical values range from thousands to millions of bytes depending on cohort size and number of follow-up fields.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_row_count",
+          "descr": "Number of observation rows contained in the raw follow-up record file at storage time. Depending on the export, this may represent one row per patient, one row per follow-up visit, or one row per observed event.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_column_count",
+          "descr": "Number of columns or fields present in the raw follow-up record file at storage time. This reflects the technical structure of the artefact rather than the meaning of the toxicity variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "followup_encoding_type",
+          "descr": "Character encoding used by the raw follow-up record file when stored or exported. Capture at file preparation time; common examples include UTF-8 and ASCII.",
+          "type": "categorical",
+          "allowed_values": [
+            "utf_8",
+            "ascii",
+            "latin_1",
+            "other"
+          ]
+        },
+        {
+          "field_id": "followup_data_completeness_flag",
+          "descr": "Technical completeness indicator for the raw follow-up record artefact, based on whether the file contains the expected follow-up structure for the enrolled cohort. Do not use for clinical completeness of toxicity grading or neurologic outcomes.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "event_level_structure",
+          "descr": "Indicates whether the raw follow-up file is organized at the patient level, visit level, or event level. Use this to help downstream users interpret the row structure of the artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "visit_level",
+            "event_level",
+            "mixed"
+          ]
+        }
+      ]
+    },
+    "intervention_followup_capture": {
+      "reasoning": "This is a Capture node, so I included only the operational metadata for the follow-up abstraction session that records subsequent interventions. I excluded the intervention types, procedures, medications, or outcomes themselves because those belong to the downstream raw signal content, not the capture process. I also avoided reusing generic capture fields that have already collided earlier in the DAG, such as capture_operator_role, capture_method, completion status, and quality flags. The fields here focus on when the intervention review happened, what source records were reviewed, what downstream response domains were captured, and whether the abstraction was complete at the session level.",
+      "md_schema": [
+        {
+          "field_id": "intervention_followup_abstraction_date",
+          "descr": "Date when subsequent intervention information was abstracted from follow-up records into the registry capture system. Record as YYYY-MM-DD; this is the capture-session date, not necessarily the intervention date.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_source_record_type",
+          "descr": "Primary follow-up source document type reviewed during intervention capture. Record the dominant clinical source used to abstract supportive care, procedures, or treatment changes after radiotherapy.",
+          "type": "categorical",
+          "allowed_values": [
+            "clinic_followup_note",
+            "hospital_discharge_summary",
+            "procedure_note",
+            "medication_record",
+            "multisource",
+            "other"
+          ]
+        },
+        {
+          "field_id": "intervention_domain_captured",
+          "descr": "Indicates which intervention domains were explicitly reviewed during the follow-up abstraction session. This describes capture scope, not the intervention itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "supportive_care",
+            "procedure",
+            "treatment_change",
+            "all_domains"
+          ]
+        },
+        {
+          "field_id": "intervention_timepoint_category",
+          "descr": "Clinical timepoint category targeted by the intervention abstraction session. Use the registry-defined follow-up interval represented in the source records, not the exact intervention date.",
+          "type": "categorical",
+          "allowed_values": [
+            "during_treatment",
+            "immediate_post_treatment",
+            "early_followup",
+            "late_followup",
+            "unspecified"
+          ]
+        },
+        {
+          "field_id": "intervention_abstraction_notes",
+          "descr": "Free-text note summarizing the intervention capture scope or notable source-record limitations at the time of abstraction, such as incomplete documentation or ambiguous linkage to toxicity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_review_status",
+          "descr": "Status of the intervention follow-up review after abstraction. Use this to indicate whether the intervention capture was complete, partial, corrected, or pending verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrected",
+            "pending_verification"
+          ]
+        }
+      ]
+    },
+    "intervention_followup_records": {
+      "reasoning": "This is a Signal node, so I included only raw artefact metadata for the follow-up intervention records and excluded the actual supportive care, procedures, or treatment-change content, which is the record payload rather than file metadata. I also avoided capture-session fields and any previously generated generic file properties that would collide across DAG steps. The fields here describe the technical identity, structure, and storage completeness of the raw intervention follow-up file so downstream users can locate and interpret the artefact.",
+      "md_schema": [
+        {
+          "field_id": "intervention_file_name",
+          "descr": "Original file name or export name of the raw intervention follow-up artefact as stored in the registry system; use a string such as 'intervention_followup_records_2024_01.csv'. Record at file creation or export time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_file_format",
+          "descr": "Digital file format of the raw intervention follow-up records at the time they are stored or exported. Examples include CSV, TSV, JSON, XLSX, or Parquet.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "intervention_file_size_bytes",
+          "descr": "Size of the raw intervention follow-up record file in bytes at storage time. Use an integer measured on the saved digital artefact; typical values range from thousands to millions of bytes depending on cohort size and number of follow-up fields.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_row_count",
+          "descr": "Number of observation rows contained in the raw intervention follow-up record file at storage time. Depending on the export, this may represent one row per patient, one row per follow-up visit, or one row per intervention event.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_column_count",
+          "descr": "Number of columns or fields present in the raw intervention follow-up record file at storage time. This reflects the technical structure of the artefact rather than the meaning of the intervention variables.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "intervention_encoding_type",
+          "descr": "Character encoding used by the raw intervention follow-up file when stored or exported. Capture at file preparation time; common examples include UTF-8 and ASCII.",
+          "type": "categorical",
+          "allowed_values": [
+            "utf_8",
+            "ascii",
+            "latin_1",
+            "other"
+          ]
+        },
+        {
+          "field_id": "intervention_data_completeness_flag",
+          "descr": "Technical completeness indicator for the raw intervention follow-up artefact, based on whether the file contains the expected intervention follow-up structure for the enrolled cohort. Do not use for clinical completeness of the intervention details themselves.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "intervention_event_level_structure",
+          "descr": "Indicates whether the raw intervention file is organized at the patient level, visit level, or intervention-event level. Use this to help downstream users interpret the row structure of the artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "visit_level",
+            "event_level",
+            "mixed"
+          ]
+        }
+      ]
+    },
+    "standardize_registry_data": {
+      "reasoning": "This is a Process node, so I included only computational curation parameters and software provenance for the standardization step. I avoided describing the output standardized table itself, because those properties belong on the downstream Derivative node, and I did not repeat raw input file properties that belong to the Signal nodes. Since agent properties for operation nodes should be described here, I included software name/version/repository and execution context. I also avoided generic fields already generated elsewhere by using process-specific names tied to standardization, schema mapping, and QC of the curation run.",
+      "md_schema": [
+        {
+          "field_id": "standardization_run_date",
+          "descr": "Date when the registry standardization computation was executed. Record as YYYY-MM-DD; this marks the process run date for curation of baseline, treatment, toxicity, and intervention records.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "etl_software_name",
+          "descr": "Name of the software or pipeline used to standardize the registry records into a common schema. Use the exact workflow or package name used for the curation run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "etl_software_version",
+          "descr": "Version of the standardization software or pipeline used for this process run. Record a version string such as '1.0.0' or 'v1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "etl_repository_url",
+          "descr": "Repository URL or source control location for the standardization workflow used in this process run. Provide the canonical code repository if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_record_domains",
+          "descr": "Registry record domains ingested by the standardization process. This describes which upstream raw inputs were included in the run, not the values within those inputs.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline_only",
+            "treatment_only",
+            "toxicity_only",
+            "intervention_only",
+            "baseline_and_treatment",
+            "baseline_treatment_and_toxicity",
+            "all_domains"
+          ]
+        },
+        {
+          "field_id": "schema_mapping_version",
+          "descr": "Version label of the common schema or mapping specification applied during standardization. Use a string such as 'schema_v2' or 'mapping_2024_01' to identify the curation ruleset.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_harmonization_method",
+          "descr": "Method used to harmonize variable names and units across the raw registry inputs during the standardization process. Examples include rule-based mapping, dictionary-based mapping, or manual curation.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based",
+            "dictionary_based",
+            "manual_curation",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "unit_conversion_applied",
+          "descr": "Indicator of whether unit conversions were applied during standardization, such as dose or weight unit harmonization. This reflects the process step, not the converted values themselves.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "standardization_qc_flag",
+          "descr": "Overall quality control flag for the standardization run, assessed after computational curation of the raw registry inputs. Use this to indicate whether the process completed successfully or required correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "standardized_registry_table": {
+      "reasoning": "This is a Derivative node, so I kept only computed-output metadata for the standardized registry table and removed colliding generic dimension fields that were already used on earlier Signal nodes. I retained fields that describe the derivation method, harmonization scope, output coding/units, and table-level quality, because those are specific to the derived dataset itself and not duplicates of upstream raw files or process settings. I also avoided any cohort identifiers or capture details, which belong to upstream nodes.",
+      "md_schema": [
+        {
+          "field_id": "derivation_method",
+          "descr": "Method used to create the standardized registry table from the raw registry inputs. Record the curation approach used to harmonize patient-level data across domains, such as rule-based ETL or manual harmonization.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_etl",
+            "manual_harmonization",
+            "hybrid_etl"
+          ]
+        },
+        {
+          "field_id": "source_record_domains_included",
+          "descr": "Registry domains represented in the standardized table at the time of derivation. This describes the input content that was harmonized into the table, not the values of any specific clinical variables.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline_only",
+            "treatment_only",
+            "toxicity_only",
+            "intervention_only",
+            "baseline_and_treatment",
+            "baseline_treatment_and_toxicity",
+            "all_domains"
+          ]
+        },
+        {
+          "field_id": "table_dimension_note",
+          "descr": "Brief note describing the table granularity and scale after harmonization, such as patient-level with one row per patient and a variable count appropriate to the registry schema. Use this instead of repeating raw row or column counts.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variable_naming_standard",
+          "descr": "Naming convention applied to variables in the standardized table. Use the registry coding standard or naming convention used at derivation time.",
+          "type": "categorical",
+          "allowed_values": [
+            "snake_case",
+            "camel_case",
+            "registry_standard",
+            "other"
+          ]
+        },
+        {
+          "field_id": "unit_standardization_applied",
+          "descr": "Indicator of whether units were standardized across domains in the derived table, such as dose or weight harmonization. This reflects the output transformation, not the specific unit values.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coding_standard",
+          "descr": "Coding scheme applied to categorical variables in the standardized table, such as controlled vocabulary or registry-specific codes. Record the dominant coding standard used in the derived output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missingness_rate",
+          "descr": "Proportion of missing cells in the standardized table at the time of derivation. Measure as a float between 0 and 1 based on the harmonized dataset contents.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivative_quality_flag",
+          "descr": "Overall quality indicator for the standardized registry table after harmonization. Use this to represent whether the derived table passed validation checks, required warnings, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "integrate_patient_registry_data": {
+      "reasoning": "This is a Process node, so I included only linkage/integration execution metadata and software provenance for merging standardized records into a unified longitudinal table. I excluded the unified table’s own structural properties and identifiers because those belong on the downstream Derivative node, and I avoided repeating generic process fields already used in other steps by using integration-specific names. The fields focus on how the merge was performed, what linkage logic was used, and whether the integration succeeded with acceptable linkage quality.",
+      "md_schema": [
+        {
+          "field_id": "integration_run_date",
+          "descr": "Date when the patient registry integration computation was executed. Record as YYYY-MM-DD; this marks the process run date for merging standardized records into a unified longitudinal table.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_name",
+          "descr": "Name of the software or pipeline used to merge standardized records into the unified patient registry table. Use the exact workflow or package name used for the linkage run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the integration software or pipeline used for this process run. Record a version string such as '1.0.0' or 'v1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_repository_url",
+          "descr": "Repository URL or source control location for the integration workflow used in this process run. Provide the canonical code repository if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linkage_key_type",
+          "descr": "Type of key or identifier logic used to merge standardized records during integration. This describes the linkage strategy applied to connect longitudinal records for the same patient.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_patient_id",
+            "deterministic_multi_field",
+            "probabilistic",
+            "hybrid"
+          ]
+        },
+        {
+          "field_id": "integration_scope_domains",
+          "descr": "Registry domains merged during the integration process. This describes which standardized inputs were combined to build the unified longitudinal table.",
+          "type": "categorical",
+          "allowed_values": [
+            "baseline_and_treatment",
+            "baseline_treatment_and_toxicity",
+            "baseline_treatment_toxicity_and_interventions",
+            "all_domains"
+          ]
+        },
+        {
+          "field_id": "record_linkage_threshold",
+          "descr": "Matching threshold or acceptance criterion used when the integration process applied probabilistic or hybrid linkage. Record as a numeric value between 0 and 1 when applicable; otherwise leave unspecified by workflow convention.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "merge_conflict_resolution_method",
+          "descr": "Method used to resolve conflicting values when multiple standardized records were merged for the same patient. Examples include latest_value, source_priority, or manual_review.",
+          "type": "categorical",
+          "allowed_values": [
+            "latest_value",
+            "source_priority",
+            "manual_review",
+            "rule_based"
+          ]
+        },
+        {
+          "field_id": "integration_qc_flag",
+          "descr": "Overall quality control flag for the integration run after merging standardized records. Use this to indicate whether the process completed successfully or required correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "unified_patient_registry_table": {
+      "reasoning": "This is a Process node, so I included only statistical analysis workflow metadata and software provenance for the tumor control modeling step. I excluded outcome summary fields because those belong to the downstream Derivative node, and I avoided repeating generic process fields already used earlier by using analysis-specific names. The fields focus on how the analysis was run, what variables and time horizon were used, what model family was applied, and whether the run passed analysis QC.",
+      "md_schema": [
+        {
+          "field_id": "analysis_run_date",
+          "descr": "Date when the tumor control analysis was executed. Record as YYYY-MM-DD; this marks the process run date for the statistical evaluation using the unified registry data.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or workflow used for the tumor control statistical analysis. Use the exact package or pipeline name used to generate the model or summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the software or workflow used for this analysis run. Record a version string such as '1.0.0' or 'v1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_repository_url",
+          "descr": "Repository URL or source control location for the analysis workflow used in this run. Provide the canonical code repository if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_endpoint",
+          "descr": "Primary tumor control endpoint evaluated in the analysis. Use the registry-defined endpoint targeted by the statistical model or summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "local_control",
+            "progression_free_survival",
+            "overall_survival",
+            "tumor_response",
+            "composite_control"
+          ]
+        },
+        {
+          "field_id": "model_family",
+          "descr": "Statistical model family or analysis approach used for tumor control evaluation. Record the main inferential framework applied in the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "cox_model",
+            "logistic_regression",
+            "kaplan_meier",
+            "poisson_model",
+            "descriptive_summary"
+          ]
+        },
+        {
+          "field_id": "covariate_set_version",
+          "descr": "Version label of the covariate set used in the tumor control analysis. Use a string such as 'covariates_v1' or 'model_set_2024_01' to identify the analysis specification.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_time_horizon_months",
+          "descr": "Follow-up time horizon in months used for the tumor control analysis. Record the planned or modeled window at analysis time; typical values may include 6, 12, 24, or longer months.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_qc_flag",
+          "descr": "Overall quality control flag for the tumor control analysis run after modeling and summary generation. Use this to indicate whether the analysis completed successfully or required correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "analyze_tumor_control": {
+      "reasoning": "This is a Process node, so I included only analysis execution metadata and software provenance for the tumor control statistical workflow. I excluded the resulting tumor control measures and effect estimates because those belong on the downstream derivative summary table, not on the analysis process itself. I also avoided generic process fields already used elsewhere by naming fields specifically for the tumor-control model, analysis window, covariate scope, and QC status. Per the node rules, software name, version, and repository are included on the process node.",
+      "md_schema": [
+        {
+          "field_id": "tumor_control_model_family",
+          "descr": "Statistical model family used for the tumor control evaluation. Record the primary modeling framework applied during the analysis run, such as a regression or survival model.",
+          "type": "categorical",
+          "allowed_values": [
+            "logistic_regression",
+            "cox_proportional_hazards",
+            "linear_model",
+            "survival_tree",
+            "other"
+          ]
+        },
+        {
+          "field_id": "tumor_control_exposure_variable_scope",
+          "descr": "Scope of radiotherapy exposure variables included in the tumor control analysis. This describes which unified registry variables were entered into the model, not their values.",
+          "type": "categorical",
+          "allowed_values": [
+            "dose_only",
+            "dose_and_modality",
+            "dose_and_duration",
+            "dose_modality_and_modifications",
+            "all_radiotherapy_exposures"
+          ]
+        },
+        {
+          "field_id": "tumor_control_covariate_adjustment_applied",
+          "descr": "Indicator of whether the tumor control analysis included covariate adjustment beyond radiotherapy exposure variables. This reflects modeling approach, not patient-level covariate values.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tumor_control_censoring_rule",
+          "descr": "Rule used to define censoring or end of observation for the tumor control analysis. Record the analysis-specific censoring convention applied to the unified registry data.",
+          "type": "categorical",
+          "allowed_values": [
+            "last_followup",
+            "event_occurred",
+            "fixed_time_horizon",
+            "registry_defined"
+          ]
+        },
+        {
+          "field_id": "tumor_control_model_formula",
+          "descr": "Textual summary of the model formula or variable specification used for the tumor control analysis. Record the analysis configuration at the process level, not the fitted results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tumor_control_validation_status",
+          "descr": "Overall validation status for the tumor control analysis run after model execution and diagnostic checks. Use this to indicate whether the process completed successfully, issued warnings, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "tumor_control_summary": {
+      "reasoning": "This is a Derivative node, so I included only the characteristics of the computed tumor control summary table itself: what derived status it contains, how it was built from the analysis, and its output structure and quality. I excluded analysis-run fields such as software, dates, and QC labels already used in the process node, and I avoided repeating generic derivative fields that had already collided in earlier steps. The fields are specific to the summary table content and are intended to help downstream users interpret the patient-level derived analysis output.",
+      "md_schema": [
+        {
+          "field_id": "summary_table_type",
+          "descr": "Type of derived summary produced for tumor control. Record that this is a patient-level analysis summary table rather than a model object or figure output.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level_summary",
+            "model_output_table",
+            "aggregate_summary"
+          ]
+        },
+        {
+          "field_id": "tumor_control_endpoint_definition",
+          "descr": "Definition of the tumor control endpoint summarized in this table, recorded at derivation time. Examples include local control, progression-free status, or recurrence-free status as defined by the analysis workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_timepoint_months",
+          "descr": "Follow-up time point in months at which tumor control status is summarized for each patient, if the derived table uses a fixed assessment horizon. Record the value used in the analysis output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "radiotherapy_exposure_variables_included",
+          "descr": "Radiotherapy exposure variable groups represented in the tumor control summary table. This describes which exposure dimensions were summarized alongside tumor control status.",
+          "type": "categorical",
+          "allowed_values": [
+            "dose_only",
+            "dose_and_modality",
+            "dose_and_duration",
+            "dose_modality_and_modifications",
+            "all_radiotherapy_exposures"
+          ]
+        },
+        {
+          "field_id": "patient_level_summary_rows",
+          "descr": "Number of patient-level rows in the tumor control summary table at derivation time. Typically one row per patient in the analyzed cohort.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_missingness_rate",
+          "descr": "Proportion of missing cells in the tumor control summary table at the time of derivation. Measure as a float between 0 and 1 based on the final analysis table contents.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derived_endpoint_completeness_flag",
+          "descr": "Indicator of whether the tumor control endpoint was successfully assigned for the expected cohort in the derived summary table. Use this to reflect output completeness, not clinical outcome severity.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "summary_quality_flag",
+          "descr": "Overall quality indicator for the tumor control summary table after derivation and validation. Use this to indicate whether the table passed checks, required warnings, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "analyze_neurological_outcomes": {
+      "reasoning": "This is a Process node, so I included only analysis execution metadata and software provenance for the neurological outcomes statistical workflow. I excluded the resulting neurological outcome measures and effect estimates because those belong on the downstream derivative summary table, not on the analysis process itself. I also avoided generic process fields already generated elsewhere by naming fields specifically for the neurological outcomes model, sequelae scope, follow-up window, and QC status. Per the rules, software name, version, and repository are included on the process node.",
+      "md_schema": [
+        {
+          "field_id": "neurological_analysis_run_date",
+          "descr": "Date when the neurological outcomes analysis was executed. Record as YYYY-MM-DD; this marks the process run date for the statistical evaluation using the unified registry data.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_analysis_software_name",
+          "descr": "Name of the software or analysis pipeline used for the neurological outcomes statistical workflow. Use the exact package, script, or workflow name used for the analysis run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_analysis_software_version",
+          "descr": "Version of the analysis software or pipeline used for this process run. Record a version string such as '1.0.0' or 'v1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_analysis_repository_url",
+          "descr": "Repository URL or source control location for the neurological outcomes analysis workflow used in this process run. Provide the canonical code repository if available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_domain_scope",
+          "descr": "Outcome domains included in the neurological outcomes analysis. This describes which unified registry variables were entered into the model, not their values.",
+          "type": "categorical",
+          "allowed_values": [
+            "neurological_outcomes_only",
+            "neurological_outcomes_and_toxicity",
+            "all_followup_outcomes"
+          ]
+        },
+        {
+          "field_id": "analysis_model_type",
+          "descr": "Statistical model type used for the neurological outcomes evaluation. Record the primary modeling framework applied during the analysis run.",
+          "type": "categorical",
+          "allowed_values": [
+            "logistic_regression",
+            "cox_proportional_hazards",
+            "linear_model",
+            "survival_tree",
+            "other"
+          ]
+        },
+        {
+          "field_id": "followup_time_horizon_months",
+          "descr": "Follow-up time horizon in months used for the neurological outcomes analysis, if applicable. Record the analysis window length measured from treatment start or registry-defined baseline.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequelae_adjustment_applied",
+          "descr": "Indicator of whether the neurological outcomes analysis included adjustment for treatment-related sequelae or other covariates beyond the primary outcome variables. This reflects modeling approach, not patient-level covariate values.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_analysis_qc_flag",
+          "descr": "Overall quality control flag for the neurological outcomes analysis run after model execution and validation checks. Use this to indicate whether the process completed successfully or required correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "neurological_outcome_summary": {
+      "reasoning": "This is a Derivative node, so I included only neurological-outcome-specific properties that have not collided with previously generated fields. I avoided generic summary-table fields already used elsewhere in the DAG, and I focused on the unique scientific content of this output: the neurological endpoint definition, sequelae scope, and whether the table is a patient-level summary. I also kept the output quality and structure descriptors specific and non-overlapping by avoiding the previously reused generic names.",
+      "md_schema": [
+        {
+          "field_id": "neurological_summary_table_type",
+          "descr": "Type of derived summary produced for neurological outcomes. Record that this is a patient-level analysis summary table rather than a model object or figure output.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level_summary",
+            "model_output_table",
+            "aggregate_summary"
+          ]
+        },
+        {
+          "field_id": "neurological_endpoint_definition",
+          "descr": "Definition of the neurological endpoint summarized in this table, recorded at derivation time. Examples include neurocognitive decline, motor deficit, seizure occurrence, or other registry-defined neurological outcome categories.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequelae_scope_included",
+          "descr": "Treatment-related sequelae domains represented in the neurological outcome summary table. This describes which post-radiotherapy sequelae were summarized alongside neurological outcomes.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "toxicity_only",
+            "supportive_care_related",
+            "all_relevant_sequelae"
+          ]
+        },
+        {
+          "field_id": "neurological_assessment_horizon_months",
+          "descr": "Follow-up time point in months at which neurological outcome status is summarized for each patient, if the derived table uses a fixed assessment horizon. Record the value used in the analysis output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_case_count",
+          "descr": "Number of patient-level rows or cases represented in the neurological outcome summary table at derivation time. Typically one row per patient in the analyzed cohort.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "neurological_summary_quality_indicator",
+          "descr": "Overall quality indicator for the neurological outcome summary table after derivation and validation. Use this to indicate whether the table passed checks, required warnings, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

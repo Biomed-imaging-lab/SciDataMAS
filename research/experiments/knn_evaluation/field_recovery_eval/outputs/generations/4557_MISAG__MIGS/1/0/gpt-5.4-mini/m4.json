@@ -1,0 +1,1181 @@
+{
+  "md_name": "Soil microbiome sequencing and metadata workflow",
+  "md_description": "This workflow represents collection and characterization of agricultural soil samples from multiple geographical regions, followed by high-throughput sequencing to profile microbial communities. It captures field metadata including country, region, GPS coordinates, crop type, and farming practice, along with soil pH, moisture, and texture measurements. The resulting sequence data are processed into community profiles and diversity summaries for comparing how management practices and crop types influence soil microbial diversity and its potential relationship to crop yield.",
+  "fields_per_node": {
+    "soil_samples_from_fields": {
+      "reasoning": "This Entity node should describe the soil samples themselves: their origin, identity, and intrinsic field provenance. I included field-level provenance and sample descriptors relevant at collection time, such as country, region, GPS coordinates, crop type, farming practice, and sampling context. I excluded homogenization, extraction, sequencing, soil chemistry measurements, raw read properties, and any computed results because those belong to downstream Process, Capture, Signal, or Derivative nodes. I also avoided duplicating any downstream process or measurement fields and kept the schema focused on what the samples are and where they came from, since sample identifiers and experiment identifiers are typically rooted here but were not provided as already_generated.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the soil sample collected from a field; use a stable string such as 'SF_001'. Assigned at collection and used to track the sample across the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "country",
+          "descr": "Country where the agricultural field was located at the time of soil collection; record the sovereign state name exactly as curated in the metadata table, e.g. 'Spain' or 'Kenya'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "region",
+          "descr": "Administrative or geographic region within the country where the field was located, e.g. state, province, county, or district; record the finest available regional unit associated with the sampling site.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gps_latitude_decimal_degrees",
+          "descr": "Latitude of the field sampling location in decimal degrees (WGS84), recorded at collection or from field records; typical range -90 to 90, e.g. 41.3874.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gps_longitude_decimal_degrees",
+          "descr": "Longitude of the field sampling location in decimal degrees (WGS84), recorded at collection or from field records; typical range -180 to 180, e.g. -3.7038.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crop_type",
+          "descr": "Crop grown in the sampled field at the time of soil collection; record the dominant or target crop species/group, e.g. 'wheat', 'maize', 'soybean'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "farming_practice",
+          "descr": "Agricultural management system applied to the field at sampling time; use a controlled term describing the production regime.",
+          "type": "categorical",
+          "allowed_values": [
+            "organic",
+            "conventional",
+            "integrated",
+            "regenerative",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "sampling_context",
+          "descr": "High-level description of the field setting from which the soil was taken, such as plot, farm, or field designation; use this to distinguish multiple samples from the same region or farm when needed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date when the field soil sample was collected, if available in the source records; use ISO 8601 format YYYY-MM-DD, e.g. 2025-04-18.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_sample_matrix_type",
+          "descr": "General matrix description of the collected material as an intrinsic sample descriptor; for this workflow it should indicate bulk agricultural soil rather than subsoil or rhizosphere material.",
+          "type": "categorical",
+          "allowed_values": [
+            "bulk_soil",
+            "rhizosphere_soil",
+            "subsoil",
+            "topsoil",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_sample_homogenization": {
+      "reasoning": "This Process node should capture how the soil samples were homogenized to create representative aliquots. I included only protocol and operation details: operator, mixing method, duration, temperature if relevant, equipment used, aliquot output conditions, and a simple quality indicator of homogeneity. I excluded sample origin, soil properties, sequencing, and any raw/processed data properties because those belong to upstream Entity nodes, the downstream homogenized sample Entity, or later Capture/Signal nodes. I also avoided repeating the root sample identifiers already established on the Entity node and kept the schema focused on the transformation step itself.",
+      "md_schema": [
+        {
+          "field_id": "process_id",
+          "descr": "Unique identifier for this homogenization event; use a stable string such as 'HOM_001'. Assign once per processing run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "operator_id",
+          "descr": "Identifier for the person or team member who performed the homogenization; use a stable string such as initials or staff code, e.g. 'AB12'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogenization_method",
+          "descr": "Method used to mix the soil prior to aliquoting, recorded at the time of processing; examples include manual mixing, mechanical stirring, vortexing, or milling if applicable to the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_mixing",
+            "mechanical_mixing",
+            "vortexing",
+            "milling",
+            "other"
+          ]
+        },
+        {
+          "field_id": "duration_minutes",
+          "descr": "Time spent homogenizing the soil sample, measured during the processing step; typical values may range from 1 to 120 minutes depending on batch size and mixing method.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_celsius",
+          "descr": "Ambient or controlled temperature during homogenization, measured during processing if recorded; typical range for soil handling is approximately 4 to 25 Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "equipment_name",
+          "descr": "Name of the instrument or device used for homogenization, if any; for example 'tissue homogenizer', 'ball mill', or 'orbital shaker'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_mass_grams",
+          "descr": "Mass of each representative soil aliquot produced after homogenization, measured at the end of the process; typical range depends on downstream assay requirements and is commonly 0.1 to 50 grams.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_count",
+          "descr": "Number of aliquots generated from the homogenized soil sample during this process step; record the count produced for downstream measurements and DNA extraction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "homogeneity_assessment",
+          "descr": "Qualitative outcome indicating whether the processed soil appeared sufficiently uniform for downstream measurement and sequencing; use a simple controlled term based on the operator's post-process check.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "homogenized_soil_samples": {
+      "reasoning": "I removed the colliding field name 'aliquot_mass_grams' and replaced it with non-duplicating Entity-level descriptors for the prepared soil aliquots. The remaining fields stay within this node's semantic territory: identity, linkage to the parent sample, physical count/portioning, storage and preservation state, and readiness for downstream measurement/extraction. I excluded upstream homogenization protocol details and downstream soil property, DNA, sequencing, and derived-result fields to avoid crossing node boundaries or repeating already_generated content.",
+      "md_schema": [
+        {
+          "field_id": "aliquot_id",
+          "descr": "Unique identifier for the prepared soil aliquot; use a stable string such as 'ALQ_001'. Assigned after homogenization and used for downstream measurements and extraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_sample_id",
+          "descr": "Identifier of the originating bulk soil sample from which this aliquot was prepared; use the same sample identifier format as the root soil sample entity, e.g. 'SF_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_volume_milliliters",
+          "descr": "Volume of the prepared soil portion available for downstream handling, measured after homogenization if the workflow records volume instead of mass; typical range depends on the assay and container format, often 0.1 to 50 milliliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_aliquots_prepared",
+          "descr": "Total number of aliquots generated from the parent homogenized soil sample, recorded after preparation is complete.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition under which the homogenized aliquot is held before measurement or DNA extraction, recorded as the material's preservation state; examples include refrigerated, frozen, or ambient short-term hold.",
+          "type": "categorical",
+          "allowed_values": [
+            "refrigerated",
+            "frozen",
+            "ambient",
+            "desiccated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the prepared aliquot is stored before downstream use, measured or set immediately after preparation; typical range may be -80 to 25 Celsius depending on preservation strategy.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preservation_state",
+          "descr": "Intrinsic preservation status of the prepared aliquot at the time it enters downstream handling, indicating whether it was processed fresh or stored prior to use.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "preserved",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "sample_readiness_flag",
+          "descr": "Indicator that the prepared aliquot is suitable for environmental measurement and DNA extraction at the time of release from homogenization; use a simple yes/no assessment.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_environment_measurement": {
+      "reasoning": "This Capture node should remain in the measurement-session/instrument territory and avoid any field names already used elsewhere in the DAG, including operator_id. I therefore kept only capture-specific session metadata: instrument identity, calibration, timing, operating mode, and repeated-read settings. I excluded the pH/moisture/texture values themselves because those belong on the downstream Soil property Signal node, and I avoided sample or aliquot properties because those belong on upstream Entity nodes. I also removed duplicate operator-style fields to prevent collisions with prior Process nodes.",
+      "md_schema": [
+        {
+          "field_id": "capture_session_id",
+          "descr": "Unique identifier for this soil property measurement session; use a stable string such as 'CAP_001'. Assigned to each instrument run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the soil analysis instrument used for the capture session, recorded as the hardware vendor name, e.g. 'Thermo Fisher', 'Mettler Toledo', or 'Campbell'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or number of the soil analysis instrument used for the measurement session; record the exact model designation, e.g. 'pH 700', 'HydraProbe', or similar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the specific instrument used in the measurement session; use the manufacturer-provided hardware serial string, e.g. 'SN123456'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_date",
+          "descr": "Date on which the soil aliquots were measured on the instrument; use ISO 8601 format YYYY-MM-DD, e.g. 2025-04-18.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_time_local",
+          "descr": "Local clock time at which the measurement session started or the aliquot was analyzed, recorded in 24-hour HH:MM or HH:MM:SS format.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "calibration_status",
+          "descr": "Status of instrument calibration immediately before or during the measurement session; use a controlled term indicating whether the instrument was calibrated successfully.",
+          "type": "categorical",
+          "allowed_values": [
+            "calibrated",
+            "uncalibrated",
+            "verification_only",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "measurement_mode",
+          "descr": "Operating mode used for the soil property capture session, describing how the instrument was configured to acquire pH, moisture, and texture measurements.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_sample",
+            "batch_mode",
+            "continuous",
+            "manual",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "replicate_count_per_aliquot",
+          "descr": "Number of repeated instrument readings taken per soil aliquot during the capture session; typical values are 1 or greater depending on the protocol.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_properties_signal": {
+      "reasoning": "This Signal node should describe the raw instrument data artefact produced by the soil property capture session. I included file- and record-level technical properties such as signal identifier, parent capture reference, file format, file size, number of records, dimensionality, and raw quality flags that characterize the data object itself. I excluded the actual soil pH, moisture, and texture values because those are scientific measurements represented in the signal content, not separate process or capture settings, and I did not add capture configuration or sample provenance fields because those belong upstream. I also avoided reusing previously generated identifiers like operator_id and did not introduce any field that overlaps semantically with the capture node or the entity nodes.",
+      "md_schema": [
+        {
+          "field_id": "signal_id",
+          "descr": "Unique identifier for the raw soil property data object; use a stable string such as 'SIG_001'. Assigned when the instrument output is saved or exported.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_capture_id",
+          "descr": "Identifier of the measurement session that generated this raw signal; link to the soil property capture run using the same capture identifier format, e.g. 'CAP_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw instrument output containing the soil pH, moisture, and texture readouts; examples include CSV, TXT, JSON, or vendor-specific export formats.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "txt",
+            "json",
+            "xml",
+            "vendor_specific"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw signal file in bytes at the time of storage or export; typical values depend on the number of readings and instrument format.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_records",
+          "descr": "Count of raw measurement records or lines in the signal file produced by the capture session; record this after file generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_dimensions",
+          "descr": "Shape of the raw data matrix if the instrument output is tabular or array-like, expressed as rows x columns or an equivalent concise string description such as '120x4'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_quality_flag",
+          "descr": "Technical flag indicating whether the raw signal file appears complete and readable without interpreting the scientific values; use a simple controlled term based on file integrity checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "ok",
+            "partial",
+            "corrupt",
+            "missing",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Storage location or URI for the raw signal file, for example a local path, object-store URI, or repository link used to retrieve the data object.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction_from_soil": {
+      "reasoning": "This Process node should capture how DNA was extracted from the homogenized soil aliquots, including protocol choices, reagent details, yield, and extraction quality indicators. I included the extraction method, kit/reagent identity, lysis conditions, purification details, operator, and output quality metrics that belong to the transformation itself. I excluded soil provenance, aliquot storage, sequencing run settings, and raw sequence file properties because those belong to upstream Entity/Capture nodes or downstream Entity/Signal nodes. I also avoided previously generated colliding identifiers such as operator_id and aliquot_mass_grams, and kept the schema limited to process-level details needed to reproduce the extraction step.",
+      "md_schema": [
+        {
+          "field_id": "extraction_id",
+          "descr": "Unique identifier for this DNA extraction event; use a stable string such as 'EXT_001'. Assigned once per extraction run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_method",
+          "descr": "DNA extraction protocol used for the soil aliquots, recorded at the time of processing; examples include bead beating, chemical lysis, column-based extraction, or kit-based workflows.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "chemical_lysis",
+            "kit_based",
+            "phenol_chloroform",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit or protocol name used for soil DNA extraction, if applicable; record the exact product name such as 'DNeasy PowerSoil'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_duration_minutes",
+          "descr": "Duration of the lysis step used to release DNA from the soil matrix during extraction; typical values may range from 1 to 120 minutes depending on protocol.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_temperature_celsius",
+          "descr": "Temperature used during the lysis or incubation stage of DNA extraction, measured in Celsius; typical range may be 4 to 95 Celsius depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purification_steps_count",
+          "descr": "Number of purification or cleanup steps applied after lysis to obtain DNA suitable for sequencing, recorded at the end of the extraction workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng",
+          "descr": "Total amount of DNA recovered from the soil aliquot after extraction, measured at the end of the process; typical range may span from low ng to several micrograms depending on biomass and protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_quality_flag",
+          "descr": "Process-level assessment of whether the extracted DNA met basic downstream sequencing requirements, based on yield and purity checks; use a controlled term.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "soil_dna_library": {
+      "reasoning": "This Entity node should describe the sequencing-ready DNA library as a material object produced after extraction and before sequencing. I included library identity, linkage to the extraction event, library type, insert size, concentration, volume, preparation state, and indexing status because these characterize what the library is. I excluded library preparation protocol details such as enzymatic steps or PCR conditions because those belong to the upstream Process node, and I excluded sequencing run settings and read-level file properties because those belong to the downstream Capture and Signal nodes. I also avoided any previously generated identifier field collisions and kept the schema strictly to intrinsic library properties and provenance.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the soil DNA library; use a stable string such as 'LIB_001'. Assigned after library preparation and used to track the sample into sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_extraction_id",
+          "descr": "Identifier of the DNA extraction event that produced the nucleic acids used for this library; use the same extraction identifier format, e.g. 'EXT_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library construction type for the sequencing-ready DNA material, indicating whether the library is amplicon-based or shotgun-based.",
+          "type": "categorical",
+          "allowed_values": [
+            "amplicon",
+            "shotgun",
+            "metabarcoding",
+            "targeted_capture",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "target_marker_gene",
+          "descr": "Marker gene or genomic region targeted by the library when applicable, such as 16S rRNA, ITS, or 18S; leave as generic or unknown for shotgun libraries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate insert size of the prepared library in base pairs, measured after library preparation and before sequencing; typical values depend on protocol and may range from tens to several hundred base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the sequencing-ready library in nanograms per microliter, measured after library preparation and before sequencing; typical range may be very low to tens of ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_volume_ul",
+          "descr": "Total volume of the prepared DNA library in microliters at the point it is handed off for sequencing; typical range depends on protocol and normalization strategy.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_status",
+          "descr": "Whether sample barcodes or indexes were added to the library for multiplexed sequencing, recorded as a library property after preparation is complete.",
+          "type": "categorical",
+          "allowed_values": [
+            "indexed",
+            "non_indexed",
+            "dual_indexed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "library_ready_flag",
+          "descr": "Indicator that the prepared DNA library met the basic requirements for loading onto the sequencing instrument at the time of release from library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "high_throughput_sequencing": {
+      "reasoning": "This Capture node should describe the sequencing session and instrument configuration used to read the soil DNA library, not the raw read files themselves. I included sequencing run identity and run-specific configuration fields such as run/flow cell context, chemistry, read length, cycle count, indexing mode, and the sequencing operator because these are active capture settings and instrument-session descriptors. I excluded sample provenance, library material properties, and raw FASTQ/file metrics because those belong to upstream Entity nodes or the downstream Signal node. I also removed the previously colliding instrument manufacturer/model/serial fields, since those metadata names were already generated elsewhere in the DAG, and avoided any other duplicated field names.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Unique identifier for the sequencing session; use a stable string such as 'SEQRUN_001'. Assigned to each instrument run or lane that generates raw reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_id",
+          "descr": "Identifier of the flow cell or consumable used for the sequencing session, recorded at the time the run was started.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or kit version configured for the run, such as SBS chemistry variant or platform-specific reagent set used to generate reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured per-read length in base pairs for the sequencing session, measured from the run setup; typical values may include 150, 250, or platform-specific lengths.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end_flag",
+          "descr": "Indicator of whether the run was configured to generate paired-end reads, recorded as a sequencing session setting.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cycle_count",
+          "descr": "Total number of sequencing cycles configured for the run, measured as part of the instrument setup before data acquisition; typical range depends on platform and read length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_operator_id",
+          "descr": "Identifier of the technician or operator who initiated and monitored the sequencing run; use a stable staff code or initials, e.g. 'LT07'.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_sequence_reads": {
+      "reasoning": "This Signal node should focus on raw sequence artefact properties that remain after removing any fields already generated elsewhere in the DAG. Because file_format, file_size_bytes, read_length_bp, and storage_uri were already produced in prior steps, I excluded them and instead kept other raw-data-specific descriptors: read count, base count, quality summary, compression status, and file identity/linkage to the sequencing run. I also avoided instrument settings, library details, and processing outputs because those belong to Capture, Entity, or downstream Process nodes. The result is a non-duplicative description of the raw read file’s technical content and integrity.",
+      "md_schema": [
+        {
+          "field_id": "read_file_id",
+          "descr": "Unique identifier for the raw read file or file set; use a stable string such as 'READS_001'. Assigned when the sequencing output is written to storage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_sequencing_run_id",
+          "descr": "Identifier of the sequencing session that produced this raw read artefact; use the same sequencing run identifier format, e.g. 'SEQRUN_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of sequencing reads contained in the raw file or file set, counted after the run completes and the data are written to disk.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count",
+          "descr": "Total number of called bases across all raw reads in the file, calculated from the stored sequence data; useful for estimating data volume and coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Average per-base Phred quality score across the raw reads, computed from the raw file as a technical quality summary; typical values depend on platform and run quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_status",
+          "descr": "Whether the raw read file is compressed at rest, recorded as a storage characteristic of the signal object.",
+          "type": "categorical",
+          "allowed_values": [
+            "compressed",
+            "uncompressed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "read_pairing_status",
+          "descr": "Whether the stored raw reads are single-end or paired-end at the file level, recorded as a technical property of the signal artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "signal_integrity_flag",
+          "descr": "Technical flag indicating whether the raw read file passed basic integrity checks such as completeness and parsability, without interpreting biological content.",
+          "type": "categorical",
+          "allowed_values": [
+            "ok",
+            "partial",
+            "corrupt",
+            "missing",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_processing": {
+      "reasoning": "This Process node should describe the read-processing workflow itself: how raw reads were filtered, trimmed, merged, and otherwise transformed into cleaned sequences. I included pipeline identity, software/tool details, version, repository, filtering thresholds, trimming and merging settings, and process-level output yield/retention metrics because these are the operational parameters of the transformation. I excluded the raw file properties and the resulting processed file properties because those belong to the upstream Signal and downstream Signal nodes, and I avoided any previously colliding field names such as file_format, file_size_bytes, read_length_bp, and storage_uri. The schema is therefore limited to reproducible software and parameter metadata for the processing step.",
+      "md_schema": [
+        {
+          "field_id": "processing_id",
+          "descr": "Unique identifier for the read-processing event; use a stable string such as 'PROC_001'. Assigned once per processing run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software or bioinformatics pipeline used to filter, trim, and merge reads; for example 'cutadapt', 'DADA2', or a custom workflow name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the software or pipeline used for read processing, recorded exactly as executed; for example '4.9' or '1.18.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository, package source, or URL where the processing software/workflow is obtained; for example a GitHub URL, conda package reference, or container registry path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_quality_threshold",
+          "descr": "Minimum base quality threshold used to retain or discard reads during processing, measured at the point of quality filtering; typical values are platform- and workflow-specific and often fall between Q10 and Q30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_length_bp",
+          "descr": "Number of base pairs removed from reads during trimming, measured as a processing parameter or summarized setting; specify the intended trim amount used in this workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "merge_overlap_bp",
+          "descr": "Minimum required overlap in base pairs for paired-end read merging, measured as a processing parameter before read merging is accepted; typical values depend on read length and amplicon size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_removal_flag",
+          "descr": "Indicator of whether chimeric reads were removed during read processing, recorded as a workflow setting for this cleanup step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retention_rate_percent",
+          "descr": "Percentage of raw reads retained after filtering and trimming, computed at the end of the processing run as a process-level quality indicator; typical values depend on sample quality and thresholds used.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "processed_sequence_reads": {
+      "reasoning": "This Process node should describe the community-inference workflow that transforms processed reads into taxonomic or feature abundance information. I included algorithm identity, database choice, assignment/clustering settings, similarity thresholds, abundance normalization, and an inference-quality metric because these are the operational parameters of the computation. I excluded upstream read properties and downstream abundance-table properties because those belong to the input Signal and output Derivative nodes, and I avoided all previously colliding software metadata fields by using alternative process-level names. The result is a process-level schema focused on reproducible community profiling.",
+      "md_schema": [
+        {
+          "field_id": "inference_id",
+          "descr": "Unique identifier for the community inference event; use a stable string such as 'INF_001'. Assigned once per inference run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pipeline_name",
+          "descr": "Name of the bioinformatics workflow or algorithm used to infer microbial community composition from processed reads; for example 'QIIME2', 'mothur', or 'DADA2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pipeline_version",
+          "descr": "Version of the community-inference workflow or algorithm, recorded exactly as executed; for example '2024.2' or '1.48.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pipeline_repository",
+          "descr": "Repository, package source, or URL where the community-inference workflow is obtained; for example a GitHub URL, package reference, or container registry path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference database used for taxonomic assignment or feature annotation during community inference; examples include SILVA, Greengenes, UNITE, or a custom database.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assignment_method",
+          "descr": "Method used to assign reads to taxa or sequence variants, recorded as the algorithmic approach chosen for community inference.",
+          "type": "categorical",
+          "allowed_values": [
+            "otu_clustering",
+            "asv_inference",
+            "taxonomy_assignment",
+            "kmer_classification",
+            "other"
+          ]
+        },
+        {
+          "field_id": "similarity_threshold_percent",
+          "descr": "Percent sequence similarity threshold used when clustering reads into operational units or assigning features, measured as a process parameter; typical values are workflow-dependent and may be 97 or 99.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Method used to normalize read-derived feature counts during inference, such as rarefaction, relative abundance conversion, or compositional scaling.",
+          "type": "categorical",
+          "allowed_values": [
+            "rarefaction",
+            "relative_abundance",
+            "tss",
+            "css",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "inference_quality_flag",
+          "descr": "Process-level assessment of whether the inferred community profile met basic analysis criteria, based on run success and reference matching; use a controlled term.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "community_inference": {
+      "reasoning": "This Process node should describe the community-inference workflow that transforms processed reads into taxonomic or feature abundance information. I included algorithm identity, version, cluster/assignment settings, similarity thresholds, abundance normalization, and an inference-quality metric because these are the operational parameters of the computation. I excluded upstream read properties and downstream abundance-table properties because those belong to the input Signal and output Derivative nodes, and I avoided all previously colliding field names from earlier steps by renaming the process identifier and method descriptors. The result is a process-level schema focused on reproducible community profiling.",
+      "md_schema": [
+        {
+          "field_id": "community_inference_run_id",
+          "descr": "Unique identifier for the community inference event; use a stable string such as 'INF_001'. Assigned once per inference run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_analysis_method",
+          "descr": "Name of the algorithmic approach used to infer microbial community composition from processed reads; for example 'QIIME2', 'mothur', 'DADA2', or a custom pipeline name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_analysis_version",
+          "descr": "Version of the community-inference method or pipeline, recorded exactly as executed; for example '2024.2' or '1.48.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_assignment_scheme",
+          "descr": "Method used to assign reads to taxa or sequence variants, recorded as the algorithmic approach chosen for community inference.",
+          "type": "categorical",
+          "allowed_values": [
+            "otu_clustering",
+            "asv_inference",
+            "taxonomy_assignment",
+            "kmer_classification",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cluster_similarity_cutoff_percent",
+          "descr": "Percent sequence similarity threshold used when clustering reads into operational units or assigning features, measured as a process parameter; typical values are workflow-dependent and may be 97 or 99.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_scaling_method",
+          "descr": "Method used to normalize read-derived feature counts during inference, such as rarefaction, relative abundance conversion, or compositional scaling.",
+          "type": "categorical",
+          "allowed_values": [
+            "rarefaction",
+            "relative_abundance",
+            "tss",
+            "css",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "inference_pass_flag",
+          "descr": "Process-level assessment of whether the inferred community profile met basic analysis criteria, based on run success and reference matching; use a controlled term.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        },
+        {
+          "field_id": "taxonomy_update_version",
+          "descr": "Version or release label of any taxonomy/feature annotation update applied during inference, if the workflow used a curated database revision distinct from the raw reference set.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "microbial_abundance_matrix": {
+      "reasoning": "This Derivative node should describe the computed abundance matrix itself, not the inference settings or the input reads. I included matrix identity, linkage to the inference step, dimensions, sparsity, feature identifier type, normalization representation, and a matrix-level quality indicator because these characterize the computed result and its usefulness for downstream comparison. I excluded software, clustering, and reference database settings because those belong to the upstream Process node, and I excluded sample provenance and raw/processed read properties because those belong to earlier Entity or Signal nodes. I also avoided all colliding field names from previous steps, especially those already used for process identifiers and inference configuration.",
+      "md_schema": [
+        {
+          "field_id": "abundance_matrix_id",
+          "descr": "Unique identifier for the computed microbial abundance matrix; use a stable string such as 'ABM_001'. Assigned when the matrix is created from inferred community data.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_inference_step_id",
+          "descr": "Identifier of the community inference event that generated this matrix; use the same inference-step identifier format, e.g. a prior process ID such as 'INFSTEP_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_row_count",
+          "descr": "Number of rows in the abundance matrix, corresponding to the number of soil samples represented; record this after matrix construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_column_count",
+          "descr": "Number of columns in the abundance matrix, corresponding to the number of microbial features or taxa represented; record this after matrix construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_id_type",
+          "descr": "Type of identifiers used for the matrix columns, indicating whether features are amplicon sequence variants, operational taxonomic units, taxonomic labels, or another identifier scheme.",
+          "type": "categorical",
+          "allowed_values": [
+            "asv",
+            "otu",
+            "taxon",
+            "species",
+            "genus",
+            "other"
+          ]
+        },
+        {
+          "field_id": "abundance_representation",
+          "descr": "Numerical representation used in the matrix values, such as raw counts, relative abundances, or transformed abundances; record the actual encoding stored in the computed table.",
+          "type": "categorical",
+          "allowed_values": [
+            "counts",
+            "relative_abundance",
+            "log_transformed",
+            "rarefied_counts",
+            "compositional",
+            "other"
+          ]
+        },
+        {
+          "field_id": "nonzero_fraction",
+          "descr": "Fraction of matrix entries that are nonzero, computed as a sparsity indicator for the abundance table; values range from 0 to 1 and summarize how sparse the matrix is.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_quality_flag",
+          "descr": "Computed quality assessment of whether the abundance matrix is suitable for downstream diversity analysis and statistics, based on completeness and basic validation checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "diversity_analysis": {
+      "reasoning": "This Process node should describe how diversity metrics were computed from the community profiles, including the analytical method and parameters used for alpha and beta diversity summarization. I included analysis identity, software/tool reference, distance metric, rarefaction or normalization basis, statistical summary choice, grouping level, and an analysis quality flag because these are properties of the computation itself. I excluded sample provenance, sequence file properties, and the resulting diversity values because those belong to upstream Entity/Derivative nodes and the downstream diversity-metrics Derivative node. I also avoided previously generated colliding field names and kept the schema focused on reproducible diversity-analysis settings.",
+      "md_schema": [
+        {
+          "field_id": "diversity_analysis_step_id",
+          "descr": "Unique identifier for the diversity analysis event; use a stable string such as 'DIV_001'. Assigned once per analysis run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_method",
+          "descr": "Name of the diversity-analysis approach or workflow used to compute alpha and beta diversity metrics from community profiles; for example 'QIIME2 diversity', 'vegan', or a custom pipeline name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_version",
+          "descr": "Version of the diversity-analysis software or pipeline, recorded exactly as executed; for example '2024.2' or '2.6-4'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "distance_metric",
+          "descr": "Distance or dissimilarity metric used for beta diversity calculation, recorded at the point of analysis; examples include Bray-Curtis, Jaccard, or UniFrac.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "weighted_unifrac",
+            "unweighted_unifrac",
+            "euclidean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "alpha_diversity_index",
+          "descr": "Alpha diversity index computed in this analysis step, such as Shannon, Simpson, or observed features; record the specific index used for the summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "shannon",
+            "simpson",
+            "observed_features",
+            "chao1",
+            "faith_pd",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_basis",
+          "descr": "Normalization or rarefaction basis used before diversity computation, describing the input scaling applied to community profiles; record the actual basis used for the analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "rarefied",
+            "relative_abundance",
+            "counts",
+            "compositional",
+            "other"
+          ]
+        },
+        {
+          "field_id": "grouping_factor",
+          "descr": "Field-level grouping variable used to compare diversity summaries across samples, such as crop type, farming practice, or region; record the factor used in the analysis model or summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_summary_method",
+          "descr": "Statistical summary or testing method used to aggregate or compare diversity outputs, such as mean comparison, permutation test, or ordination-based summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_quality_flag",
+          "descr": "Process-level assessment of whether the diversity analysis completed successfully and produced interpretable metrics, based on convergence and input validation checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "microbial_diversity_metrics": {
+      "reasoning": "This Derivative node should describe the computed diversity summary results themselves, not the analysis settings or upstream community profiles. I included result identity, linkage to the diversity-analysis step, beta metric representation, table dimensions, grouping labels, and result-level quality/completeness indicators because these are intrinsic properties of the computed summaries. I excluded the analysis software and parameter choices because those belong to the upstream Process node, and I excluded sample provenance and raw read properties because those belong to earlier nodes. I also removed the colliding alpha_diversity_index field and kept the schema focused on the reusable diversity result artifact.",
+      "md_schema": [
+        {
+          "field_id": "diversity_metrics_id",
+          "descr": "Unique identifier for the computed diversity metrics object; use a stable string such as 'DIVMET_001'. Assigned when the diversity summary table or result file is created.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_diversity_analysis_step_id",
+          "descr": "Identifier of the diversity-analysis event that generated these metrics; use the same diversity analysis identifier format, e.g. 'DIV_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_diversity_metric",
+          "descr": "Beta diversity distance or dissimilarity metric represented in the result object, such as Bray-Curtis, Jaccard, or UniFrac; record the metric actually summarized.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "weighted_unifrac",
+            "unweighted_unifrac",
+            "euclidean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_row_count",
+          "descr": "Number of sample-level rows in the diversity metrics output table, counted after the derivative is created; typically corresponds to the number of field samples represented.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_column_count",
+          "descr": "Number of metric columns in the diversity summary output, counted after result creation; this indicates how many diversity measures are stored in the object.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "group_labels_included",
+          "descr": "Grouping labels carried with the diversity metrics for downstream comparison, such as crop type, management practice, or region; record whether such labels are included in the result object.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_completeness_flag",
+          "descr": "Quality indicator showing whether the computed diversity metrics are complete and internally consistent for downstream statistical interpretation; use a simple controlled term.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "marginal",
+            "fail",
+            "not_assessed"
+          ]
+        }
+      ]
+    },
+    "comparative_statistics": {
+      "reasoning": "This Process node should describe the statistical analysis that jointly relates diversity metrics to field descriptors such as crop type and management practice. I included analysis identity, software/tool, version, repository, model formula, response and predictor variables, test type, correction method, and statistical significance threshold because these are the operational details needed to reproduce the comparison. I excluded sample provenance, raw sequence data, and the final statistical outputs because those belong to earlier Entity/Derivative nodes or the downstream result Derivative node. I also avoided all previously colliding field names and kept the schema focused on the computational test setup rather than the scientific findings.",
+      "md_schema": [
+        {
+          "field_id": "comparative_statistics_id",
+          "descr": "Unique identifier for the comparative statistics analysis event; use a stable string such as 'STAT_001'. Assigned once per statistical analysis run or batch.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistics_software_name",
+          "descr": "Name of the statistical software or package used to analyze diversity metrics against field descriptors; for example 'R', 'Python', 'lme4', or 'statsmodels'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistics_software_version",
+          "descr": "Version of the statistical software or package used for the analysis, recorded exactly as executed; for example '4.3.1' or '0.14.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistics_software_repository",
+          "descr": "Repository, package source, or URL for the statistical analysis software or workflow; for example a CRAN package reference, PyPI package, GitHub URL, or container registry path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_formula",
+          "descr": "Statistical model formula used to test associations between diversity metrics and field descriptors, recorded in the syntax used by the analysis environment; for example 'diversity ~ crop_type + farming_practice + region'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "response_variable",
+          "descr": "Response variable analyzed in the statistical test, describing which diversity metric or summary was treated as the outcome; record the field or metric name used in the model.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predictor_variables",
+          "descr": "Predictor variables included in the comparative statistical model, such as crop type, farming practice, region, or soil covariates; record the set of descriptors tested.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_test_type",
+          "descr": "Type of statistical test or modeling framework used for comparison, such as linear model, mixed model, PERMANOVA, or nonparametric test.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "mixed_model",
+            "permanova",
+            "anova",
+            "kruskal_wallis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "multiple_testing_correction",
+          "descr": "Method used to adjust p-values or significance thresholds for multiple comparisons, recorded as the correction applied in this analysis step.",
+          "type": "categorical",
+          "allowed_values": [
+            "fdr",
+            "bonferroni",
+            "holm",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "significance_threshold",
+          "descr": "Alpha level used to declare statistical significance in the comparative analysis, typically 0.05 or a workflow-specific value.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "management_impact_results": {
+      "reasoning": "This Derivative node should describe the final comparative result artefact, not the statistical model settings. I included result identity, linkage to the comparative statistics step, the comparison factors, effect summaries, significance summaries, directionality, yield relevance annotation, and a concise result quality flag because these are intrinsic properties of the final output. I excluded the software, model formula, and correction settings because those belong to the upstream Process node, and I excluded raw sequence and diversity computation details because those belong to earlier nodes. I also avoided all previously colliding field names and kept the schema centered on the interpretable findings produced by the workflow.",
+      "md_schema": [
+        {
+          "field_id": "management_impact_result_id",
+          "descr": "Unique identifier for the final comparative result object; use a stable string such as 'MIR_001'. Assigned when the end-of-workflow summary is created.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_comparative_statistics_id",
+          "descr": "Identifier of the comparative statistics event that generated this final result; use the same statistics-analysis identifier format, e.g. 'STAT_001'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_factor",
+          "descr": "Primary field descriptor used in the final comparison of microbial diversity, such as crop type, farming practice, region, or yield-related grouping variable.",
+          "type": "categorical",
+          "allowed_values": [
+            "crop_type",
+            "farming_practice",
+            "region",
+            "yield_relevance",
+            "other"
+          ]
+        },
+        {
+          "field_id": "effect_direction",
+          "descr": "Direction of the observed association between the comparison factor and microbial diversity, summarized from the final comparative analysis; use a simple directional interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "mixed",
+            "no_clear_effect",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "effect_size_summary",
+          "descr": "Concise summary of the magnitude of the observed management impact on microbial diversity, reported as a text or numeric summary from the final comparative result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_summary",
+          "descr": "Summary of the statistical significance of the final comparison, including whether differences or associations were detected; report the end-result interpretation rather than the test details.",
+          "type": "categorical",
+          "allowed_values": [
+            "significant",
+            "not_significant",
+            "partially_significant",
+            "not_assessed"
+          ]
+        },
+        {
+          "field_id": "yield_relevance_flag",
+          "descr": "Indicator of whether the final comparative result suggests a potential relevance to crop yield, based on the workflow's interpretive output; use a simple yes/no-style assessment.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_summary_text",
+          "descr": "Short human-readable narrative summarizing how farming practice and crop type relate to microbial diversity in the analyzed soil samples; this is the final interpretive statement stored with the derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_confidence_level",
+          "descr": "Overall confidence level assigned to the final comparative result, reflecting completeness of the comparative workflow and consistency of the inferred association; use a controlled term.",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

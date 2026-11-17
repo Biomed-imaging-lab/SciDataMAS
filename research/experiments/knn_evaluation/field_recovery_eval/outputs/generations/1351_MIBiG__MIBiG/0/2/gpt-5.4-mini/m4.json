@@ -1,0 +1,1653 @@
+{
+  "md_name": "Soil Bacterial BGC Genomics and Antibiotic Characterization",
+  "md_description": "This workflow begins with soil samples, isolates bacterial strains through physical and cultivation steps, and generates genomic DNA for whole-genome sequencing. Sequencing data are assembled and mined for biosynthetic gene clusters, which are mapped and functionally annotated at the gene level. In parallel, cultured strains are induced for antibiotic production and chemically profiled by LC-MS/MS to identify antibiotic compounds. Integrated analysis combines genomic and chemical results to characterize novel antibiotics and produce a structured metadata table for the dataset.",
+  "fields_per_node": {
+    "soil_sample": {
+      "reasoning": "The soil_sample node is an Entity, so I included only intrinsic source and provenance fields for the environmental material itself: where and when the soil was collected, what habitat it came from, and basic physical/chemical context that helps interpret downstream isolate provenance. I excluded any isolation, cultivation, sequencing, or analytical settings because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided sample identifiers if they were likely to be shared globally across the DAG; however, since no already_generated fields were provided, I included a single sample identifier as an entity-level identifier. No fields overlap with already_generated because none were supplied.",
+      "md_schema": [
+        {
+          "field_id": "soil_sample_id",
+          "descr": "Unique identifier for the soil sample used as the starting material for bacterial isolation; use a stable string such as SOIL-001 or SITEA_2024_07_15.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the soil was collected in the field, recorded at the time of sampling; format YYYY-MM-DD.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site",
+          "descr": "Free-text or coded site name for the environmental location where the soil was collected, capturing the provenance of the starting material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "habitat_type",
+          "descr": "Environmental habitat category for the sampled soil at collection, describing the source ecosystem rather than the downstream culture conditions; examples include agricultural field, forest floor, grassland, or rhizosphere-associated soil.",
+          "type": "categorical",
+          "allowed_values": [
+            "agricultural_field",
+            "forest_floor",
+            "grassland",
+            "desert_soil",
+            "rhizosphere_soil",
+            "wetland_soil",
+            "compost",
+            "urban_soil",
+            "other"
+          ]
+        },
+        {
+          "field_id": "soil_depth_cm",
+          "descr": "Depth below the soil surface from which the sample was collected, measured at sampling time; typical range 0-100 cm, recorded in centimeters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_ph",
+          "descr": "Measured pH of the soil sample at or near collection, representing the intrinsic sample chemistry relevant to microbial provenance; typical range 3.0-10.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_moisture_percent",
+          "descr": "Estimated gravimetric or volumetric moisture content of the soil at collection, recorded as percent; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_method",
+          "descr": "Brief description of how the soil was obtained in the field, such as sterile spatula, auger, or corer; this captures the sampling method used for the entity but not downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "sterile_spatula",
+            "soil_auger",
+            "soil_corer",
+            "scoop",
+            "hand_collected",
+            "other"
+          ]
+        }
+      ]
+    },
+    "isolation_process": {
+      "reasoning": "The isolation_process node is a Process, so I included only fields describing how bacterial strains were physically isolated from the soil sample: the isolation workflow, selective media, incubation conditions, and key operational parameters that define the transformation from soil to isolates. I excluded intrinsic properties of the soil sample entity and any properties of the resulting bacterial isolates entity, because those belong upstream and downstream respectively. I also did not include sequencing, DNA extraction, or culture expansion details because those are separate process nodes. Since no already_generated fields were provided in this turn, there was no field collision to avoid.",
+      "md_schema": [
+        {
+          "field_id": "isolation_method",
+          "descr": "Primary physical isolation strategy used to recover individual bacterial strains from soil, recorded for the isolation step itself; examples include dilution plating, spread plating, serial dilution, or enrichment followed by plating.",
+          "type": "categorical",
+          "allowed_values": [
+            "dilution_plating",
+            "spread_plating",
+            "serial_dilution",
+            "enrichment_culture",
+            "streak_purification",
+            "other"
+          ]
+        },
+        {
+          "field_id": "isolation_medium",
+          "descr": "Culture medium used during the isolation step to recover bacterial colonies from soil-derived material; report the medium formulation or name, such as R2A, TSA, or ISP2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Incubation temperature applied during bacterial isolation, measured in degrees Celsius at the plate/incubation stage; typical range 4-45.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_duration_days",
+          "descr": "Duration of incubation used to allow bacterial colonies to appear during isolation, measured in days from plating to colony pickup; typical range 1-60.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "oxygen_condition",
+          "descr": "Atmospheric condition maintained during isolation incubation, describing the growth environment chosen for colony recovery.",
+          "type": "categorical",
+          "allowed_values": [
+            "aerobic",
+            "microaerophilic",
+            "anaerobic",
+            "facultative",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "purification_passages",
+          "descr": "Number of re-streaking or subculturing rounds used to obtain a pure bacterial isolate from mixed soil-derived colonies; integer count recorded at the end of isolation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "isolation_success_flag",
+          "descr": "Indicator of whether the isolation workflow yielded one or more pure bacterial isolates suitable for downstream culture growth and DNA extraction.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bacterial_isolates": {
+      "reasoning": "The bacterial_isolates node is an Entity, so I included only intrinsic identity, provenance, and basic biological properties of the recovered strain itself. I focused on fields that describe what the isolate is, not how it was obtained or what was done to it downstream. Therefore I excluded isolation protocol details (owned by isolation_process), culture growth conditions (owned by culture_growth), DNA properties (owned by genomic_dna), and any sequencing or chemistry-related metadata. No already_generated fields were provided here, so there were no duplicates to avoid.",
+      "md_schema": [
+        {
+          "field_id": "isolate_id",
+          "descr": "Unique identifier for the bacterial isolate; use a stable strain-level string such as ISO-001 or BACT_2024_07_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_soil_sample_id",
+          "descr": "Identifier of the source soil sample from which this isolate was recovered; link this entity back to the originating environmental sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "isolate_colony_morphology",
+          "descr": "Observable colony morphology at the time of isolate picking, capturing intrinsic appearance on the isolation plate; examples include circular, irregular, convex, pigmented, mucoid, or dry.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gram_stain_category",
+          "descr": "Gram-stain reaction observed for the isolate, recorded as a basic taxonomic/phenotypic property of the recovered strain.",
+          "type": "categorical",
+          "allowed_values": [
+            "gram_positive",
+            "gram_negative",
+            "variable",
+            "not_determined"
+          ]
+        },
+        {
+          "field_id": "aerobicity_preference",
+          "descr": "Observed oxygen-growth preference of the isolate under standard test conditions, representing a basic physiological property of the strain.",
+          "type": "categorical",
+          "allowed_values": [
+            "aerobic",
+            "facultative",
+            "microaerophilic",
+            "anaerobic",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "isolate_taxonomic_affiliation",
+          "descr": "Lowest confident taxonomic assignment available for the isolate at the time of curation, such as genus or species name; use a string like Streptomyces sp. or Bacillus subtilis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_status",
+          "descr": "Assessment of whether the recovered strain is considered a pure isolate rather than a mixed colony, determined during isolate curation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pure",
+            "putatively_pure",
+            "mixed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "culture_growth": {
+      "reasoning": "The culture_growth node is a Process, so I included only operational growth conditions and performance indicators for expanding isolated strains into biomass. I focused on medium, temperature, time, shaking/aeration, inoculum, and a simple growth outcome flag because these parameters define how the biomass was generated for downstream DNA extraction and metabolite production. I excluded intrinsic isolate properties, DNA attributes, and later culture-induction or metabolite-production conditions because those belong to upstream/downstream nodes. No already_generated fields were provided in this turn, so there was no need to suppress duplicates.",
+      "md_schema": [
+        {
+          "field_id": "growth_medium",
+          "descr": "Culture medium used to expand the bacterial isolate into sufficient biomass for downstream DNA extraction and metabolite production; report the medium name or formulation, such as LB, TSA, R2A, or ISP2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "growth_temperature_celsius",
+          "descr": "Incubation temperature used during biomass expansion, measured in degrees Celsius at the culture-growth stage; typical range 4-45.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "growth_duration_hours",
+          "descr": "Total incubation time used for culture expansion, measured in hours from inoculation to harvest; typical range 1-240.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "shaking_speed_rpm",
+          "descr": "Orbital shaking speed used during culture growth, measured in revolutions per minute when cultures were incubated under agitation; typical range 0-400.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aeration_mode",
+          "descr": "Aeration or agitation mode used to support biomass growth during culture expansion.",
+          "type": "categorical",
+          "allowed_values": [
+            "static",
+            "shaken",
+            "baffled_flask",
+            "sparged",
+            "other"
+          ]
+        },
+        {
+          "field_id": "inoculum_fraction_percent",
+          "descr": "Approximate fraction of starter culture used to inoculate the growth medium, recorded as percent v/v or w/v depending on the laboratory convention; typical range 0.01-50.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biomass_sufficiency_flag",
+          "descr": "Indicator of whether the culture growth step produced enough biomass to proceed to DNA extraction and downstream metabolite-related workflows.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "cultured_isolates": {
+      "reasoning": "The cultured_isolates node is an Entity, so I included only properties of the expanded culture material itself: identity/linkage to the parent isolate, culture state at harvest, and basic biomass/preparation descriptors. I excluded growth protocol settings because those belong to the culture_growth Process, and I excluded DNA extraction, sequencing, induction, and chemistry details because those are downstream nodes. Since no already_generated fields were provided here, there were no collisions to avoid.",
+      "md_schema": [
+        {
+          "field_id": "cultured_isolate_id",
+          "descr": "Unique identifier for the expanded bacterial culture entity; use a stable string such as CUL-001 or ISO-001_GROWTH_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_isolate_id",
+          "descr": "Identifier of the bacterial isolate used to generate this cultured entity, linking the expanded culture back to the original isolate.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_state",
+          "descr": "Operational state of the culture at harvest time, describing whether the biomass was actively growing, stationary, or otherwise prepared for downstream extraction and analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "exponential",
+            "stationary",
+            "late_stationary",
+            "preculture",
+            "other"
+          ]
+        },
+        {
+          "field_id": "culture_volume_ml",
+          "descr": "Total harvested culture volume available from the expanded isolate, measured in milliliters at the time of downstream processing; typical range 0.1-10000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biomass_yield_mg",
+          "descr": "Approximate wet or dry biomass obtained from the expanded culture, measured in milligrams at harvest; record the measurement basis in accompanying documentation if needed.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_contamination_status",
+          "descr": "Assessment of whether the expanded culture remained free of obvious contamination at the time it was prepared for sequencing and chemical analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "clean",
+            "suspect_contamination",
+            "contaminated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "culture_storage_condition",
+          "descr": "Short description of how the expanded culture was held before downstream processing, such as refrigerated, frozen, freshly processed, or cryopreserved.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "cryopreserved",
+            "lyophilized",
+            "other"
+          ]
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "The dna_extraction node is a Process, so I included only fields that describe how genomic DNA was extracted and purified from the cultured bacterial material: extraction method, lysis strategy, purification chemistry, elution details, and simple DNA quality/yield indicators. I excluded culture-growth parameters and all sequencing or downstream bioinformatic details because those belong to other nodes. I also avoided repeating any isolate or culture entity identifiers except for linking back to the input material, since this process operates on cultured_isolates and produces genomic_dna.",
+      "md_schema": [
+        {
+          "field_id": "input_culture_id",
+          "descr": "Identifier of the cultured bacterial material processed for DNA extraction; link this process to the cultured_isolates entity used as input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_method",
+          "descr": "Primary extraction workflow used to isolate genomic DNA from the cultured bacterial material, such as commercial kit, phenol-chloroform, or CTAB-based extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "kit_based",
+            "phenol_chloroform",
+            "ctab",
+            "magnetic_beads",
+            "alkaline_lysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cell_lysis_strategy",
+          "descr": "Main lysis approach applied during genomic DNA extraction, describing how bacterial cells were disrupted before purification.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic",
+            "mechanical",
+            "chemical",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "lysis_reagent",
+          "descr": "Key reagent or reagent class used to assist cell lysis during extraction, reported as the name or formulation when relevant; examples include lysozyme, proteinase K, SDS, or bead-beating matrix.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_elution_volume_ul",
+          "descr": "Final elution volume used to recover purified genomic DNA, measured in microliters at the end of the extraction workflow; typical range 5-500.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Measured concentration of purified genomic DNA after extraction and before sequencing, in nanograms per microliter; typical range 0-1000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_260_280",
+          "descr": "Spectrophotometric A260/A280 purity ratio for the extracted DNA, measured after purification and used as a basic quality indicator; typical range 1.0-2.2.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng",
+          "descr": "Total amount of purified genomic DNA recovered from the extraction step, reported in nanograms at the end of the process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_quality_pass_flag",
+          "descr": "Indicator of whether the extracted DNA met internal quality criteria for downstream sequencing library preparation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "genomic_dna": {
+      "reasoning": "I kept only entity-level DNA material fields and removed the colliding measurement fields dna_concentration_ng_per_ul and dna_purity_ratio_260_280 because they were already generated elsewhere in the DAG. The remaining fields describe intrinsic properties and provenance of the purified genomic DNA without repeating extraction-process details or downstream sequencing settings.",
+      "md_schema": [
+        {
+          "field_id": "genomic_dna_id",
+          "descr": "Unique identifier for the purified genomic DNA preparation; use a stable string such as gDNA-001 or DNA_ISO-001_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_cultured_isolate_id",
+          "descr": "Identifier of the cultured bacterial isolate or culture used as the source material for this genomic DNA preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_mass_ng",
+          "descr": "Total mass of the purified genomic DNA preparation available for downstream sequencing, reported in nanograms at the time of curation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of the physical integrity of the genomic DNA preparation before sequencing, such as intact, partially degraded, or degraded.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_degraded",
+            "degraded",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Storage temperature used to preserve the purified genomic DNA before sequencing library preparation, measured in degrees Celsius; common values include -20 or -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_days",
+          "descr": "Number of days the purified genomic DNA was stored prior to downstream sequencing, counted from extraction completion to library preparation; typical range 0-3650.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_run": {
+      "reasoning": "The sequencing_run node is a Capture node, so I included only the instrument/session configuration and run-level acquisition context for the Illumina sequencing of genomic DNA. I focused on hardware identity, run setup, chemistry, read configuration, and immediate run output characteristics that define the capture session. I excluded sample properties and DNA prep quality metrics because those belong to genomic_dna, and I excluded file-level properties because those belong to the raw_reads Signal node. I also avoided the previously colliding fields dna_concentration_ng_per_ul and dna_purity_ratio_260_280 by not repeating them here.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture session; for this workflow it identifies the platform vendor operating the Illumina system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model name of the sequencing instrument used to generate the raw bacterial genomic reads, recorded for the capture session; example: NovaSeq 6000, NextSeq 2000, or MiSeq.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Instrument serial number of the sequencing platform used for this run, recorded to uniquely identify the capture hardware; use the exact manufacturer serial string when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_kit_version",
+          "descr": "Library sequencing kit or flow cell chemistry version used during the run, describing the configured capture chemistry rather than the sample itself; report the kit name/version exactly as used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_layout",
+          "descr": "Configured read structure for the sequencing run, describing how bases were acquired from each DNA fragment at capture time.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "mate_pair",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read generated during the run; typical range 25-500 depending on platform and chemistry.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_coverage_x",
+          "descr": "Expected or targeted genome coverage for the sequencing session, expressed as fold coverage (x) at the capture planning stage; typical range 1-1000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_lane_or_flowcell_id",
+          "descr": "Identifier of the specific sequencing lane or flow cell used for this capture session, enabling traceability of the acquisition run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_date",
+          "descr": "Date on which the sequencing capture session was initiated or completed, recorded in YYYY-MM-DD format.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_success_flag",
+          "descr": "Indicator of whether the sequencing capture session completed successfully and produced raw reads suitable for downstream analysis.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "The raw_reads node is a Signal node, so I included only technical file-level properties of the unprocessed FASTQ artefact: file identity, format, size, sequencing read counts, base totals, quality metrics, and storage location. I excluded capture/instrument settings because those belong to sequencing_run, and I excluded assembly or biological interpretation because those belong to downstream derivative nodes. I also avoided repeating any DNA-prep fields from earlier nodes, including the previously flagged concentration and purity fields, because they do not describe the raw file itself.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_id",
+          "descr": "Unique identifier for the raw FASTQ read file set produced by the sequencing run; use a stable string such as FASTQ-001 or RUN123_R1R2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "File format of the raw sequencing artefact, recorded at the signal level; for this node it is typically FASTQ or compressed FASTQ (.fastq.gz).",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file(s) on disk, measured in bytes after acquisition and before downstream processing; typical range 1e6-1e13.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Number of individual sequencing reads contained in the raw FASTQ signal, counted from the file content after sequencing and before trimming or filtering; typical range 1-1e12.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_count_bp",
+          "descr": "Total number of sequenced bases represented in the raw read file set, measured in base pairs before any trimming or filtering; typical range 1-1e15.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_read_quality_score",
+          "descr": "Average Phred quality score across the raw reads, calculated from the FASTQ output before downstream filtering; typical range 0-40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "q30_fraction",
+          "descr": "Fraction of bases in the raw reads with Phred quality score at or above 30, computed from the raw signal to summarize technical quality; typical range 0.0-1.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_content_percent",
+          "descr": "Percent GC content of the raw read set, calculated from the unprocessed FASTQ signal as a technical descriptor of sequence composition; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_path",
+          "descr": "File path, object-store URI, or repository location where the raw read file set is stored after sequencing; provide a resolvable location such as /data/run1/fastq or s3://bucket/path.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembly_process": {
+      "reasoning": "The assembly_process node is a Process, so I included only computational assembly parameters, software configuration, and assembly quality indicators for converting raw reads into draft genomes. I focused on the assembler identity, version, input handling, and the main output quality measures that define how the assembly was performed. I excluded raw-read file properties because those belong to raw_reads, and I excluded assembled-genome output properties that are intrinsic to the downstream assembled_genome derivative. No already_generated fields were provided in this turn, so there were no duplicate-field constraints beyond staying within the process territory.",
+      "md_schema": [
+        {
+          "field_id": "input_reads_id",
+          "descr": "Identifier of the raw read dataset submitted to the assembly workflow; link this process to the raw_reads signal used as input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_name",
+          "descr": "Name of the genome assembler used to construct the draft bacterial genome from raw sequencing reads; example: SPAdes or MEGAHIT.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_version",
+          "descr": "Software version of the genome assembler used for this assembly process, recorded to support reproducibility; example: 3.15.5.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "kmer_sizes",
+          "descr": "K-mer sizes used by the assembler during draft genome construction, reported as a comma-separated list or structured string; typical values depend on read length and assembler defaults.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_contig_length_bp",
+          "descr": "Minimum contig length retained after assembly filtering, measured in base pairs; typical range 100-100000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_mode",
+          "descr": "Assembly strategy or mode selected for the run, describing how reads were interpreted during genome construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "careful",
+            "default",
+            "meta",
+            "single_cell",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembly_n50_bp",
+          "descr": "Contig N50 achieved by the assembly process, reported as a draft-genome quality indicator in base pairs after assembly completion; typical range 0-1e8.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_completeness_percent",
+          "descr": "Estimated completeness of the draft genome produced by the assembly process, expressed as percent and assessed at or after assembly completion; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_contamination_percent",
+          "descr": "Estimated contamination of the draft genome produced by the assembly process, expressed as percent and assessed at or after assembly completion; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_success_flag",
+          "descr": "Indicator of whether the assembly workflow produced a draft genome suitable for downstream BGC prediction and mapping.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembled_genome": {
+      "reasoning": "The assembled_genome node is a Derivative, so I kept only computed output properties of the draft genome and removed the colliding gc_content_percent field flagged as already generated elsewhere in the DAG. The remaining fields describe the assembly product itself: identity, source linkage, contiguity, size, completeness/contamination, status, and storage location. I excluded assembly-process parameters and raw-read properties because those belong to upstream nodes, and I avoided any fields that overlap with earlier generated metadata.",
+      "md_schema": [
+        {
+          "field_id": "assembled_genome_id",
+          "descr": "Unique identifier for the computed bacterial genome assembly; use a stable string such as ASM-001 or GENOME_ISO-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_raw_reads_id",
+          "descr": "Identifier of the raw sequencing reads used to generate this assembled genome, enabling traceability to the input signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_length_bp",
+          "descr": "Total length of the assembled draft genome in base pairs, measured from the final assembly output; typical range 1e5-1e10.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count",
+          "descr": "Number of contigs in the final assembled genome, counted after assembly completion and any post-assembly filtering; typical range 1-1e6.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "n50_bp",
+          "descr": "Assembly N50 of the computed draft genome, reported in base pairs as a contiguity metric derived from the final assembly output; typical range 0-1e8.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent",
+          "descr": "Estimated completeness of the assembled genome, expressed as percent and derived from post-assembly quality assessment; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent",
+          "descr": "Estimated contamination of the assembled genome, expressed as percent and derived from post-assembly quality assessment; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_status",
+          "descr": "Qualitative status of the computed genome assembly, indicating whether it is usable for downstream biosynthetic gene cluster prediction and annotation.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "fragmented",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "assembly_storage_path",
+          "descr": "File path, repository location, or object-store URI where the assembled genome is stored after computation; provide a resolvable location such as /data/asm/genome.fasta or s3://bucket/asm.fa.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bgc_prediction": {
+      "reasoning": "The bgc_prediction node is a Process, so I included only computational settings and quality indicators for the biosynthetic gene cluster calling step. I focused on the prediction software, version, detection thresholds, input assembly linkage, and simple output counts/quality because those describe how the transformation from assembled genome to BGC calls was performed. I excluded assembled-genome intrinsic properties and the resulting BGC call details themselves, since those belong to the upstream assembled_genome and downstream bgc_annotations nodes. I also avoided the previously colliding gc_content_percent field by not repeating it here.",
+      "md_schema": [
+        {
+          "field_id": "input_assembled_genome_id",
+          "descr": "Identifier of the assembled genome submitted to the BGC prediction workflow; link this process to the assembled_genome derivative used as input.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bgc_predictor_name",
+          "descr": "Name of the biosynthetic gene cluster prediction software used for this process, recorded to support reproducibility; example: antiSMASH.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bgc_predictor_version",
+          "descr": "Software version of the BGC prediction tool used for cluster calling, recorded exactly as executed; example: 7.0.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prediction_parameters",
+          "descr": "Key non-default parameters used during BGC prediction, such as detection modes, organism type, or rule set overrides, recorded as a concise string or parameter summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_cluster_length_bp",
+          "descr": "Minimum predicted cluster length retained by the prediction workflow, measured in base pairs; typical range 100-1000000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prediction_threshold_score",
+          "descr": "Decision threshold or confidence cutoff used by the BGC caller to define a predicted cluster, recorded as the score threshold or equivalent model cutoff.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predicted_bgc_count",
+          "descr": "Number of biosynthetic gene clusters predicted from the assembled genome by the end of the prediction process; integer count at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "high_confidence_bgc_count",
+          "descr": "Number of predicted biosynthetic gene clusters that met the workflow's high-confidence criteria after prediction, counted at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bgc_prediction_success_flag",
+          "descr": "Indicator of whether the BGC prediction workflow completed successfully and generated cluster calls suitable for downstream mapping and annotation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "bgc_annotations": {
+      "reasoning": "The bgc_annotations node is a Derivative, so I included only computed properties of the predicted biosynthetic gene clusters themselves: cluster identity, genomic span, class/type, gene count, confidence, and storage location. I excluded prediction software parameters because those belong to bgc_prediction, and I excluded later mapping or gene-level function details because those belong to cluster_mapping and gene_annotation/gene_functions. I also avoided repeating any upstream genome metrics or previously colliding fields, keeping the node focused on the BGC call output.",
+      "md_schema": [
+        {
+          "field_id": "bgc_annotation_id",
+          "descr": "Unique identifier for the predicted biosynthetic gene cluster annotation record; use a stable string such as BGC-001 or CLUSTER_ISO-001_01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_assembled_genome_id",
+          "descr": "Identifier of the assembled genome from which this biosynthetic gene cluster was predicted, enabling traceability to the input derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_id",
+          "descr": "Cluster label assigned to the predicted BGC within the source genome, such as region001 or cluster_5, used to distinguish multiple calls from the same assembly.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_start_bp",
+          "descr": "Start coordinate of the predicted biosynthetic gene cluster on the assembled genome, measured in base pairs from the assembly coordinate system; typical range 1-1e10.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_end_bp",
+          "descr": "End coordinate of the predicted biosynthetic gene cluster on the assembled genome, measured in base pairs from the assembly coordinate system; typical range 1-1e10.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_length_bp",
+          "descr": "Total genomic span of the predicted biosynthetic gene cluster, calculated from start and end coordinates and reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bgc_class",
+          "descr": "Broad biosynthetic class assigned to the predicted cluster, describing the major chemical scaffold or biosynthetic family inferred from the annotation.",
+          "type": "categorical",
+          "allowed_values": [
+            "nrps",
+            "pkS",
+            "terpene",
+            "ripp",
+            "betalactam",
+            "siderophore",
+            "lantipeptide",
+            "alkaloid",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "gene_count",
+          "descr": "Number of genes or CDS features included within the predicted biosynthetic gene cluster region, counted from the annotation output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prediction_confidence",
+          "descr": "Confidence score or qualitative confidence assigned to the predicted BGC call, representing the reliability of the computed cluster annotation; if a numeric score is used, record it consistently across the dataset.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_status",
+          "descr": "Qualitative status of the BGC annotation record after derivation, indicating whether the call is complete, partial, or uncertain for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "uncertain",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "bgc_annotation_storage_path",
+          "descr": "File path, repository location, or object-store URI where the BGC annotation output is stored; provide a resolvable location such as /results/bgc.tsv or s3://bucket/bgc.json.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "cluster_mapping": {
+      "reasoning": "The cluster_mapping node is a Process, so I included only computational mapping parameters and mapping-quality outputs for placing predicted BGCs onto genome coordinates. I focused on the input annotation linkage, mapping software/version, coordinate handling, overlap criteria, and simple mapping success/coverage indicators that describe how the mapping was performed. I excluded the underlying BGC call properties because those belong to bgc_annotations, and I excluded the resulting mapped coordinates themselves because those belong to the downstream cluster_locations Derivative node. No already_generated fields were provided for this turn, so there were no duplicate-field constraints beyond the node boundary.",
+      "md_schema": [
+        {
+          "field_id": "input_bgc_annotation_id",
+          "descr": "Identifier of the predicted BGC annotation record used as input to the mapping workflow; link this process to the bgc_annotations derivative being placed on genomic coordinates.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_software_name",
+          "descr": "Name of the software or script used to map biosynthetic gene clusters to genomic coordinates, recorded for reproducibility; example: Biopython.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_software_version",
+          "descr": "Software version of the mapping tool used in this process, recorded exactly as executed; example: 1.83.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coordinate_system",
+          "descr": "Genome coordinate convention used for the mapping step, describing whether coordinates are 1-based inclusive or another standard.",
+          "type": "categorical",
+          "allowed_values": [
+            "1_based_inclusive",
+            "0_based_half_open",
+            "other"
+          ]
+        },
+        {
+          "field_id": "overlap_threshold_bp",
+          "descr": "Minimum number of base pairs of overlap required to assign a cluster to a mapped genomic interval, measured as an integer threshold used in the mapping process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_method",
+          "descr": "Operational method used to project BGC annotations onto genome coordinates, describing the algorithmic approach rather than the biological content.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_match",
+            "interval_overlap",
+            "feature_join",
+            "sequence_alignment",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mapped_cluster_count",
+          "descr": "Number of biosynthetic gene clusters successfully mapped to genomic coordinates by the end of the mapping process; integer count recorded at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mapping_success_flag",
+          "descr": "Indicator of whether the cluster-to-genome coordinate mapping completed successfully and yielded usable genomic location assignments.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "cluster_locations": {
+      "reasoning": "The cluster_locations node is a Derivative, so I kept only output-side location descriptors that were not previously generated elsewhere in the DAG and avoided the colliding coordinate fields cluster_start_bp, cluster_end_bp, and cluster_length_bp. I retained unique location identity, source linkage, contig assignment, strand, confidence, status, and storage path because these still describe the computed genomic location artifact without duplicating earlier BGC or mapping metadata. I excluded mapping software parameters because they belong to cluster_mapping, and I excluded BGC class/identity details because they belong to bgc_annotations.",
+      "md_schema": [
+        {
+          "field_id": "cluster_location_id",
+          "descr": "Unique identifier for the genomic location record assigned to a predicted biosynthetic gene cluster; use a stable string such as LOC-001 or BGC_ISO-001_01_LOC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_bgc_annotation_id",
+          "descr": "Identifier of the predicted BGC annotation record from which this genomic location was derived, enabling traceability to the source cluster call.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_id",
+          "descr": "Identifier of the contig or scaffold on which the biosynthetic gene cluster is located, as reported in the assembled genome coordinate system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_strand",
+          "descr": "Strand orientation of the mapped biosynthetic gene cluster on the contig or scaffold, recorded as the final coordinate assignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "plus",
+            "minus",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "location_confidence",
+          "descr": "Confidence or support score for the mapped genomic location of the biosynthetic gene cluster, representing the reliability of the coordinate assignment.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "location_status",
+          "descr": "Qualitative status of the mapped cluster location after derivation, indicating whether the coordinates are complete, partial, or uncertain for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "uncertain",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cluster_location_storage_path",
+          "descr": "File path, repository location, or object-store URI where the cluster location output is stored; provide a resolvable location such as /results/cluster_locations.tsv or s3://bucket/locations.json.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "gene_annotation": {
+      "reasoning": "The gene_annotation node is a Process, so I included only computational annotation settings and process-level outputs for assigning functions to individual genes within BGCs. I focused on the input linkage, annotation software/version, database choice, cutoffs, and summary quality indicators that describe how the gene-level functional annotation was performed. I excluded BGC discovery and mapping fields because those belong upstream to bgc_annotations and cluster_locations, and I excluded the final gene function records themselves because those belong to the downstream gene_functions Derivative node. I also avoided the previously colliding cluster_start_bp, cluster_end_bp, and cluster_length_bp fields by not repeating any coordinate fields here.",
+      "md_schema": [
+        {
+          "field_id": "input_cluster_location_id",
+          "descr": "Identifier of the mapped cluster location record used as input to the gene annotation workflow; link this process to the cluster_locations derivative being functionally annotated.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_software_name",
+          "descr": "Name of the gene annotation software used to assign functions within biosynthetic gene clusters, recorded for reproducibility; example: Prokka.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_software_version",
+          "descr": "Software version of the gene annotation tool used in this process, recorded exactly as executed; example: 1.14.6.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference database used to support functional annotation of genes within the biosynthetic gene clusters, reported by name or release; examples include UniProt, Pfam, or custom HMM sets.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identity_threshold_percent",
+          "descr": "Minimum sequence identity threshold applied during functional annotation, expressed as percent identity and used as a process parameter; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coverage_threshold_percent",
+          "descr": "Minimum alignment coverage threshold applied during functional annotation, expressed as percent and used as a process parameter; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotated_gene_count",
+          "descr": "Number of genes within the input cluster region that received a functional annotation by the end of the gene annotation process; integer count at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hypothetical_gene_count",
+          "descr": "Number of genes within the input cluster region that remained annotated as hypothetical or uncharacterized after the annotation process; integer count at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_success_flag",
+          "descr": "Indicator of whether the gene annotation workflow completed successfully and generated usable gene-level functional assignments.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "gene_functions": {
+      "reasoning": "The gene_functions node is a Derivative, so I included only computed gene-level output properties: record identity, source linkage, gene identifier, predicted function, confidence, evidence, and storage location. I kept the schema focused on the final functional assignments rather than the annotation software or database, because those belong to the gene_annotation process. I also avoided coordinate fields and any upstream cluster-location identifiers that were already colliding in prior steps, keeping the node strictly about the gene-function result table.",
+      "md_schema": [
+        {
+          "field_id": "gene_function_id",
+          "descr": "Unique identifier for the gene function record assigned to a gene within a biosynthetic gene cluster; use a stable string such as GFUNC-001 or GENE_ISO-001_05.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_cluster_location_id",
+          "descr": "Identifier of the mapped cluster location record from which this gene function assignment was derived, enabling traceability to the cluster context.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_id",
+          "descr": "Identifier of the gene or CDS feature within the biosynthetic gene cluster receiving the functional assignment, as reported by the genome annotation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predicted_function",
+          "descr": "Computed functional assignment for the gene, such as enzyme class, transporter, regulator, or biosynthetic enzyme role, derived from annotation output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "function_confidence",
+          "descr": "Confidence score or qualitative confidence assigned to the functional annotation of the gene, representing reliability of the computed assignment.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_type",
+          "descr": "Main evidence used to support the gene function assignment, such as homology, conserved domain, motif, or manual curation.",
+          "type": "categorical",
+          "allowed_values": [
+            "homology",
+            "domain_match",
+            "motif_match",
+            "manual_curation",
+            "synteny",
+            "other"
+          ]
+        },
+        {
+          "field_id": "annotation_source",
+          "descr": "Primary annotation source used for the gene-level assignment, such as the database, pipeline output, or curated rule set that informed the predicted function.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_function_status",
+          "descr": "Qualitative status of the gene function record after derivation, indicating whether the assignment is complete, partial, uncertain, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "uncertain",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "gene_function_storage_path",
+          "descr": "File path, repository location, or object-store URI where the gene function output is stored; provide a resolvable location such as /results/gene_functions.tsv or s3://bucket/gene_functions.json.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "antibiotic_induction": {
+      "reasoning": "The antibiotic_induction node is a Process, so I included only cultivation and induction parameters that define how antibiotic biosynthesis was stimulated in the cultured strain. I focused on the input culture linkage, induction medium and supplements, stress or elicitor conditions, incubation settings, and a simple success indicator because these describe the transformation from cultured_isolates to antibiotic_production_culture. I excluded chemical characterization, LC-MS/MS settings, and metabolite outputs because those belong to downstream capture/signal/derivative nodes. No already_generated fields were provided in this turn, so there were no duplicate-field constraints beyond the process boundary.",
+      "md_schema": [
+        {
+          "field_id": "input_cultured_isolate_id",
+          "descr": "Identifier of the cultured bacterial isolate used as input to the antibiotic induction workflow; link this process to the cultured_isolates entity being stimulated for metabolite production.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_medium",
+          "descr": "Culture medium used during antibiotic induction, reported by name or formulation; examples include ISP2, R5A, or specialized production media.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_supplement",
+          "descr": "Chemical supplement, elicitor, or nutrient amendment added to stimulate antibiotic biosynthesis during induction; examples include sodium butyrate, rare earth elements, or specific precursors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_temperature_celsius",
+          "descr": "Incubation temperature used during antibiotic induction, measured in degrees Celsius at the cultivation stage; typical range 4-45.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_duration_hours",
+          "descr": "Duration of the induction cultivation used to stimulate antibiotic production, measured in hours from inoculation or elicitor addition to harvest; typical range 1-1000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_shaking_speed_rpm",
+          "descr": "Orbital shaking speed used during the induction culture, measured in revolutions per minute when agitation was applied; typical range 0-400.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "induction_trigger_type",
+          "descr": "Primary strategy used to trigger antibiotic biosynthesis in the culture, describing the main induction mode applied during the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "nutrient_shift",
+            "chemical_elicitor",
+            "stress_induction",
+            "co_culture",
+            "time_course",
+            "other"
+          ]
+        },
+        {
+          "field_id": "antibiotic_induction_success_flag",
+          "descr": "Indicator of whether the induction workflow produced a culture judged suitable for downstream chemical characterization and antibiotic detection.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "antibiotic_production_culture": {
+      "reasoning": "The antibiotic_production_culture node is an Entity, so I kept only intrinsic properties of the induced production culture itself and excluded induction protocol, capture, and signal details. I retained identity, provenance, cultivation state, harvest volume, storage, and contamination-related status because these describe the culture material after induction. I removed biomass_yield_mg because it was reported as already generated elsewhere in the DAG and would collide semantically and by field id. No other already_generated fields were provided in this turn, so the remaining schema avoids duplicates while staying within the entity scope.",
+      "md_schema": [
+        {
+          "field_id": "production_culture_id",
+          "descr": "Unique identifier for the antibiotic production culture entity; use a stable string such as APC-001 or CUL-001_PROD.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_cultured_isolate_id",
+          "descr": "Identifier of the cultured isolate from which this production culture was generated, linking the induced culture back to the original isolate entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "production_state",
+          "descr": "Operational state of the culture at the time of antibiotic production harvest, describing whether the culture was in the intended induction phase or otherwise prepared for extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "induced",
+            "pre_induction",
+            "post_induction",
+            "harvested",
+            "other"
+          ]
+        },
+        {
+          "field_id": "harvest_volume_ml",
+          "descr": "Total culture volume harvested from the antibiotic production culture at the time of downstream chemical extraction, measured in milliliters; typical range 0.1-10000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_status",
+          "descr": "Assessment of whether the antibiotic production culture remained free of obvious contamination before chemical characterization.",
+          "type": "categorical",
+          "allowed_values": [
+            "clean",
+            "suspect_contamination",
+            "contaminated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Description of how the production culture was held prior to chemical capture, such as fresh, refrigerated, frozen, or cryopreserved.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "cryopreserved",
+            "lyophilized",
+            "other"
+          ]
+        }
+      ]
+    },
+    "metabolite_capture": {
+      "reasoning": "The metabolite_capture node is a Capture node, so I included only the measurement-session and instrument-configuration fields for LC-MS/MS acquisition of culture extracts. I focused on hardware identity, method configuration, ionization and scan settings, chromatographic setup, and run-level acquisition quality because those describe how the chemical signal was captured. I excluded sample/culture properties because those belong to antibiotic_production_culture, and I excluded file-level properties and interpretation because those belong to raw_metabolite_signal and downstream antibiotic_id. I also avoided the previously colliding biomass_yield_mg field by not repeating it here.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the LC-MS/MS instrument used for this capture session; describe the hardware vendor operating the chemical measurement system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the LC-MS/MS instrument used to acquire the raw metabolite signal, recorded for the capture session; example: Q Exactive, Triple Quad 6500, or Orbitrap Exploris.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Instrument serial number of the LC-MS/MS system used for this run, recorded to uniquely identify the capture hardware; use the exact manufacturer serial string when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ionization_mode",
+          "descr": "Ionization mode configured for the LC-MS/MS capture session, describing the source polarity used to acquire the metabolite signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "alternating",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "mass_range_mz",
+          "descr": "Mass-to-charge range scanned during LC-MS/MS acquisition, recorded as the lower and upper m/z bounds used for the capture session; typical values depend on instrument configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lc_column_name",
+          "descr": "Liquid chromatography column used during metabolite capture, reported by name, chemistry, and dimensions when available; this describes the instrument setup rather than the sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lc_flow_rate_ml_per_min",
+          "descr": "Liquid chromatography flow rate used during the capture run, measured in milliliters per minute; typical range 0.01-5.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gradient_duration_minutes",
+          "descr": "Length of the LC gradient program used during the capture session, measured in minutes from injection to final elution; typical range 1-240.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms_resolution",
+          "descr": "Mass spectrometer resolving power configured for the acquisition, recorded as the instrument setting used to collect the raw signal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_run_date",
+          "descr": "Date on which the LC-MS/MS capture session was initiated or completed, recorded in YYYY-MM-DD format.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_success_flag",
+          "descr": "Indicator of whether the metabolite capture session completed successfully and produced raw signals suitable for downstream identification.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_metabolite_signal": {
+      "reasoning": "The raw_metabolite_signal node is a Signal node, so I kept only file-level technical properties of the raw LC-MS/MS artefact while avoiding field ids that were already used elsewhere in the DAG. Because file_format, file_size_bytes, and storage_path were reported as collisions, I replaced them with non-colliding signal-specific alternatives that still describe the raw data product: vendor-specific file type, acquisition file count, and repository URI. I excluded capture settings and downstream chemical interpretation, since those belong to metabolite_capture and antibiotic_id respectively.",
+      "md_schema": [
+        {
+          "field_id": "raw_metabolite_signal_id",
+          "descr": "Unique identifier for the raw LC-MS/MS signal file or file set produced by the metabolite capture run; use a stable string such as MSRAW-001 or RUN123_MET.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "vendor_raw_file_type",
+          "descr": "Vendor or export file type of the raw chemical signal artefact at the signal level; examples include Thermo RAW, mzML, or mzXML.",
+          "type": "categorical",
+          "allowed_values": [
+            "vendor_raw",
+            "mzml",
+            "mzxml",
+            "netcdf",
+            "other"
+          ]
+        },
+        {
+          "field_id": "acquisition_file_count",
+          "descr": "Number of raw acquisition files included in this metabolite signal record, counted after capture and before downstream interpretation; typical range 1-1000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "scan_count",
+          "descr": "Total number of MS scans contained in the raw signal file, counted from the acquired LC-MS/MS run before any preprocessing or peak picking; typical range 1-1e9.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chromatogram_length_minutes",
+          "descr": "Total chromatographic run length represented by the raw signal file, measured in minutes from injection to final acquisition point; typical range 0.1-240.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_signal_to_noise",
+          "descr": "Average signal-to-noise ratio across the raw chromatographic/mass spectrometric readout, computed as a technical quality metric before downstream interpretation; typical range 0-1000.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tic_area",
+          "descr": "Total ion chromatogram area calculated from the raw signal file, used as a technical abundance summary of the acquisition; typical range 0-1e15.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_repository_uri",
+          "descr": "File path, object-store URI, or repository location where the raw metabolite signal is stored after acquisition; provide a resolvable location such as /data/ms/raw.mzML or s3://bucket/ms.raw.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "antibiotic_id": {
+      "reasoning": "The antibiotic_id node is a Process, so I included only computational interpretation parameters and result-level summaries for converting raw metabolite signals into identified antibiotic features. I focused on the input signal linkage, software/version, feature-finding and identification settings, reference library choice, and simple identification success metrics because those describe how the interpretation was performed. I excluded raw signal file properties because those belong to raw_metabolite_signal, and I excluded the identified antibiotic records themselves because those belong to the downstream identified_antibiotics Derivative node. I also avoided previously colliding file_format, file_size_bytes, and storage_path fields by not repeating them here.",
+      "md_schema": [
+        {
+          "field_id": "input_raw_metabolite_signal_id",
+          "descr": "Identifier of the raw metabolite signal dataset used as input to the antibiotic identification workflow; link this process to the raw_metabolite_signal signal being interpreted.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identification_software_name",
+          "descr": "Name of the software used to interpret the raw chemical signal and identify antibiotic-related features, recorded for reproducibility; example: MZmine.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identification_software_version",
+          "descr": "Software version of the antibiotic identification tool used in this process, recorded exactly as executed; example: 3.0.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_detection_parameters",
+          "descr": "Key non-default parameters used for feature detection and deconvolution during chemical signal interpretation, recorded as a concise string or parameter summary.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_or_database_name",
+          "descr": "Reference library, spectral database, or compound repository used to support antibiotic identification, reported by name or release; examples include GNPS, MassBank, or in-house libraries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matching_tolerance_ppm",
+          "descr": "Mass tolerance used when matching observed features to reference compounds, expressed in parts per million and applied during the identification process; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matched_compound_count",
+          "descr": "Number of antibiotic candidate compounds matched or annotated from the raw metabolite signal by the end of the identification process; integer count at process completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unique_feature_count",
+          "descr": "Number of distinct chromatographic or mass spectral features retained after identification, counted at process completion as a summary of the interpreted signal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "antibiotic_identification_success_flag",
+          "descr": "Indicator of whether the chemical signal interpretation completed successfully and produced usable antibiotic identifications for downstream analysis.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "identified_antibiotics": {
+      "reasoning": "The identified_antibiotics node is a Derivative, so I included only computed compound-level outputs: record identity, source signal linkage, compound name/class, mass and retention descriptors, confidence, novelty flag, and storage location. I excluded identification software settings because those belong to antibiotic_id, and I excluded raw signal file properties because those belong to raw_metabolite_signal. I also avoided reusing any previously colliding file metadata fields by keeping the schema specific to the identified compound table.",
+      "md_schema": [
+        {
+          "field_id": "identified_antibiotic_id",
+          "descr": "Unique identifier for the identified antibiotic compound record; use a stable string such as ABX-001 or COMPUND_ISO-001_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_raw_metabolite_signal_id",
+          "descr": "Identifier of the raw metabolite signal dataset from which this antibiotic identification was derived, enabling traceability to the chemical evidence.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compound_name",
+          "descr": "Name or best available annotation for the identified antibiotic compound, reported as the computed compound label from the identification workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compound_class",
+          "descr": "Broad chemical class assigned to the identified antibiotic, such as peptide, polyketide, lipopeptide, or alkaloid, based on the computed identification.",
+          "type": "categorical",
+          "allowed_values": [
+            "peptide",
+            "polyketide",
+            "lipopeptide",
+            "alkaloid",
+            "glycoside",
+            "terpenoid",
+            "siderophore",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "precursor_mz",
+          "descr": "Observed precursor ion mass-to-charge ratio for the identified compound, recorded from the raw metabolite evidence and reported as m/z.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retention_time_minutes",
+          "descr": "Observed chromatographic retention time associated with the identified compound, measured in minutes from the LC-MS/MS run.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identification_confidence",
+          "descr": "Confidence score or qualitative confidence assigned to the antibiotic identification, representing the reliability of the computed compound assignment.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "novelty_status",
+          "descr": "Qualitative novelty assessment for the identified antibiotic, indicating whether it is known, putative, or novel based on the interpretation workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "known",
+            "putative_known",
+            "novel",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "identification_status",
+          "descr": "Qualitative status of the antibiotic identification record after derivation, indicating whether the call is complete, partial, uncertain, or failed.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "uncertain",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "identified_antibiotic_storage_path",
+          "descr": "File path, repository location, or object-store URI where the identified antibiotic output is stored; provide a resolvable location such as /results/identified_antibiotics.tsv or s3://bucket/abx.json.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "integrated_analysis": {
+      "reasoning": "The integrated_analysis node is a Process, so I included only the computational integration settings and summary outputs that describe how genomic and chemical results were combined to infer biosynthetic relationships and novelty. I focused on the input linkage fields, integration software/runtime, matching logic, and high-level result counts/quality because those define the operation performed at this stage. I excluded raw genomic, gene, and chemical output properties because those belong to upstream derivative nodes, and I excluded the final table structure itself because that belongs to the downstream metadata_table Derivative node. No already_generated fields were provided in this turn, so there were no duplicate-field constraints beyond the process boundary.",
+      "md_schema": [
+        {
+          "field_id": "input_bgc_annotations_id",
+          "descr": "Identifier of the BGC annotation dataset used as input to the integrated analysis, linking the process to the predicted cluster calls.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_cluster_locations_id",
+          "descr": "Identifier of the cluster location dataset used as input to the integrated analysis, linking the process to genomic coordinates for the predicted clusters.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_gene_functions_id",
+          "descr": "Identifier of the gene function dataset used as input to the integrated analysis, linking the process to gene-level functional assignments within the clusters.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_identified_antibiotics_id",
+          "descr": "Identifier of the identified antibiotic dataset used as input to the integrated analysis, linking the process to the chemical product calls.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_name",
+          "descr": "Name of the software environment or script used to perform the integrated genome-chemistry analysis, recorded for reproducibility; example: R.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the integration software or runtime used in the analysis, recorded exactly as executed; example: 4.4.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matching_strategy",
+          "descr": "Primary strategy used to link genomic biosynthetic clusters to chemical products during integration, describing the logic applied to infer relationships.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_match",
+            "correlation_based",
+            "cooccurrence",
+            "rule_based",
+            "manual_curation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "novelty_inference_method",
+          "descr": "Method used to infer novelty of the integrated biosynthetic relationship or compound, recorded as the high-level approach used by the analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based",
+            "similarity_threshold",
+            "network_analysis",
+            "manual_curation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "linked_cluster_count",
+          "descr": "Number of BGCs successfully linked to chemical products by the end of the integrated analysis, counted as a process output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "novel_association_count",
+          "descr": "Number of inferred novel genome-to-chemical associations identified by the integration workflow, counted as a process summary output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_success_flag",
+          "descr": "Indicator of whether the integrated genome-chemistry analysis completed successfully and generated results suitable for metadata table construction.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "The metadata_table node is a Derivative, so I included only computed dataset-table properties that describe the final assembled metadata product itself: table identity, source linkage to the integration output, row/column counts, format, curation status, and storage location. I excluded biological or analytical content from upstream nodes because the table is a containerized summary artifact rather than a new scientific result. I also avoided reusing any colliding file-level fields from raw signals, keeping the schema specific to the final metadata deliverable.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_id",
+          "descr": "Unique identifier for the final structured metadata table; use a stable string such as META-001 or DATASET_TABLE_v1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_integrated_analysis_id",
+          "descr": "Identifier of the integrated analysis output from which this metadata table was compiled, enabling traceability to the upstream derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_format",
+          "descr": "File or table format of the final metadata deliverable, reported as the storage/serialization format used for distribution.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of data rows in the final metadata table at the time of release, counted after compilation and curation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns in the final metadata table at the time of release, counted after schema compilation and curation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_version",
+          "descr": "Version label for the metadata table release, used to distinguish successive curated exports of the dataset table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "curation_status",
+          "descr": "Qualitative status of the metadata table after compilation, indicating whether it is draft, curated, or finalized for release.",
+          "type": "categorical",
+          "allowed_values": [
+            "draft",
+            "curated",
+            "final",
+            "deprecated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "metadata_table_storage_path",
+          "descr": "File path, repository location, or object-store URI where the final metadata table is stored; provide a resolvable location such as /results/metadata_table.tsv or s3://bucket/metadata.xlsx.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

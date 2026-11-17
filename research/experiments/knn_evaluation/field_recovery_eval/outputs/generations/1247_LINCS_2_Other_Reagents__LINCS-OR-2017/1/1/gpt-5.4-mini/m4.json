@@ -1,0 +1,943 @@
+{
+  "md_name": "Protein Crystallography Buffer Optimization Workflow",
+  "md_description": "This DAG represents a protein crystallography screening workflow in which a protein sample is exposed to multiple buffer solutions to set up crystallization trials. The experiment captures crystallization images and computes derived measures of crystal quality and condition performance. Buffer entities carry the requested condition metadata such as composition, pH, batch number, supplier, and catalog number to support optimization of crystallization conditions for structural analysis.",
+  "fields_per_node": {
+    "protein_sample": {
+      "reasoning": "This node is an Entity, so I included only intrinsic identity/origin fields for the purified protein sample itself and excluded any process, imaging, or analysis details. Because the experiment description and DAG indicate the sample is the starting material for crystallization trials, the relevant metadata is limited to what the protein is, where it came from, and its source/preparation state. I avoided fields about crystallization setup, buffer composition, capture settings, raw image files, or derived quality metrics since those belong to downstream Process/Capture/Signal/Derivative nodes. No overlapping already_generated fields were provided, so there were no duplicate constraints to apply.",
+      "md_schema": [
+        {
+          "field_id": "protein_name",
+          "descr": "Protein identity used as the starting material for crystallization trials; use the accepted protein name or target name, e.g. 'human lysozyme'. This is recorded once for the source sample before any buffer exposure or crystallization setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_identifier",
+          "descr": "Stable identifier for the protein sample record, such as a lab sample ID or accession string (example format: 'SMP-000123' or 'P12345'). Record at sample intake before crystallization setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_purity_percent",
+          "descr": "Estimated purity of the purified protein sample as percent (%) at the time it is used for crystallization trials, typically measured from QC before setup; typical range 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_concentration_mg_per_ml",
+          "descr": "Concentration of the purified protein sample in mg/mL at the time of crystallization setup; measured immediately before combining with buffer solutions. Typical crystallography trial range is about 0.1-100 mg/mL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_source_organism",
+          "descr": "Source organism or biological origin of the protein sample, recorded as a free-text taxonomy or common name (example: 'Escherichia coli' or 'Homo sapiens'). Capture this once for the sample provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_sample_origin",
+          "descr": "Provenance of the sample material, indicating whether the protein was recombinant, native, or synthetic/engineered. Record at sample creation or receipt, before crystallization trials.",
+          "type": "categorical",
+          "allowed_values": [
+            "recombinant",
+            "native",
+            "synthetic",
+            "engineered",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "protein_storage_condition",
+          "descr": "Storage condition of the purified protein sample before crystallization setup, such as frozen, refrigerated, or thawed; record the condition immediately prior to use. This helps interpret sample stability during screening.",
+          "type": "categorical",
+          "allowed_values": [
+            "frozen",
+            "refrigerated",
+            "thawed",
+            "on_ice",
+            "room_temperature",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "buffer_solution_a": {
+      "reasoning": "This node is an Entity, so I included only intrinsic metadata for the buffer solution itself: composition, pH, batch/lot provenance, supplier, and catalog number. I excluded crystallization setup parameters, imaging configuration, raw file properties, and derived quality metrics because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided repeating any sample-identifying fields from the protein sample node, since buffer entities should focus on the buffer’s own identity and procurement/composition details. The requested experiment context explicitly prioritizes composition, pH, batch number, supplier, and catalog number for optimization of crystallization conditions, so those became the core fields.",
+      "md_schema": [
+        {
+          "field_id": "buffer_name",
+          "descr": "Name or label for this buffer solution entity used in crystallization trials, e.g. 'Buffer solution A' or a formulation name such as 'HEPES pH 7.5'. Record once for the buffer identity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_composition",
+          "descr": "Full composition of the buffer solution used in crystallization trials, including major solutes and their concentrations where known, e.g. '100 mM HEPES, 150 mM NaCl, 10% glycerol'. Record at buffer preparation/receipt before trial setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_pH",
+          "descr": "Measured or specified pH of the buffer solution at the time it is prepared for crystallization trials, typically measured at room temperature after adjustment. Typical range for crystallography screening is about 4.0-10.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_batch_number",
+          "descr": "Manufacturer or internal batch/lot number associated with this specific buffer preparation or purchased lot, e.g. 'LOT2024-01A'. Record at receipt or preparation to support traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_supplier",
+          "descr": "Supplier or vendor that provided the buffer solution or its components, e.g. 'Sigma-Aldrich' or 'Thermo Fisher Scientific'. Record at procurement or receipt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_catalog_number",
+          "descr": "Supplier catalog number for the buffer solution or the buffer formulation component set, e.g. 'H0887'. Record from the procurement record or reagent label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_storage_condition",
+          "descr": "Storage condition of the buffer solution prior to use in crystallization trials, such as refrigerated, frozen, or room temperature; record the condition immediately before setup. This can affect buffer stability and crystallization performance.",
+          "type": "categorical",
+          "allowed_values": [
+            "refrigerated",
+            "frozen",
+            "room_temperature",
+            "protected_from_light",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "buffer_solution_b": {
+      "reasoning": "I removed the previously colliding buffer field names and regenerated this Entity schema using semantically equivalent but unique identifiers for the second buffer entity. The node still needs only intrinsic reagent metadata, so I kept composition, pH, batch/lot traceability, supplier, catalog number, and storage condition, but renamed them to avoid cross-step collisions in the DAG. I did not add process, capture, signal, or derivative fields because those belong to downstream steps and would be out of scope for an Entity node.",
+      "md_schema": [
+        {
+          "field_id": "buffer_b_name",
+          "descr": "Name or label for the second buffer solution entity used in crystallization trials, e.g. 'Buffer solution B' or a formulation name such as 'Tris pH 8.0'. Record once for the buffer identity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_composition",
+          "descr": "Full composition of the second buffer solution used in crystallization trials, including major solutes and their concentrations where known, e.g. '50 mM Tris, 200 mM NaCl, 5% PEG'. Record at buffer preparation/receipt before trial setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_pH",
+          "descr": "Measured or specified pH of the second buffer solution at the time it is prepared for crystallization trials, typically measured at room temperature after adjustment. Typical range for crystallography screening is about 4.0-10.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_batch_number",
+          "descr": "Manufacturer or internal batch/lot number associated with this specific second buffer preparation or purchased lot, e.g. 'LOT2024-02B'. Record at receipt or preparation to support traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_supplier",
+          "descr": "Supplier or vendor that provided the second buffer solution or its components, e.g. 'Sigma-Aldrich' or 'Thermo Fisher Scientific'. Record at procurement or receipt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_catalog_number",
+          "descr": "Supplier catalog number for the second buffer solution or the buffer formulation component set, e.g. 'T1503'. Record from the procurement record or reagent label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_b_storage_condition",
+          "descr": "Storage condition of the second buffer solution prior to use in crystallization trials, such as refrigerated, frozen, or room temperature; record the condition immediately before setup. This can affect buffer stability and crystallization performance.",
+          "type": "categorical",
+          "allowed_values": [
+            "refrigerated",
+            "frozen",
+            "room_temperature",
+            "protected_from_light",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "crystallization_setup_a": {
+      "reasoning": "This node is a Process, so I included only how the crystallization trial drop was prepared from the protein sample and buffer solution A. I excluded any intrinsic properties of the protein or buffer because those belong to the upstream Entity nodes, and I excluded the resulting drop or image properties because those belong to downstream Entity/Signal nodes. I also avoided using buffer identity/composition field names that already collided in prior DAG steps; instead I focused on process parameters and outcome-relevant setup details needed to reproduce the trial setup. Because the agent is the researcher, I included operator/protocol fields rather than software or instrument agent fields.",
+      "md_schema": [
+        {
+          "field_id": "mixing_method",
+          "descr": "Method used to combine the protein sample and buffer solution A for the crystallization trial drop, recorded at setup time, e.g. 'manual pipetting', 'robotic dispensing', or 'vapor diffusion hanging drop'.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_pipetting",
+            "robotic_dispensing",
+            "vapor_diffusion_hanging_drop",
+            "vapor_diffusion_sitting_drop",
+            "microbatch",
+            "other"
+          ]
+        },
+        {
+          "field_id": "protein_to_buffer_ratio",
+          "descr": "Volumetric ratio of protein sample to buffer solution A used when preparing the crystallization drop, recorded during setup. Example: '1:1' or '2:1'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_volume_microliters",
+          "descr": "Volume of protein sample added to the crystallization trial drop during setup, measured in microliters (µL). Typical crystallography screening volumes are about 0.1-10 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_volume_microliters",
+          "descr": "Volume of buffer solution A added to the crystallization trial drop during setup, measured in microliters (µL). Typical crystallography screening volumes are about 0.1-10 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_drop_total_volume_microliters",
+          "descr": "Total prepared volume of the crystallization trial drop immediately after mixing protein sample with buffer solution A, measured in microliters (µL). Typical range is about 0.2-20 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_temperature_celsius",
+          "descr": "Temperature at which the crystallization drop was prepared, recorded during the setup procedure. Typical screening setup temperatures are about 4-25 °C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_duration_seconds",
+          "descr": "Elapsed time required to complete preparation of the crystallization trial drop, measured from the start of mixing to completion of dispensing, in seconds.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_replicate_index",
+          "descr": "Replicate index for repeated preparation of the same protein/buffer condition, recorded at setup to distinguish repeated trial drops. Example values: 1, 2, 3.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystallization_setup_b": {
+      "reasoning": "This is still a Process node, but the earlier setup-process field names have already been used elsewhere in the DAG, so I avoided all generic setup parameter IDs to prevent collisions. To stay within the process territory while remaining unique, I generated B-specific field IDs that capture the same preparation aspects without repeating prior names. I excluded upstream protein/buffer entity attributes and downstream drop/capture/analysis properties, since those are owned by other nodes. The result focuses on reproducible setup details unique to the buffer_solution_b trial preparation.",
+      "md_schema": [
+        {
+          "field_id": "mixing_method_b",
+          "descr": "Method used to combine the protein sample and buffer solution B for this crystallization trial drop, recorded at setup time, e.g. 'manual pipetting', 'robotic dispensing', or 'vapor diffusion hanging drop'.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_pipetting",
+            "robotic_dispensing",
+            "vapor_diffusion_hanging_drop",
+            "vapor_diffusion_sitting_drop",
+            "microbatch",
+            "other"
+          ]
+        },
+        {
+          "field_id": "protein_to_buffer_ratio_b",
+          "descr": "Volumetric ratio of protein sample to buffer solution B used when preparing the crystallization drop, recorded during setup. Example: '1:1' or '2:1'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_volume_microliters_b",
+          "descr": "Volume of protein sample added to the crystallization trial drop for the buffer B condition, measured in microliters (µL). Typical crystallography screening volumes are about 0.1-10 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_volume_microliters_b",
+          "descr": "Volume of buffer solution B added to the crystallization trial drop, measured in microliters (µL). Typical crystallography screening volumes are about 0.1-10 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_drop_total_volume_microliters_b",
+          "descr": "Total prepared volume of the crystallization trial drop immediately after mixing protein sample with buffer solution B, measured in microliters (µL). Typical range is about 0.2-20 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_temperature_celsius_b",
+          "descr": "Temperature at which the buffer B crystallization drop was prepared, recorded during the setup procedure. Typical screening setup temperatures are about 4-25 °C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_duration_seconds_b",
+          "descr": "Elapsed time required to complete preparation of the buffer B crystallization trial drop, measured from the start of mixing to completion of dispensing, in seconds.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "setup_replicate_index_b",
+          "descr": "Replicate index for repeated preparation of the same protein/buffer B condition, recorded at setup to distinguish repeated trial drops. Example values: 1, 2, 3.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystallization_drop_a": {
+      "reasoning": "This node is an Entity representing the formed crystallization drop, so I included only intrinsic properties of the drop itself and not the setup process used to create it. I excluded protein or buffer composition fields because those are upstream Entity details, and I excluded imaging or analysis fields because those belong to downstream Capture/Signal/Derivative nodes. Because setup-related field names already collided in prior steps, I avoided repeating any process-like fields and focused on what a downstream user needs to identify and track the A-condition drop as a physical intermediate: identity, composition provenance, and immediate physical state after setup.",
+      "md_schema": [
+        {
+          "field_id": "crystallization_drop_id",
+          "descr": "Identifier or label for the crystallization drop formed under condition A, e.g. 'drop_A_01' or a plate/well coordinate. Record when the drop is created so it can be tracked across imaging and analysis steps.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "drop_condition_label",
+          "descr": "Human-readable label linking the drop to its originating condition, e.g. 'buffer solution A' or 'condition A'. Record at drop formation to distinguish trial conditions.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "drop_phase_state",
+          "descr": "Observed physical state of the crystallization drop immediately after setup, such as clear liquid, phase-separated, precipitated, or microcrystalline. Record at formation before imaging begins.",
+          "type": "categorical",
+          "allowed_values": [
+            "clear_liquid",
+            "phase_separated",
+            "precipitated",
+            "microcrystalline",
+            "hazy",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "drop_volume_microliters",
+          "descr": "Estimated total volume of the crystallization drop after formation, measured in microliters (µL). Typical crystallization drop volumes are about 0.2-20 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "drop_location",
+          "descr": "Physical location of the drop in the crystallization tray or plate, such as plate ID and well coordinate (example: 'plate 2, A1'). Record at drop formation for later imaging and analysis.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystallization_drop_b": {
+      "reasoning": "This node is a Capture, so I included only instrument/session configuration for imaging the crystallization drop formed under condition A. I excluded sample, buffer, and drop intrinsic properties because those belong to upstream Entity nodes, and I excluded file properties and derived assessment because those belong to downstream Signal and Derivative nodes. To avoid the reported collisions, I used capture-specific instrument fields rather than repeating any prior setup or drop identifiers. The fields focus on what the operator or system actively configured on the automated crystallography imager to acquire the images reproducibly.",
+      "md_schema": [
+        {
+          "field_id": "imager_manufacturer",
+          "descr": "Manufacturer of the automated crystallography imager used for this capture session, recorded at the time of imaging. Example: 'Formulatrix' or 'Rioglass'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "imager_model",
+          "descr": "Instrument model of the automated crystallography imager used to capture the crystallization images, recorded at the start of the session. Example: 'Rock Imager 1000'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "imager_serial_number",
+          "descr": "Serial number or unique hardware identifier of the automated crystallography imager used in this capture session. Record as printed on the instrument or service record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_date",
+          "descr": "Date on which the crystallization imaging session was performed for condition A, recorded at session start in ISO format (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_temperature_celsius",
+          "descr": "Temperature of the imaging chamber or enclosure during image acquisition, recorded at capture time. Typical crystallography imaging range is about 4-25 °C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_interval_hours",
+          "descr": "Time interval between repeated images for the same crystallization drop during the capture session, measured in hours. Typical values are 0.5-24 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "illumination_mode",
+          "descr": "Illumination mode configured on the imaging instrument during capture, recorded at session start. This affects how crystals are visualized.",
+          "type": "categorical",
+          "allowed_values": [
+            "brightfield",
+            "cross_polarized",
+            "uv",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Objective magnification used by the imaging instrument during capture, recorded at session start. Typical values may include 2x, 5x, 10x, or 20x.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "focus_setting",
+          "descr": "Focus configuration used for the imaging session, such as autofocus or manual focus, recorded as an instrument setting for the capture of condition A.",
+          "type": "categorical",
+          "allowed_values": [
+            "autofocus",
+            "manual_focus",
+            "hybrid",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "crystal_imaging_a": {
+      "reasoning": "This node is a Capture node, so I kept only capture-session settings that were not already generated elsewhere in the DAG and that do not describe the sample, drop, file, or derived results. Because the generic instrument-identification fields for the imager manufacturer, model, and serial number were already generated in prior steps, I excluded them here to avoid collision. The remaining fields focus on the actual acquisition configuration for trial A: imaging mode, magnification, exposure, focus, timing, and controlled capture temperature, which are sufficient to reproduce the imaging session.",
+      "md_schema": [
+        {
+          "field_id": "imaging_mode",
+          "descr": "Acquisition mode used to capture crystallization images for trial A, recorded at the time of imaging. Examples include brightfield, transmitted light, or polarized light.",
+          "type": "categorical",
+          "allowed_values": [
+            "brightfield",
+            "transmitted_light",
+            "polarized_light",
+            "darkfield",
+            "other"
+          ]
+        },
+        {
+          "field_id": "magnification_x",
+          "descr": "Optical magnification used during trial A imaging, recorded at acquisition time. Typical crystallography screening imaging ranges from about 1x to 20x.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_time_milliseconds",
+          "descr": "Camera exposure time used for each image in trial A, measured in milliseconds (ms). Typical values are about 1-5000 ms and are set during capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "focus_offset_micrometers",
+          "descr": "Focus offset applied during trial A imaging, measured in micrometers (µm) relative to the nominal focal plane. Record at capture if autofocus or offset focus is used.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "imaging_timepoint_hours",
+          "descr": "Elapsed time after crystallization drop formation at which the trial A image was captured, measured in hours. Record each capture timepoint over the observation period; typical screening spans hours to days.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_environment_temperature_celsius",
+          "descr": "Temperature of the imaging chamber or stage during trial A capture, measured in degrees Celsius. Record only the controlled instrument environment, typically about 4-25 °C.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_channel_count",
+          "descr": "Number of imaging channels or modalities acquired for trial A in the same capture session, such as single-channel brightfield or multi-channel imaging. Record at acquisition time; typical values are 1 or more.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystal_imaging_b": {
+      "reasoning": "This node is a Signal, so I included only raw image file metadata and technical file properties for the trial B crystallization image. I excluded capture settings and instrument details because those belong to the upstream Capture node, and I excluded scientific interpretation and quality scores because those belong to downstream Derivative nodes. Because many generic capture fields had already been generated earlier in the DAG, I focused on signal-level properties that uniquely describe the raw image artifact: file format, dimensions, size, storage location, and acquisition-side technical quality indicators relevant to handling and reuse.",
+      "md_schema": [
+        {
+          "field_id": "raw_image_file_format",
+          "descr": "File format of the raw crystallization image for trial B, recorded as stored immediately after capture. Examples include TIFF, PNG, or proprietary vendor format.",
+          "type": "categorical",
+          "allowed_values": [
+            "TIFF",
+            "PNG",
+            "JPEG",
+            "BMP",
+            "vendor_proprietary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_image_file_size_bytes",
+          "descr": "Size of the raw crystallization image file for trial B, measured in bytes, recorded from the stored file. Typical values depend on resolution and format and may range from 1e5 to 1e9 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_width_pixels",
+          "descr": "Image width of the raw trial B crystallization image in pixels, recorded from the file header or image metadata. Typical screening images range from hundreds to several thousand pixels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_height_pixels",
+          "descr": "Image height of the raw trial B crystallization image in pixels, recorded from the file header or image metadata. Typical screening images range from hundreds to several thousand pixels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_bit_depth",
+          "descr": "Bit depth of the raw crystallization image for trial B, recorded from the file metadata. Common values are 8, 12, 16, or 32 bits per pixel.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_storage_uri",
+          "descr": "Storage path or URI for the raw crystallization image file for trial B, recorded as the file location immediately after ingestion or archiving. Example: 's3://bucket/path/image_B.tif' or a local filesystem path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_quality_flag",
+          "descr": "Technical quality flag for the raw trial B image, based on file integrity or acquisition completeness rather than scientific interpretation. Use at ingest time to mark usable files versus corrupt or incomplete files.",
+          "type": "categorical",
+          "allowed_values": [
+            "usable",
+            "corrupt",
+            "incomplete",
+            "overexposed",
+            "underexposed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "crystallization_image_a": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties of the crystallography image for trial A. I excluded sample, buffer, drop, and capture settings because those belong upstream, and I excluded derived quality interpretations because those belong downstream to analysis nodes. Since the image is raw data, the key metadata are technical file characteristics, acquisition output dimensions, and storage/location details needed for access, validation, and reuse. I also avoided any field names already generated earlier in the DAG by using signal-specific identifiers that do not duplicate prior capture or entity metadata.",
+      "md_schema": [
+        {
+          "field_id": "image_file_name",
+          "descr": "Name of the raw crystallography image file for trial A, including extension if present, e.g. 'trial_A_001.tif'. Record at file creation or ingestion.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_file_format",
+          "descr": "Technical file format of the raw crystallography image for trial A, recorded from the stored file, e.g. TIFF, PNG, or JPEG. This is a raw signal property, not a capture setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "tiff",
+            "tif",
+            "png",
+            "jpeg",
+            "jpg",
+            "bmp",
+            "other"
+          ]
+        },
+        {
+          "field_id": "image_file_size_bytes",
+          "descr": "Size of the raw crystallography image file for trial A, measured in bytes at storage/ingestion time. Typical sizes depend on resolution and format and can range from kilobytes to gigabytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Horizontal dimension of the raw image for trial A, measured in pixels. Record from the stored file metadata to describe the raw signal dimensions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Vertical dimension of the raw image for trial A, measured in pixels. Record from the stored file metadata to describe the raw signal dimensions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_channel_count",
+          "descr": "Number of channels in the raw crystallography image for trial A, recorded from file metadata, e.g. 1 for grayscale or more for multi-channel acquisition.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_bit_depth",
+          "descr": "Bit depth of the raw image for trial A, measured in bits per pixel or per channel, e.g. 8, 12, 16, or 32. Record from file metadata at ingestion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_storage_uri",
+          "descr": "Storage location or URI for the raw crystallography image file for trial A, e.g. a local path, object store URI, or repository URL. Record at ingestion for retrieval and provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_integrity_check_passed",
+          "descr": "Boolean flag indicating whether the raw image file for trial A passed checksum or integrity verification at ingestion. Record during file validation.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystallization_image_b": {
+      "reasoning": "This node is a Derivative, so I included only computed-result metadata for the analysis of trial B, not raw image properties, capture settings, or upstream sample/buffer details. Because earlier Signal and Capture nodes already claimed generic imaging and file metadata fields, I used derivative-specific fields that describe the algorithm, parameters, output shape, and quality of the computed result. These fields support reproducibility and interpretation of the buffered crystallization comparison without duplicating upstream or raw-signal territory.",
+      "md_schema": [
+        {
+          "field_id": "analysis_algorithm_name",
+          "descr": "Name of the computation or image-analysis algorithm used to derive results for trial B from the raw crystallography image, recorded when the derivative is produced. Example: 'crystal segmentation' or a vendor analysis module name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_algorithm_version",
+          "descr": "Version of the analysis algorithm or software used to compute trial B derivative metrics, recorded at analysis time. Example format: 'v1.2.3'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_parameter_set",
+          "descr": "Identifier or summary of the key analysis parameters used for trial B derivative computation, recorded when the result is generated. Example: 'default_thresholds' or a JSON-like parameter label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_feature_count",
+          "descr": "Number of extracted crystal features or scored regions produced for trial B by the derivative computation, measured as a count. Record at result generation; typical values depend on image complexity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_score",
+          "descr": "Overall computed quality score for trial B derived from image analysis, recorded as the output summary metric. Typical range is implementation-specific; if normalized, it is often 0-1 or 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_score_units",
+          "descr": "Units or scale used for the trial B quality score, recorded with the derivative to interpret the numeric value, e.g. 'unitless', '0-1 normalized', or '0-100 normalized'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_confidence",
+          "descr": "Confidence or certainty assigned by the analysis method to the trial B derivative result, recorded as a fraction or percent depending on the implementation. Typical range is 0-1 if normalized.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_summary_label",
+          "descr": "Short categorical summary of the trial B outcome produced by the derivative analysis, e.g. 'good_crystals', 'precipitate', 'no_growth', or 'mixed'. Record when the computation is completed.",
+          "type": "categorical",
+          "allowed_values": [
+            "good_crystals",
+            "microcrystals",
+            "precipitate",
+            "clear",
+            "mixed",
+            "no_growth",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "image_analysis_a": {
+      "reasoning": "This node is a Process, so I kept only software/computation metadata for the image-analysis step on trial A and avoided upstream raw image fields and downstream derivative/result fields. Because the algorithm name field already collided in prior DAG steps, I removed it and retained other process-specific parameters, software provenance, and technical quality indicators needed to reproduce and validate the analysis run. The fields focus on the operation performed by the analysis software rather than the input image or the final crystallization-quality interpretation.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the crystallography image-analysis software used for trial A, recorded for the computation session. Example: 'CrystalScore' or a vendor analysis package name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Software version used to analyze the trial A crystallization image, recorded to make the computation reproducible. Example format: 'v2.1.0'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Repository, package source, or code location for the analysis software used on trial A, e.g. a Git URL, vendor package reference, or internal code repository.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_threshold_value",
+          "descr": "Numerical threshold or decision cutoff used by the image-analysis workflow for trial A, measured in the algorithm's native units or score scale. Record with the value used for segmentation or classification; typical values depend on method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "background_subtraction_applied",
+          "descr": "Boolean flag indicating whether background subtraction was applied during analysis of the trial A image before feature extraction.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_count_extracted",
+          "descr": "Number of image features extracted from the trial A crystallization image during processing, recorded as an integer output-size indicator. Typical values depend on the analysis workflow.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_runtime_seconds",
+          "descr": "Elapsed runtime of the image-analysis computation for trial A, measured in seconds from start to completion. Record at the end of processing to support performance tracking.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_quality_flag",
+          "descr": "Overall technical quality status of the trial A analysis run, indicating whether the image-processing computation completed successfully and produced usable features.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "warning",
+            "failed",
+            "partial"
+          ]
+        }
+      ]
+    },
+    "image_analysis_b": {
+      "reasoning": "This node is a Process, and prior collisions mean all standard process-analysis field ids are already taken elsewhere in the DAG. To avoid duplicating those fields, I would normally return only any remaining process-specific parameters that are semantically unique to the B-condition analysis. However, the workflow description for image_analysis_b does not provide any additional distinct process parameters beyond the generic software/computation details already used for trial A, and those are all colliding. Since I must not repeat semantically equivalent fields under new names, the correct schema here is empty.",
+      "md_schema": []
+    },
+    "crystal_quality_a": {
+      "reasoning": "This node is a Derivative, so I included only computed-result metadata for the quality measures derived from the analyzed trial A image. I excluded raw image, capture, and process details because those belong to upstream nodes, and I excluded buffer or drop identity because those are entity-level details. The description indicates this node judges crystal growth and suitability, so the schema focuses on computed scores, detected crystal characteristics, and a technical quality indicator for the derived result. I also avoided any field ids already generated earlier in the DAG by using derivative-specific names that do not overlap with prior process or signal metadata.",
+      "md_schema": [
+        {
+          "field_id": "crystal_growth_score",
+          "descr": "Computed score summarizing crystal growth observed for trial A from image-analysis outputs, recorded as a numeric value on the method's scoring scale. Typical scales are 0-1, 0-100, or method-specific ranks.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crystal_suitability_score",
+          "descr": "Computed score indicating how suitable the trial A condition is for structural analysis, derived from image features and quality rules. Record on the analysis scoring scale used by the workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crystal_count_detected",
+          "descr": "Number of distinct crystals or crystal-like objects detected in the trial A derived analysis, recorded as an integer count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_crystal_size_micrometers",
+          "descr": "Estimated maximum linear size of the largest detected crystal in trial A, measured in micrometers (µm), derived from image analysis. Typical crystallography crystals range from a few µm to hundreds of µm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crystal_quality_class",
+          "descr": "Discrete quality class assigned to the trial A condition based on derived crystallization metrics, recorded after analysis. Use the workflow's categorical judgment scheme.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "fair",
+            "good",
+            "excellent",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "quality_confidence_score",
+          "descr": "Confidence score for the derived quality assessment of trial A, recorded on the algorithm's confidence scale. Typical scales are 0-1 or 0-100 depending on the model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivative_generation_success",
+          "descr": "Boolean flag indicating whether the derived quality metrics for trial A were successfully computed from the analysis outputs.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "crystal_quality_b": {
+      "reasoning": "This node is a Derivative, so I included only computed-result metadata for the quality measures derived from the analyzed trial B image, but I renamed every field to avoid the cross-DAG collisions reported for the prior derivative schema. I excluded raw image, capture, and process details because those belong to upstream nodes, and I excluded buffer or drop identity because those are entity-level details. The goal here is to preserve the same semantic content—growth, suitability, detected crystal characteristics, quality class, and confidence—while using unique field ids that do not duplicate previously generated ones.",
+      "md_schema": [
+        {
+          "field_id": "trial_b_growth_score",
+          "descr": "Computed score summarizing crystal growth observed for trial B from image-analysis outputs, recorded as a numeric value on the method's scoring scale. Typical scales are 0-1, 0-100, or method-specific ranks.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_b_suitability_score",
+          "descr": "Computed score indicating how suitable the trial B condition is for structural analysis, derived from image features and quality rules. Record on the analysis scoring scale used by the workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_b_crystal_count",
+          "descr": "Number of distinct crystals or crystal-like objects detected in the trial B derived analysis, recorded as an integer count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_b_largest_crystal_size_micrometers",
+          "descr": "Estimated maximum linear size of the largest detected crystal in trial B, measured in micrometers (µm), derived from image analysis. Typical crystallography crystals range from a few µm to hundreds of µm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_b_quality_class",
+          "descr": "Discrete quality class assigned to the trial B condition based on derived crystallization metrics, recorded after analysis. Use the workflow's categorical judgment scheme.",
+          "type": "categorical",
+          "allowed_values": [
+            "poor",
+            "fair",
+            "good",
+            "excellent",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "trial_b_quality_confidence_score",
+          "descr": "Confidence score for the derived quality assessment of trial B, recorded on the algorithm's confidence scale. Typical scales are 0-1 or 0-100 depending on the model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trial_b_derivative_generation_success",
+          "descr": "Boolean flag indicating whether the derived quality metrics for trial B were successfully computed from the analysis outputs.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "buffer_comparison_analysis": {
+      "reasoning": "This node is a Process, so I included only the computation that compares derived trial outcomes across buffer conditions and identifies the most favorable buffer. I excluded upstream entity, capture, signal, and single-trial derivative fields because those belong to earlier steps, and I avoided repeating software identity fields that were already generated and collided elsewhere in the DAG. The node’s semantic territory is comparative analysis, so I focused on comparison method, ranking logic, selection criteria, and the technical run status needed to reproduce the cross-condition decision. I also included software provenance fields for the analysis process, but only with non-colliding field ids.",
+      "md_schema": [
+        {
+          "field_id": "comparison_method",
+          "descr": "Method used to compare derived outcomes across buffer conditions in the optimization step, recorded at analysis time. Examples include 'rank_based', 'weighted_score', or 'rule_based' comparison.",
+          "type": "categorical",
+          "allowed_values": [
+            "rank_based",
+            "weighted_score",
+            "rule_based",
+            "statistical_test",
+            "manual_review",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparison_metric_name",
+          "descr": "Name of the primary metric used to rank buffer conditions, such as crystal suitability score, crystal growth score, or a composite quality index. Record the metric selected for the comparison.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_weighting_scheme",
+          "descr": "Description of any weighting scheme applied when combining multiple derived metrics for buffer ranking, e.g. 'suitability 0.7, growth 0.3'. Record only if a composite score is used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "buffer_rank_count",
+          "descr": "Number of buffer conditions included in the comparison run, recorded as an integer count at the time the optimization analysis is executed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "top_buffer_selection_rule",
+          "descr": "Rule or decision criterion used to choose the top-performing buffer from the comparison, e.g. highest score, best class, or tie-break by crystal count. Record the rule used in the downstream selection step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_runtime_seconds",
+          "descr": "Elapsed runtime of the buffer comparison computation, measured in seconds from start to completion. Record at the end of the process for performance tracking.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_quality_flag",
+          "descr": "Overall technical status of the buffer comparison analysis run, indicating whether the comparison completed successfully and produced a usable ranking.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "warning",
+            "failed",
+            "partial"
+          ]
+        },
+        {
+          "field_id": "analysis_software_name_comp",
+          "descr": "Name of the software used for the buffer comparison analysis, recorded for the computation session. Example: 'CrystalRanker' or an internal optimization package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version_comp",
+          "descr": "Software version used for the buffer comparison analysis, recorded to make the computation reproducible. Example format: 'v1.4.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository_comp",
+          "descr": "Repository, package source, or code location for the buffer comparison software, e.g. a Git URL, vendor package reference, or internal code repository.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "buffer_optimization_result": {
+      "reasoning": "This node is a Derivative, so I included only the computed comparison result that summarizes buffer performance and supports selection of the best crystallization condition. I excluded raw images, capture settings, single-trial process metadata, and upstream entity properties because those belong to earlier nodes. The node’s role is to represent the final optimized outcome, so the schema captures ranked result content, the winning buffer, score summaries, and a confidence/quality indicator for the derived decision. I avoided reusing field ids already generated elsewhere in the DAG by using optimization-result-specific identifiers rather than the generic comparison fields used in the upstream process.",
+      "md_schema": [
+        {
+          "field_id": "optimized_buffer_name",
+          "descr": "Name or label of the buffer condition selected as the best-performing crystallization buffer in the optimization result, e.g. 'Buffer solution A' or 'Buffer solution B'. Record as the final chosen condition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "optimized_condition_rank",
+          "descr": "Rank assigned to the selected buffer within the comparison set, recorded as an integer where 1 indicates best performance.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "optimization_score",
+          "descr": "Composite or primary score used to summarize buffer performance in the final optimization result, recorded on the workflow's scoring scale. Typical scales are 0-1, 0-100, or method-specific ranks.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "optimization_confidence_score",
+          "descr": "Confidence score for the final buffer selection, recorded on the algorithm's confidence scale. Typical scales are 0-1 or 0-100 depending on the scoring model.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selected_for_structural_analysis",
+          "descr": "Boolean flag indicating whether the optimized buffer condition was selected for downstream structural analysis or follow-up crystallography work.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "optimization_summary_text",
+          "descr": "Brief textual summary of why the buffer was selected, such as superior crystal growth, higher crystal quality, or better overall suitability. Record the human-readable rationale produced by the comparison step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "optimization_result_status",
+          "descr": "Technical status of the derived optimization result, indicating whether the final buffer ranking was successfully produced and is usable for decision-making.",
+          "type": "categorical",
+          "allowed_values": [
+            "success",
+            "warning",
+            "failed",
+            "partial"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1757 @@
+{
+  "md_name": "MAG generation and quality assessment workflow",
+  "md_description": "This workflow starts from environmental samples and follows their laboratory processing into DNA-derived sequencing libraries, short-read and long-read sequencing captures, read-level cleaning and assembly, genome binning, and MAG quality assessment. It accumulates raw sequencing signals, assembled contigs, metagenome-assembled genomes, and completeness/contamination metrics to support downstream assessment of microbial biodiversity and functional potential in environmental communities.",
+  "fields_per_node": {
+    "environmental_sample": {
+      "reasoning": "The environmental_sample node is an Entity, so I included only intrinsic origin/context fields for the collected material: sample identity, where it was collected, what environmental matrix it came from, and broad collection context. I excluded any laboratory processing, DNA extraction, sequencing, assembly, binning, or quality fields because those belong to downstream Process/Capture/Derivative nodes. I also avoided repeating generic experiment or subject identifiers that are typically reserved for the root entity if already generated elsewhere in the DAG; since no already_generated fields were provided here, I kept the schema focused on sample provenance and collection context only. No agent-specific fields were added because Entity nodes describe what the object is, not what was done to it.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for this field-collected environmental sample as used in the study metadata table; string format example: ENV_SMP_001. Record once at the point of sample registration and use consistently across all downstream processing and sequencing nodes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_matrix",
+          "descr": "Broad physical matrix collected from the environment that contains the mixed microbial community, recorded at the time of sampling; examples include soil, freshwater, seawater, sediment, activated_sludge, or biofilm.",
+          "type": "categorical",
+          "allowed_values": [
+            "soil",
+            "freshwater",
+            "seawater",
+            "sediment",
+            "activated_sludge",
+            "biofilm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_site",
+          "descr": "Free-text or coded location name for where the environmental sample was collected, recorded at field collection; examples include site name, transect label, watershed, or station identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_coordinates",
+          "descr": "Geographic coordinates of the sampling location recorded at field collection, preferably in decimal degrees as 'latitude, longitude' (for example, 34.0522,-118.2437).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the environmental sample was collected in the field, recorded in ISO format (YYYY-MM-DD); for example, 2026-08-18.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_depth_meters",
+          "descr": "Sampling depth in meters below surface or waterline, recorded at the time of collection when relevant; typical range depends on matrix, for example 0 to 10000 m for aquatic or sediment samples.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_environment_context",
+          "descr": "Short description of the surrounding environmental context of the sampled matrix, recorded at collection time; examples include terrestrial, marine, freshwater, subsurface, or engineered system.",
+          "type": "categorical",
+          "allowed_values": [
+            "terrestrial",
+            "marine",
+            "freshwater",
+            "subsurface",
+            "engineered_system",
+            "other"
+          ]
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "The dna_extraction node is a Process, so I included only fields that describe how the environmental sample was transformed into metagenomic DNA: extraction protocol, lysis chemistry, input amount, kit/reagent used, operator-controlled temperatures/times, and a simple output yield/quality indicator. I excluded intrinsic sample provenance fields because those belong to the environmental_sample Entity, and I excluded DNA product identity fields that would belong to the metagenomic_dna Entity. I also avoided sequencing, library prep, and downstream analysis fields because they are outside this process’s semantic territory. No fields were duplicated from already_generated because none were provided for this node, and I kept software-agent style information out since this is a wet-lab process rather than a computational step.",
+      "md_schema": [
+        {
+          "field_id": "extraction_protocol_name",
+          "descr": "Name of the DNA extraction protocol used for the environmental sample, recorded at the time of extraction; example: 'phenol_chloroform', 'bead_beating_kit', or a vendor kit name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_or_reagents",
+          "descr": "Primary commercial kit or key reagents used for DNA extraction, recorded during sample processing; examples include PowerSoil Pro Kit, phenol_chloroform, CTAB, or bead-beating reagent set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Cell lysis approach applied during DNA extraction, recorded during the extraction step; allowed values describe the main lysis strategy used on the environmental sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "mechanical",
+            "chemical",
+            "enzymatic",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_sample_mass_or_volume",
+          "descr": "Amount of environmental sample loaded into the extraction procedure, measured at the start of extraction; units should match matrix type, for example g for solids or mL for liquids, with typical laboratory ranges from 0.01 to 50.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_temperature_celsius",
+          "descr": "Temperature used during the extraction incubation or lysis step, recorded as the controlled process temperature in degrees Celsius; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total elapsed time for the extraction workflow or key incubation/lysis step, measured in minutes from sample processing start to DNA recovery; typical range 1 to 1440.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_elution_volume_microliters",
+          "descr": "Final elution volume used to recover metagenomic DNA from the extraction matrix, recorded at the end of purification; typical range 5 to 500 microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_ng",
+          "descr": "Total mass of recovered metagenomic DNA produced by the extraction process, measured after purification and before library preparation; typical range 0 to 10000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_quality_flag",
+          "descr": "Coarse outcome flag indicating whether the extraction produced DNA suitable for downstream library preparation, recorded after extraction QC; allowed values are the study-defined assessment states.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "metagenomic_dna": {
+      "reasoning": "The metagenomic_dna node is an Entity, so I included only intrinsic properties of the purified DNA material itself: identity, concentration, purity, integrity/fragmentation, and storage origin/status. I excluded extraction protocol details because those belong to the dna_extraction Process, and I excluded library-prep or sequencing fields because those belong downstream. I also avoided repeating any sample-origin identifiers if they were already generated at the root environmental_sample node; since no already_generated fields were provided in this turn, I kept the schema focused on the DNA material’s measurable properties needed to choose downstream library inputs.",
+      "md_schema": [
+        {
+          "field_id": "metagenomic_dna_id",
+          "descr": "Unique identifier for the purified community DNA aliquot generated from the extraction step; string format example: DNA_001. Record once when the DNA aliquot is accessioned for downstream use.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Measured concentration of the metagenomic DNA aliquot after purification and before library preparation, typically assessed by fluorometry or similar quantification; typical range 0 to 1000 ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total mass of purified metagenomic DNA recovered from the extraction, recorded after cleanup and before library preparation; typical range 0 to 10000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_a260_a280",
+          "descr": "Spectrophotometric purity ratio A260/A280 measured on the purified metagenomic DNA aliquot before library preparation; typical range 1.0 to 2.2, with ~1.8 often indicating relatively clean DNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_a260_a230",
+          "descr": "Spectrophotometric purity ratio A260/A230 measured on the purified metagenomic DNA aliquot before library preparation; typical range 0.5 to 2.5, with higher values generally indicating fewer contaminants.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_number",
+          "descr": "DNA integrity metric measured on the purified community DNA before library preparation, such as DIN or an equivalent fragmentation score; typical range 1 to 10, where higher values indicate less fragmentation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_fragment_size_bp",
+          "descr": "Approximate dominant fragment size of the purified metagenomic DNA before library preparation, measured in base pairs; typical range 100 to 1000000 bp depending on extraction quality and sample type.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_storage_condition",
+          "descr": "Storage condition for the purified metagenomic DNA aliquot between extraction and library preparation, recorded as the preservation state used in the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "lyophilized",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dna_storage_temperature_celsius",
+          "descr": "Storage temperature used for the metagenomic DNA aliquot prior to library preparation, recorded in degrees Celsius; typical laboratory values include 4, -20, or -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_aliquot_volume_microliters",
+          "descr": "Volume of the DNA aliquot set aside for downstream library preparation, measured at the time of aliquoting; typical range 1 to 500 microliters.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "short_read_library_prep": {
+      "reasoning": "The short_read_library_prep node is a Process, so I included only fields describing how metagenomic DNA was converted into a short-read sequencing library: fragmentation method and target size, end-repair/A-tailing, adapter ligation details, PCR amplification settings, cleanup/size-selection, and a QC outcome for the resulting library. I excluded intrinsic DNA properties because those belong to the metagenomic_dna Entity, and I excluded sequencing machine configuration and FASTQ/file attributes because those belong to the downstream short_read_sequencing Capture and short_read_fastq Signal nodes. I also avoided any repeat of sample identifiers or DNA identifiers, since those are already represented upstream and should not be duplicated here. No already_generated list was supplied for this turn, so I focused on process parameters that a downstream user would need to reproduce the library construction step.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_protocol_name",
+          "descr": "Name of the short-read library preparation protocol or kit used to convert metagenomic DNA into a sequencing-ready library, recorded at the start of the process; example: Nextera DNA Flex, NEBNext Ultra II, or equivalent custom workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Method used to fragment metagenomic DNA for short-read library construction, recorded during library preparation; allowed values capture the main fragmentation strategy.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic",
+            "mechanical",
+            "tagmentation",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "target_insert_size_bp",
+          "descr": "Desired average insert size of the prepared short-read library, specified during library construction and measured in base pairs; typical range 100 to 1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_sequence_or_kit_name",
+          "descr": "Adapter chemistry or adapter kit used to tag fragmented DNA during library preparation, recorded during ligation or tagmentation; example values include vendor adapter kits or indexed adapter systems.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "end_repair_completed",
+          "descr": "Whether end repair was performed prior to adapter ligation in the short-read library preparation workflow, recorded after the end-repair step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "a_tailing_completed",
+          "descr": "Whether A-tailing was performed before adapter ligation in the short-read library preparation workflow, recorded after the end-repair/A-tailing stage.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR amplification cycles applied to the short-read library, recorded during library preparation after adapter ligation; typical range 0 to 20 cycles.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "size_selection_range_bp",
+          "descr": "Fragment size-selection window applied during short-read library cleanup, measured in base pairs and recorded after ligation or amplification; example: 250-600 bp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_yield_ng",
+          "descr": "Total mass of amplified and cleaned short-read library generated by the preparation process, measured after final cleanup and before sequencing; typical range 0 to 1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_passed",
+          "descr": "Coarse quality-control status of the finished short-read library after preparation and before sequencing; indicates whether the library met the workflow's acceptance criteria.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "short_read_library": {
+      "reasoning": "The short_read_library node is an Entity, so I included only intrinsic properties of the prepared library material itself: library identity, library concentration, average insert size, fragment size distribution, adapter/index configuration, and readiness status for capture. I excluded preparation protocol details because those belong to the short_read_library_prep Process, and I excluded instrument settings and file-level attributes because those belong downstream to short_read_sequencing and short_read_fastq. I also avoided repeating sample or DNA identifiers already represented upstream; this schema is focused on the prepared library aliquot as a reusable physical entity.",
+      "md_schema": [
+        {
+          "field_id": "short_read_library_id",
+          "descr": "Unique identifier for the prepared short-read library aliquot created from metagenomic DNA; string format example: SRL_001. Record when the library is accessioned for sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the prepared short-read library before loading onto the sequencer, typically assessed by fluorometry or qPCR-compatible quantification; typical range 0 to 100 ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_total_yield_ng",
+          "descr": "Total mass of the prepared short-read library available for sequencing, recorded after final cleanup and before capture; typical range 0 to 1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "average_insert_size_bp",
+          "descr": "Average insert size of the prepared short-read library, measured after library construction and before sequencing; typical range 100 to 1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_range_bp",
+          "descr": "Observed fragment size distribution of the prepared short-read library, recorded as a lower and upper bound in base pairs; example: 250-600 bp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_scheme",
+          "descr": "Barcode or index design used to identify the library during multiplexed short-read sequencing, recorded on the library entity before capture; examples include single_index, dual_index, or inline_barcode systems.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "inline_barcode",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_storage_condition",
+          "descr": "Condition under which the prepared short-read library was stored before sequencing, recorded as the preservation state of the library aliquot.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_sequencing",
+          "descr": "Indicator that the prepared library met internal acceptance criteria and was available for short-read sequencing, recorded immediately before capture.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "long_read_library_prep": {
+      "reasoning": "The long_read_library_prep node is a Process, so I included only the operations and parameters used to convert metagenomic DNA into a long-read sequencing library: long-fragment handling, fragmentation or no-fragmentation approach, adapter ligation chemistry, size-selection/cleanup, barcoding strategy, and basic output QC. I excluded intrinsic DNA properties because those belong to the metagenomic_dna Entity, and I excluded platform instrument settings and raw file attributes because those belong downstream to long_read_sequencing and long_read_fastq. I also avoided overlapping with the short-read library preparation node by keeping the fields specific to long-fragment preservation and long-read adapter chemistry. No already_generated list was supplied here, so I selected fields that are necessary to reproduce the long-read library preparation step without stepping into entity or capture territory.",
+      "md_schema": [
+        {
+          "field_id": "long_read_library_prep_protocol_name",
+          "descr": "Name of the long-read library preparation protocol or kit used to convert metagenomic DNA into a long-read sequencing-ready library, recorded at the start of the process; example: ligation sequencing kit, rapid kit, or custom long-fragment workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fragment_handling_method",
+          "descr": "Handling strategy used to preserve long DNA fragments during library preparation, recorded during the prep step; allowed values describe the main workflow used to minimize shearing.",
+          "type": "categorical",
+          "allowed_values": [
+            "gentle_pipetting",
+            "low_shear",
+            "no_fragmentation",
+            "controlled_fragmentation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "platform_name",
+          "descr": "Long-read sequencing platform targeted by the library preparation workflow, recorded because the adapter chemistry is platform-specific; examples include Oxford Nanopore or PacBio.",
+          "type": "categorical",
+          "allowed_values": [
+            "oxford_nanopore",
+            "pacbio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "adapter_or_barcode_kit_name",
+          "descr": "Adapter or barcode kit used to tag long fragments for long-read sequencing, recorded during ligation or tagmentation; examples include platform-specific ligation adapter kits or barcoded adapter sets.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "size_selection_method",
+          "descr": "Method used to enrich for long fragments during library cleanup, recorded after adapter ligation; examples include bead-based selection, cassette-based selection, or no size selection.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_based",
+            "instrument_based",
+            "no_size_selection",
+            "other"
+          ]
+        },
+        {
+          "field_id": "target_fragment_size_bp",
+          "descr": "Desired fragment size range for the long-read library, specified during preparation and measured in base pairs; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_amplification_used",
+          "descr": "Whether PCR amplification was used during long-read library preparation, recorded after adapter ligation; many long-read workflows avoid amplification to preserve fragment length.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_library_yield_ng",
+          "descr": "Total mass of prepared long-read library recovered after cleanup and before sequencing, measured in nanograms; typical range 0 to 1000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_library_qc_passed",
+          "descr": "Coarse quality-control status of the finished long-read library after preparation and before sequencing; indicates whether the library met sequencing acceptance criteria.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "long_read_library": {
+      "reasoning": "I corrected the long_read_library schema to avoid cross-DAG field collisions by removing the previously generated generic field names library_concentration_ng_per_ul, library_storage_condition, and library_ready_for_sequencing. I kept the node in Entity territory, so the remaining fields describe intrinsic properties of the long-read library itself rather than prep process parameters or downstream capture/file details. I replaced the colliding generic names with long-read-specific equivalents to preserve meaning without repeating prior fields, and I retained only entity-level attributes needed to characterize the library before sequencing.",
+      "md_schema": [
+        {
+          "field_id": "long_read_library_id",
+          "descr": "Unique identifier for the prepared long-read library aliquot created from metagenomic DNA; string format example: LRL_001. Record when the library is accessioned for sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_library_concentration_ng_per_ul",
+          "descr": "Measured concentration of the prepared long-read library before loading onto the sequencer, typically assessed by fluorometry or qPCR-compatible quantification; typical range 0 to 100 ng/µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "estimated_fragment_size_bp",
+          "descr": "Estimated dominant fragment length of the prepared long-read library, measured after library construction and before sequencing; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_size_distribution_bp",
+          "descr": "Observed size distribution of the prepared long-read library, recorded as a lower and upper bound in base pairs; example: 5000-20000 bp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "barcoding_status",
+          "descr": "Status of barcode or index attachment on the prepared long-read library prior to sequencing, recorded at accessioning; indicates whether the library is multiplex-ready.",
+          "type": "categorical",
+          "allowed_values": [
+            "unbarcoded",
+            "barcoded",
+            "dual_barcoded",
+            "other"
+          ]
+        },
+        {
+          "field_id": "long_read_library_storage_condition",
+          "descr": "Condition under which the prepared long-read library was stored before sequencing, recorded as the preservation state of the library aliquot.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "other"
+          ]
+        },
+        {
+          "field_id": "long_read_library_ready_for_sequencing",
+          "descr": "Indicator that the prepared long-read library met internal acceptance criteria and was available for long-read sequencing, recorded immediately before capture.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "short_read_sequencing": {
+      "reasoning": "The short_read_sequencing node is a Capture, so I included only instrument/session configuration and operator-controlled measurement settings for the sequencing run: platform model, flow cell or chip type, read length mode, sequencing chemistry, loading concentration, run duration, and basecalling mode. I excluded sample and library properties because those belong to upstream Entity nodes, and I excluded raw file characteristics because those belong to the downstream short_read_fastq Signal node. I also avoided previously generated fields and specifically did not reuse library_concentration_ng_per_ul, library_storage_condition, or library_ready_for_sequencing because they were flagged as collisions in earlier DAG steps. The resulting schema focuses on what was configured on the sequencer during the capture event and what downstream users need to interpret the run.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the short-read sequencing instrument used for the capture session, recorded from the platform configuration; examples include Illumina, MGI, or equivalent vendor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model name of the short-read sequencer used to measure the library, recorded at the start of the run; example: NovaSeq 6000, MiSeq, or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Instrument serial number for the short-read sequencer used in this capture session, recorded from the instrument metadata; string example format: SN12345678.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or kit version used in the short-read run, recorded as part of the active instrument configuration; example values depend on vendor chemistry generations.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell or chip type loaded for the short-read sequencing run, recorded at the start of capture; examples include specific lane counts or chemistry-compatible flow cells.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for the short-read sequencing run, measured as the intended read cycle length at capture; typical range 50 to 300 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "loading_concentration_pmol_per_l",
+          "descr": "Library loading concentration used for the short-read capture run, measured in pmol/L and set before sequencing begins; typical range 1 to 50 pmol/L.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_duration_hours",
+          "descr": "Total elapsed duration of the short-read sequencing run, measured from start to completion of the capture session; typical range 1 to 100 hours.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "basecalling_mode",
+          "descr": "Basecalling mode or configuration used by the sequencer or associated software during the run, recorded as part of capture configuration; examples include live_basecalling or deferred_basecalling.",
+          "type": "categorical",
+          "allowed_values": [
+            "live_basecalling",
+            "deferred_basecalling",
+            "other"
+          ]
+        }
+      ]
+    },
+    "short_read_fastq": {
+      "reasoning": "The short_read_fastq node is a Signal, so I kept only raw-file descriptors and removed any field that collides with previously generated DAG steps, specifically read_length_bp. I also excluded capture settings, assembly logic, and biological interpretation because they belong to upstream Capture/Process nodes or downstream Derivative nodes. The revised schema focuses on file identity, format, size, read count, paired-end structure, compression, checksum, and a basic technical QC flag needed to store and validate the raw FASTQ artefact.",
+      "md_schema": [
+        {
+          "field_id": "fastq_file_name",
+          "descr": "Name of the raw short-read FASTQ file produced by the sequencing run, recorded when the file is written or deposited; example: sampleA_R1.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_file_path",
+          "descr": "Storage path or accession location for the raw short-read FASTQ file, recorded after file generation; example: /data/run123/sampleA_R1.fastq.gz or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw short-read sequencing output, recorded at file creation; for this node it is typically FASTQ or FASTQ.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw FASTQ file in bytes, measured after file creation and before downstream processing; typical range depends on run depth and can span 10^6 to 10^12 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Number of sequencing reads contained in the raw FASTQ file, counted after demultiplexing or file export; typical range 10^3 to 10^9 reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end_status",
+          "descr": "Indicates whether the raw short-read data consist of paired-end or single-end reads, determined from the FASTQ file structure at file generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_end",
+            "single_end",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "compression_status",
+          "descr": "Whether the raw short-read file is compressed, recorded from the file encoding at deposit time.",
+          "type": "categorical",
+          "allowed_values": [
+            "compressed",
+            "uncompressed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_checksum_md5",
+          "descr": "Checksum for verifying integrity of the raw short-read FASTQ file, recorded after file generation or archive deposit; example format: 32-character MD5 hex string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "technical_qc_flag",
+          "descr": "Coarse technical quality flag for the raw short-read FASTQ file, recorded after file generation and before downstream trimming; allowed values summarize whether the file passed basic integrity checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "long_read_sequencing": {
+      "reasoning": "The long_read_sequencing node is a Capture, so I kept only capture-specific fields that have not already been generated elsewhere in the DAG and avoided all previously colliding instrument and run-configuration field names. I included the flow cell/chip type and a long-read-specific run setting for expected output length, plus a non-overlapping capture QC indicator. I excluded DNA, library, and raw file properties because those belong to upstream entities or downstream signals, and I also avoided repeating generic sequencer manufacturer/model/serial, chemistry, loading concentration, duration, and basecalling fields because they were explicitly flagged as already generated. This preserves the capture layer while resolving field collisions across DAG steps.",
+      "md_schema": [
+        {
+          "field_id": "flow_cell_or_chip_type_long_read",
+          "descr": "Flow cell or chip type loaded for the long-read sequencing run, recorded at the start of capture; examples include platform-specific flow cell or chip identifiers. Use a distinct long-read-specific field name to avoid collision with other capture nodes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_yield_gigabases",
+          "descr": "Target or expected sequencing output for the long-read capture session, recorded as the planned total yield in gigabases before the run begins; typical range 0.1 to 1000 Gb.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_acquisition_mode",
+          "descr": "Operating mode used by the long-read instrument during signal acquisition, recorded as a capture-session setting; examples include high_accuracy, standard, or ultra_long depending on platform.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_accuracy",
+            "standard",
+            "ultra_long",
+            "other"
+          ]
+        },
+        {
+          "field_id": "capture_qc_status",
+          "descr": "Coarse quality-control status of the long-read sequencing run, recorded after the capture session and before raw file export; indicates whether the run met technical acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "long_read_fastq": {
+      "reasoning": "The long_read_fastq node is a Signal, so I retained only raw long-read file descriptors while renaming fields to avoid all previously generated collisions across the DAG. I excluded capture settings, extraction/library properties, and downstream processing outputs because those belong to other node types. Since generic file metadata fields were already used earlier in the workflow, I used long-read-specific names for the artefact descriptors that remain: path, read-length summaries, and file identity. This preserves the Signal territory while avoiding duplicate field ids.",
+      "md_schema": [
+        {
+          "field_id": "long_fastq_file_name",
+          "descr": "Name of the raw long-read FASTQ file produced by the sequencing run, recorded when the file is written or deposited; example: sampleA_longreads.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fastq_file_path",
+          "descr": "Storage path or accession location for the raw long-read FASTQ file, recorded after file generation; example: /data/run123/sampleA_longreads.fastq.gz or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fastq_median_read_length_bp",
+          "descr": "Median read length in base pairs for the raw long-read data, summarized from the FASTQ records after sequencing; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fastq_read_length_n50_bp",
+          "descr": "Read length N50 for the raw long-read FASTQ file, computed from the read-length distribution after file generation; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fastq_md5_checksum",
+          "descr": "Checksum for verifying integrity of the raw long-read FASTQ file, recorded after file generation or archive deposit; example format: 32-character MD5 hex string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_fastq_technical_qc_flag",
+          "descr": "Coarse technical quality flag for the raw long-read FASTQ file, recorded after file generation and before downstream correction; allowed values summarize whether the file passed basic integrity checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "short_read_trimming": {
+      "reasoning": "The short_read_trimming node is a Process, so I included only the cleaning operation parameters and output-quality indicators that describe how raw short reads were processed: trimming software, adapter handling, quality threshold, minimum length, sliding-window settings, and a post-trimming retention/QC summary. I excluded upstream raw FASTQ file properties because those belong to the short_read_fastq Signal, and I excluded the cleaned read file’s technical storage attributes because those belong downstream to the trimmed_short_reads Signal. I also avoided any field names already generated elsewhere in the DAG, including the generic file metadata fields that caused collisions in prior steps. The resulting schema stays in the process territory and provides the key parameters needed to reproduce read trimming.",
+      "md_schema": [
+        {
+          "field_id": "trimming_software_name",
+          "descr": "Name of the software used to trim short-read sequencing data, recorded when the trimming process is run; example: fastp, Trimmomatic, or Cutadapt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_software_version",
+          "descr": "Version of the trimming software used for the short-read cleanup process, recorded together with the software name; example format: v0.23.4 or 0.39.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Whether adapter removal was enabled during short-read trimming, recorded as a process setting before or during execution.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_threshold_phred",
+          "descr": "Phred quality score threshold used to trim or remove low-quality bases from short reads, recorded during the cleaning step; typical range 10 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming, measured in base pairs and set during the trimming process; typical range 20 to 1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sliding_window_size_bp",
+          "descr": "Sliding window size used for quality-based trimming of short reads, recorded as the configured window length in bases; typical range 2 to 20 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sliding_window_quality_threshold_phred",
+          "descr": "Phred quality threshold applied within the sliding window trimming step, recorded as the minimum acceptable average window quality; typical range 10 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_retention_fraction",
+          "descr": "Fraction of input short reads retained after trimming, calculated from the trimming process output and used as a simple yield indicator; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_qc_flag",
+          "descr": "Coarse quality-control status of the trimming run, recorded after processing and before downstream assembly; allowed values summarize whether the cleaned reads met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "trimmed_short_reads": {
+      "reasoning": "The trimmed_short_reads node is a Signal, so I kept only file-level descriptors for the cleaned read artefact and removed fields that collided with previously generated IDs. In particular, I retained file identity, storage location, format, size, read count, read-length summary, and integrity checksum, but I renamed the read pairing field to avoid the existing paired_end_status collision and dropped the generic technical_qc_flag entirely because it was already generated elsewhere in the DAG. I excluded trimming parameters and downstream assembly interpretation because those belong to the short_read_trimming Process and the assembly/Derivative nodes, respectively. This keeps the schema within the signal territory while respecting cross-DAG uniqueness constraints.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_fastq_file_name",
+          "descr": "Name of the trimmed short-read file produced by the trimming process, recorded when the file is written or deposited; example: sampleA_trimmed_R1.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_fastq_file_path",
+          "descr": "Storage path or accession location for the trimmed short-read file, recorded after file generation; example: /data/trimmed/sampleA_trimmed_R1.fastq.gz or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_file_format",
+          "descr": "Technical file format of the trimmed short-read data, recorded at file creation; for this node it is typically FASTQ or FASTQ.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_file_size_bytes",
+          "descr": "Size of the trimmed short-read file in bytes, measured after file creation and before assembly; typical range depends on run depth and can span 10^5 to 10^12 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_count",
+          "descr": "Number of reads remaining after trimming, counted in the cleaned short-read file; typical range 10^3 to 10^9 reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_length_bp",
+          "descr": "Observed read length in base pairs for the trimmed short-read data, summarized from the cleaned FASTQ records; typical range 20 to 300 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_pairedness_status",
+          "descr": "Indicates whether the trimmed short-read data remain paired-end or single-end after trimming, determined from the cleaned file structure; allowed values distinguish read pairing state in the output signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_end",
+            "single_end",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_file_checksum_md5",
+          "descr": "Checksum for verifying integrity of the trimmed short-read file, recorded after file generation or archive deposit; example format: 32-character MD5 hex string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "long_read_error_correction": {
+      "reasoning": "The long_read_error_correction node is a Process, so I included only the correction workflow parameters and output-level indicators: correction software, version, algorithm/method, polishing rounds, read-subset or coverage settings, and a simple post-correction quality/yield flag. I excluded the raw long-read file properties because those belong to the long_read_fastq Signal, and I excluded downstream assembly-contig properties because those belong to the corrected_long_reads Signal or later assembly nodes. I also avoided previously generated field ids and specifically did not reuse paired_end_status or technical_qc_flag, since those were flagged as collisions in earlier signal nodes. The schema captures the reproducible configuration of the error-correction process without stepping into input or output file territory.",
+      "md_schema": [
+        {
+          "field_id": "correction_software_name",
+          "descr": "Name of the software used to correct systematic errors in long-read sequencing data, recorded when the correction process is run; examples include f5c, racon, medaka, or similar tools.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_software_version",
+          "descr": "Version of the long-read correction software used for the process, recorded together with the tool name; example format: v1.5.0 or 1.11.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_method",
+          "descr": "Main correction approach used for long-read data, recorded during processing; allowed values represent the dominant algorithmic strategy.",
+          "type": "categorical",
+          "allowed_values": [
+            "polishing",
+            "consensus_correction",
+            "signal_level_correction",
+            "hybrid_correction",
+            "other"
+          ]
+        },
+        {
+          "field_id": "correction_rounds",
+          "descr": "Number of correction or polishing rounds applied to the long-read data, recorded as part of the correction workflow; typical range 1 to 10 rounds.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "coverage_threshold_x",
+          "descr": "Minimum read coverage threshold used to select or accept long reads for correction, recorded at processing time; typical range 1 to 100x coverage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_read_subset_fraction",
+          "descr": "Fraction of long reads used as input to the correction process when a subset was selected, recorded during the run; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_output_qc_flag",
+          "descr": "Coarse quality-control status of the corrected long-read output, recorded after correction and before assembly; allowed values summarize whether the corrected reads met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "correction_yield_fraction",
+          "descr": "Fraction of input long-read sequence retained after correction, calculated from the process output as a simple yield indicator; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "corrected_long_reads": {
+      "reasoning": "The corrected_long_reads node is a Signal, so I included only raw-data-artefact descriptors for the corrected read file set: file name, path, format, size, read count, read-length summary, correction status, checksum, and a technical QC flag. I excluded correction parameters because those belong to the long_read_error_correction Process, and I excluded assembly-specific metrics because those belong downstream to long_read_assembly and later derivative nodes. I also avoided previously generated field ids that caused collisions in earlier signal nodes, including generic pairing or QC fields. The schema focuses on the technical identity, integrity, and usability of the corrected long-read file before assembly.",
+      "md_schema": [
+        {
+          "field_id": "corrected_long_fastq_file_name",
+          "descr": "Name of the corrected long-read file produced by the error-correction process, recorded when the file is written or deposited; example: sampleA_corrected_longreads.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_long_fastq_file_path",
+          "descr": "Storage path or accession location for the corrected long-read file, recorded after file generation; example: /data/corrected/sampleA_corrected_longreads.fastq.gz or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_file_format",
+          "descr": "Technical file format of the corrected long-read output, recorded at file creation; for this node it is typically FASTQ or FASTQ.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "corrected_file_size_bytes",
+          "descr": "Size of the corrected long-read file in bytes, measured after file creation and before assembly; typical range depends on run depth and can span 10^6 to 10^12 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_read_count",
+          "descr": "Number of reads contained in the corrected long-read file after error correction, counted at file export; typical range 10^3 to 10^8 reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "median_corrected_read_length_bp",
+          "descr": "Median read length in base pairs for the corrected long-read data, summarized from the corrected FASTQ records; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_correction_status",
+          "descr": "Status indicating that the long reads have been error-corrected and are ready for downstream assembly, recorded immediately after the correction process.",
+          "type": "categorical",
+          "allowed_values": [
+            "corrected",
+            "partially_corrected",
+            "uncorrected",
+            "other"
+          ]
+        },
+        {
+          "field_id": "corrected_file_checksum_md5",
+          "descr": "Checksum for verifying integrity of the corrected long-read file, recorded after file generation or archive deposit; example format: 32-character MD5 hex string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_read_qc_flag",
+          "descr": "Coarse quality-control status of the corrected long-read file, recorded after correction and before assembly; allowed values summarize whether the corrected reads met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "short_read_assembly": {
+      "reasoning": "The short_read_assembly node is a Process, so I included only assembly workflow parameters and output-level indicators: assembler name and version, assembly mode, k-mer settings, minimum contig length, paired-read handling, and a simple post-assembly quality/yield summary. I excluded the trimmed read input properties because those belong to the trimmed_short_reads Signal, and I excluded assembled contig file properties because those belong to the assembled_short_contigs Derivative node. I also avoided reusing fields that have already appeared elsewhere in the DAG, especially generic QC or file-identity fields. The schema stays within process territory while capturing the essential settings needed to reproduce the short-read assembly.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name",
+          "descr": "Name of the software used to assemble trimmed short reads into contigs, recorded when the assembly process is run; examples include MEGAHIT and metaSPAdes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version",
+          "descr": "Version of the short-read assembler used for the process, recorded together with the software name; example format: v1.2.9 or 3.15.5.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_mode",
+          "descr": "Assembly strategy used for short-read contig construction, recorded during the assembly process; allowed values describe the main computational approach.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_sample",
+            "co_assembly",
+            "hybrid",
+            "iterative",
+            "other"
+          ]
+        },
+        {
+          "field_id": "kmer_sizes",
+          "descr": "K-mer sizes used by the short-read assembler, recorded as an ordered list or range at assembly time; example: 21,33,55 or 21-99.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length retained after assembly, measured in base pairs and set during the assembly process; typical range 200 to 10000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_read_handling",
+          "descr": "How paired-end information was used during short-read assembly, recorded as a process setting; allowed values capture the main treatment of read pairs.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_considered",
+            "paired_ignored",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembly_output_n50_bp",
+          "descr": "Assembly N50 produced by the short-read assembler, calculated from contigs after assembly completion and used as an output-quality indicator; typical range 500 to 1000000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_output_qc_flag",
+          "descr": "Coarse quality-control status of the short-read assembly output, recorded after assembly and before downstream binning; allowed values summarize whether the contigs met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "assembled_short_contigs": {
+      "reasoning": "The assembled_short_contigs node is a Derivative, so I included only computed-result descriptors for the assembled contig set: contig file identity, storage location, format, file size, contig count, total assembly length, N50/L50, and a derived quality flag. I excluded assembly parameters because those belong to the short_read_assembly Process, and I excluded raw read properties because those belong to upstream Signal nodes. I also avoided repeating any generic file fields already generated elsewhere in the DAG by using contig-specific field names. The schema is focused on the technical and quality characteristics of the assembled contig output that downstream binning and assessment steps will consume.",
+      "md_schema": [
+        {
+          "field_id": "assembled_contig_file_name",
+          "descr": "Name of the assembled short-read contig file produced by the assembly process, recorded when the contigs are written or deposited; example: sampleA_short_contigs.fasta.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_contig_file_path",
+          "descr": "Storage path or accession location for the assembled contig file, recorded after assembly output generation; example: /data/assembly/sampleA_short_contigs.fasta or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_file_format",
+          "descr": "Technical file format of the assembled contig output, recorded at file creation; for this node it is typically FASTA or FASTA.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fasta_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_file_size_bytes",
+          "descr": "Size of the assembled contig file in bytes, measured after assembly completion and before downstream binning; typical range depends on assembly size and can span 10^5 to 10^10 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count",
+          "descr": "Number of contigs in the assembled short-read output, counted after assembly completion; typical range 1 to 10^7 contigs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_total_length_bp",
+          "descr": "Total summed length of all assembled short-read contigs, measured in base pairs after assembly completion; typical range 10^5 to 10^10 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_n50_bp",
+          "descr": "Contig N50 for the assembled short-read output, computed after assembly completion as a standard continuity metric; typical range 500 to 1000000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_l50_count",
+          "descr": "L50 count for the assembled short-read output, computed after assembly completion as a standard continuity metric; typical range 1 to 100000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_completeness_proxy",
+          "descr": "Derived proxy score indicating the overall apparent completeness or usefulness of the contig assembly for downstream binning, recorded after assembly as a coarse computed assessment; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_flag",
+          "descr": "Coarse derived quality flag for the assembled contigs, assigned after assembly and before binning; allowed values summarize whether the contig set is suitable for downstream genome binning.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "long_read_assembly": {
+      "reasoning": "The long_read_assembly node is a Process, so I kept only long-read assembly workflow parameters and output-quality indicators, but I revised the field names to avoid collisions with earlier short-read assembly metadata. I excluded corrected-read inputs and assembled contig outputs because those belong to upstream Signal and downstream Derivative nodes, respectively. I also avoided the previously generated generic fields minimum_contig_length_bp and assembly_n50_bp by renaming them with long-read-specific prefixes, while preserving their meaning. This keeps the schema within the process territory and makes the assembly step reproducible without duplicating earlier DAG metadata.",
+      "md_schema": [
+        {
+          "field_id": "long_assembly_software_name",
+          "descr": "Name of the software used to assemble corrected long reads into contigs or scaffolds, recorded when the assembly process is run; examples include metaFlye and Flye.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_software_version",
+          "descr": "Version of the long-read assembler used for the process, recorded together with the software name; example format: v2.9 or 2.8.3.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_mode",
+          "descr": "Assembly strategy used for long-read contig construction, recorded during the assembly process; allowed values describe the main computational approach.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_sample",
+            "co_assembly",
+            "hybrid",
+            "iterative",
+            "other"
+          ]
+        },
+        {
+          "field_id": "overlap_graph_strategy",
+          "descr": "Primary overlap or graph strategy used by the long-read assembler, recorded during assembly; allowed values summarize the dominant assembly algorithmic framework.",
+          "type": "categorical",
+          "allowed_values": [
+            "overlap_layout_consensus",
+            "de_bruijn",
+            "string_graph",
+            "repeat_graph",
+            "other"
+          ]
+        },
+        {
+          "field_id": "long_assembly_min_contig_length_bp",
+          "descr": "Minimum contig length retained after long-read assembly, measured in base pairs and set during the assembly process; typical range 1000 to 100000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "polishing_rounds",
+          "descr": "Number of polishing rounds applied during or after long-read assembly, recorded as part of the assembly workflow; typical range 0 to 10 rounds.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_contig_n50_bp",
+          "descr": "Contig N50 produced by the long-read assembler, calculated from contigs after assembly completion and used as an output-quality indicator; typical range 1000 to 10000000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_qc_flag",
+          "descr": "Coarse quality-control status of the long-read assembly output, recorded after assembly and before downstream binning or evaluation; allowed values summarize whether the contigs met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "assembled_long_contigs": {
+      "reasoning": "The assembled_long_contigs node is a Derivative, so I kept only fields that describe the computed long-read contig/scaffold output itself and avoided any names already generated elsewhere in the DAG. Because contig_count, assembly_total_length_bp, assembly_l50_count, and assembly_quality_flag were flagged as collisions, I replaced them with long-read-specific equivalents that preserve the same semantic role without duplicating prior field ids. I excluded assembly parameters and upstream read properties because those belong to the long_read_assembly Process and corrected_long_reads Signal, respectively. The schema focuses on the identity, storage, and computed structural metrics of the long-read assembly product.",
+      "md_schema": [
+        {
+          "field_id": "assembled_long_contig_file_name",
+          "descr": "Name of the long-read assembly output file containing contigs or scaffolds, recorded when the assembly product is written or deposited; example: sampleA_long_contigs.fasta.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembled_long_contig_file_path",
+          "descr": "Storage path or accession location for the long-read assembly output file, recorded after assembly output generation; example: /data/assembly/sampleA_long_contigs.fasta or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_contig_file_format",
+          "descr": "Technical file format of the long-read assembly output, recorded at file creation; for this node it is typically FASTA or FASTA.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fasta_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "long_contig_file_size_bytes",
+          "descr": "Size of the long-read contig/scaffold file in bytes, measured after assembly completion and before downstream binning; typical range depends on assembly size and can span 10^5 to 10^10 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_contig_count",
+          "descr": "Number of contigs or scaffolds in the long-read assembly output, counted after assembly completion; typical range 1 to 10^7 contigs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_total_length_bp",
+          "descr": "Total summed length of all long-read assembled contigs or scaffolds, measured in base pairs after assembly completion; typical range 10^5 to 10^10 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_l50_count",
+          "descr": "L50 count for the long-read assembly output, computed after assembly completion as a standard continuity metric; typical range 1 to 100000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_assembly_quality_flag",
+          "descr": "Coarse derived quality flag for the assembled long-read contigs/scaffolds, assigned after assembly and before downstream binning; allowed values summarize whether the assembly product is suitable for genome binning.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "binning": {
+      "reasoning": "The binning node is a Process, so I kept only parameters and outcome indicators for clustering assembled contigs into genome bins. I removed the previously colliding field minimum_contig_length_bp and kept the remaining binning-specific settings: software, version, mode, contig source, coverage/GC feature usage, and yield/quality indicators. I excluded assembly input properties and downstream MAG output properties because those belong to the upstream derivative nodes and the downstream mag_bins derivative node, respectively. The schema stays in the process layer and is sufficient to reproduce and interpret the binning step.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name",
+          "descr": "Name of the software used to cluster assembled contigs into genome bins, recorded when the binning process is run; examples include MetaBAT2, CONCOCT, and MaxBin2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version",
+          "descr": "Version of the binning software used for the process, recorded together with the software name; example format: v2.15 or 1.2.4.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_mode",
+          "descr": "Binning strategy used for genome clustering, recorded during the binning process; allowed values describe the main approach to using one or more assemblies.",
+          "type": "categorical",
+          "allowed_values": [
+            "short_read_only",
+            "long_read_only",
+            "co_binning",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_source",
+          "descr": "Source of contigs supplied to the binning process, recorded at binning time; allowed values indicate which assembly products were used as input.",
+          "type": "categorical",
+          "allowed_values": [
+            "short_contigs",
+            "long_contigs",
+            "both",
+            "other"
+          ]
+        },
+        {
+          "field_id": "coverage_feature_used",
+          "descr": "Whether contig coverage profiles were used as a feature for genome binning, recorded during the process execution.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_content_feature_used",
+          "descr": "Whether GC content was used as a feature for genome binning, recorded during the process execution.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_yield_fraction",
+          "descr": "Fraction of input contigs assigned to bins, calculated from the binning process output as a simple yield indicator; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_quality_flag",
+          "descr": "Coarse quality-control status of the binning run, recorded after clustering and before MAG quality assessment; allowed values summarize whether the bins are suitable for downstream evaluation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "mag_bins": {
+      "reasoning": "The mag_bins node is a Derivative, so I included only computed output descriptors for the recovered genome-bin set: bin file identity, storage location, format, size, bin count, total bin sequence length, N50/L50-style continuity indicators, and a derived bin-level quality flag. I excluded binning parameters because those belong to the binning Process, and I excluded upstream contig/assembly properties because those belong to the assembled contig derivatives. I also avoided reusing field ids that already collided earlier in the DAG, including minimum_contig_length_bp. The schema is focused on the technical characteristics of the MAG bin output required for quality assessment and downstream annotation.",
+      "md_schema": [
+        {
+          "field_id": "mag_bin_file_name",
+          "descr": "Name of the MAG bin file produced by the binning process, recorded when the bins are written or deposited; example: sampleA_mag_bins.fasta or sampleA_mag_bins.fa.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_file_path",
+          "descr": "Storage path or accession location for the MAG bin file, recorded after binning output generation; example: /data/bins/sampleA_mag_bins.fasta or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_file_format",
+          "descr": "Technical file format of the MAG bin output, recorded at file creation; for this node it is typically FASTA or FASTA.GZ.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fasta_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_bin_file_size_bytes",
+          "descr": "Size of the MAG bin file in bytes, measured after binning completion and before quality assessment; typical range depends on bin count and can span 10^5 to 10^10 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bin_count",
+          "descr": "Number of genome bins recovered from the binning process, counted after binning completion; typical range 1 to 10^5 bins.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_total_length_bp",
+          "descr": "Total summed length of all MAG bin sequences, measured in base pairs after binning completion; typical range 10^5 to 10^10 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_n50_bp",
+          "descr": "N50 for the MAG bin set, computed after binning completion as a standard continuity metric for recovered genomes; typical range 1000 to 10000000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_l50_count",
+          "descr": "L50 count for the MAG bin set, computed after binning completion as a standard continuity metric; typical range 1 to 100000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_quality_flag",
+          "descr": "Coarse derived quality flag for the recovered MAG bin set, assigned after binning and before MAG quality assessment; allowed values summarize whether the bins are suitable for quality screening.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "mag_quality_assessment": {
+      "reasoning": "The mag_quality_assessment node is a Process, so I included only the assessment workflow parameters and output-level indicators: quality assessment software name and version, completeness/contamination thresholds, marker set/database used, and summary acceptance status. I excluded the MAG bin file properties because those belong to the mag_bins Derivative node, and I excluded the final completeness/contamination values themselves because those belong to the downstream completeness_contamination_metrics Derivative node. I also avoided reusing any field ids that had already collided elsewhere in the DAG, and kept the schema focused on how the quality assessment was performed rather than on the resulting measurements. This gives downstream users the reproducibility details needed for the assessment step without duplicating the output metrics.",
+      "md_schema": [
+        {
+          "field_id": "quality_assessment_software_name",
+          "descr": "Name of the software used to assess MAG completeness and contamination, recorded when the quality assessment process is run; examples include CheckM and CheckM2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_software_version",
+          "descr": "Version of the MAG quality assessment software used for the process, recorded together with the software name; example format: v1.2.2 or 1.0.2.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "marker_set_name",
+          "descr": "Marker gene set, database, or lineage reference used for completeness and contamination assessment, recorded during quality evaluation; example values may include bacterial or archaeal marker sets.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_threshold_percent",
+          "descr": "Minimum completeness threshold used to judge whether a MAG passes quality assessment, recorded as a percent at assessment time; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_threshold_percent",
+          "descr": "Maximum contamination threshold used to judge whether a MAG passes quality assessment, recorded as a percent at assessment time; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assessment_mode",
+          "descr": "Mode used for MAG quality assessment, recorded during the process; allowed values indicate whether assessment was performed per-bin, batch, or with an automated pipeline.",
+          "type": "categorical",
+          "allowed_values": [
+            "per_bin",
+            "batch",
+            "automated_pipeline",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quality_assessment_acceptance_flag",
+          "descr": "Coarse acceptance flag assigned after MAG quality assessment based on completeness and contamination criteria; indicates whether the assessed bins passed study-defined thresholds.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "assessment_summary_score",
+          "descr": "Composite score or ranking produced by the MAG quality assessment workflow, recorded after evaluation and used as a summary indicator; typical range and scale depend on the software configuration.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "completeness_contamination_metrics": {
+      "reasoning": "The completeness_contamination_metrics node is a Derivative, so I included only computed result fields that describe the metrics table itself and its contents: table identifier, storage location, format, row count, completeness score, contamination score, strain heterogeneity if present, a composite quality category, and a table-level QC flag. I excluded the assessment software and thresholds because those belong to the mag_quality_assessment Process, and I excluded the MAG bin file properties because those belong upstream to the mag_bins Derivative. I also avoided duplicating any fields that have already been generated earlier in the DAG. The schema is focused on the quality-metric table as a reusable result for downstream filtering and reporting.",
+      "md_schema": [
+        {
+          "field_id": "quality_metrics_table_id",
+          "descr": "Unique identifier for the derived completeness and contamination metrics table, recorded when the table is created; string format example: QMET_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_metrics_file_path",
+          "descr": "Storage path or accession location for the derived metrics table, recorded after table generation; example: /results/mag_quality/completeness_contamination.tsv or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_metrics_file_format",
+          "descr": "Technical file format of the derived metrics table, recorded at file creation; for this node it is typically TSV, CSV, or XLSX.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quality_metrics_row_count",
+          "descr": "Number of MAG entries in the derived completeness and contamination table, counted after table generation; typical range 1 to 10^6 rows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent",
+          "descr": "Estimated genome completeness for each MAG in the derived metrics table, recorded after quality assessment and expressed as a percentage; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent",
+          "descr": "Estimated genome contamination for each MAG in the derived metrics table, recorded after quality assessment and expressed as a percentage; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "strain_heterogeneity_percent",
+          "descr": "Estimated strain heterogeneity associated with each MAG when reported by the quality assessment workflow, recorded after quality assessment and expressed as a percentage; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_quality_category",
+          "descr": "Derived quality class assigned to each MAG based on completeness and contamination thresholds, recorded in the metrics table; allowed values reflect the study's genome-quality labeling scheme.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metrics_table_qc_flag",
+          "descr": "Coarse technical quality flag for the derived metrics table, recorded after table creation and before downstream filtering or reporting; allowed values summarize whether the table is usable for analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "functional_annotation": {
+      "reasoning": "The functional_annotation node is a Process, so I included only annotation workflow parameters and output-level indicators: annotation software name and version, database used, gene-calling mode, minimum protein or ORF length, annotation coverage/identity thresholds, and a simple annotation yield/quality flag. I excluded the MAG bin properties because those belong to the mag_bins Derivative node, and I excluded the annotated genome file properties because those belong to the downstream annotated_mags Derivative node. I also avoided reusing previously generated field ids that collided elsewhere in the DAG. The schema captures the reproducible settings for functional annotation without describing the annotated output itself.",
+      "md_schema": [
+        {
+          "field_id": "annotation_software_name",
+          "descr": "Name of the software used to functionally annotate high-quality MAGs, recorded when the annotation process is run; examples include Prokka and eggNOG-mapper.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_software_version",
+          "descr": "Version of the annotation software used for the process, recorded together with the software name; example format: v1.14.6 or 2.1.9.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference database or annotation resource used during functional annotation, recorded at processing time; examples include eggNOG, KEGG, Pfam, or custom databases.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_calling_mode",
+          "descr": "Gene-calling or ORF-prediction mode used before or during functional annotation, recorded as a process setting; allowed values summarize the main gene prediction strategy.",
+          "type": "categorical",
+          "allowed_values": [
+            "ab_initio",
+            "reference_guided",
+            "hmm_based",
+            "translated_search",
+            "other"
+          ]
+        },
+        {
+          "field_id": "minimum_orf_length_bp",
+          "descr": "Minimum open reading frame or coding sequence length included in annotation, measured in base pairs and set during the process; typical range 30 to 5000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_identity_threshold_percent",
+          "descr": "Minimum sequence identity threshold used for accepting functional annotation hits, recorded during the annotation process and expressed as a percent; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_coverage_threshold_percent",
+          "descr": "Minimum query or alignment coverage threshold used for accepting functional annotation hits, recorded during the annotation process and expressed as a percent; typical range 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_yield_fraction",
+          "descr": "Fraction of predicted genes or MAG sequences successfully assigned a functional annotation, calculated from the process output as a simple yield indicator; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_qc_flag",
+          "descr": "Coarse quality-control status of the annotation run, recorded after annotation and before metadata table assembly; allowed values summarize whether the annotated MAGs met study-defined acceptance criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "annotated_mags": {
+      "reasoning": "The annotated_mags node is a Derivative, so I included only computed output descriptors for the annotated genome set: annotated MAG file identity, storage location, format, file size, genome count, predicted gene count, functional label count, annotation coverage fraction, and a derived annotation quality flag. I excluded annotation parameters because those belong to the functional_annotation Process, and I excluded upstream MAG bin properties because those belong to the mag_bins Derivative. I also avoided reusing field ids that were already generated elsewhere in the DAG. The schema focuses on the technical and summary properties of the annotated MAG output needed for downstream interpretation and table assembly.",
+      "md_schema": [
+        {
+          "field_id": "annotated_mag_file_name",
+          "descr": "Name of the annotated MAG output file produced by functional annotation, recorded when the annotated genomes are written or deposited; example: sampleA_annotated_mags.fasta.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotated_mag_file_path",
+          "descr": "Storage path or accession location for the annotated MAG output file, recorded after annotation output generation; example: /data/annotation/sampleA_annotated_mags.fasta or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotated_mag_file_format",
+          "descr": "Technical file format of the annotated MAG output, recorded at file creation; for this node it is typically FASTA, GFF3, or a combined archive.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "gff3",
+            "archive",
+            "other"
+          ]
+        },
+        {
+          "field_id": "annotated_mag_file_size_bytes",
+          "descr": "Size of the annotated MAG output in bytes, measured after annotation completion and before metadata table assembly; typical range depends on genome count and can span 10^5 to 10^10 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotated_mag_count",
+          "descr": "Number of MAGs included in the annotated output, counted after annotation completion; typical range 1 to 10^5 genomes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "predicted_gene_count",
+          "descr": "Number of predicted genes or open reading frames present in the annotated MAG output, counted after annotation completion; typical range 1 to 10^8 genes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_label_count",
+          "descr": "Number of genes or loci assigned a functional label in the annotated MAG output, counted after annotation completion; typical range 0 to 10^8 labels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_coverage_fraction",
+          "descr": "Fraction of predicted genes in the MAG set that received functional annotation, calculated after annotation completion; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_quality_flag",
+          "descr": "Coarse derived quality flag for the annotated MAG output, assigned after annotation and before metadata table assembly; allowed values summarize whether the annotated genomes are suitable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "metadata_assembly_table": {
+      "reasoning": "The metadata_assembly_table node is a Process, so I included only table-construction workflow parameters and output-level indicators: script or workflow name, version, input source summary, join key used, selected columns, table format, row count, and a simple assembly QC flag. I excluded the underlying annotation and quality metric values because those belong to the annotated_mags and completeness_contamination_metrics Derivative nodes, and I excluded the final metadata table file properties because those belong to the downstream metadata_table Derivative node. I also avoided any previously generated field ids that collided elsewhere in the DAG. The schema captures how the final metadata table was assembled without describing the table itself as an output artifact.",
+      "md_schema": [
+        {
+          "field_id": "table_assembly_script_name",
+          "descr": "Name of the script, workflow, or pipeline used to consolidate MAG annotations and quality metrics into the final metadata table, recorded when the process is run; example: custom_analysis_script or metadata_builder.py.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_assembly_script_version",
+          "descr": "Version of the script or workflow used for metadata table assembly, recorded together with the script name; example format: v1.0.3 or a git commit hash.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_sources_summary",
+          "descr": "Brief summary of the input derivative tables or files merged into the metadata table, recorded at assembly time; examples include annotated MAGs and completeness/contamination metrics.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_key_name",
+          "descr": "Primary key or identifier used to merge annotation and quality tables into the final metadata table, recorded during table assembly; example: mag_id or bin_id.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selected_column_count",
+          "descr": "Number of columns retained in the assembled metadata table after consolidation and cleanup, recorded at the end of the process; typical range 1 to 1000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_format",
+          "descr": "File format chosen for the assembled metadata table, recorded at output creation; example values include TSV, CSV, or XLSX.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of MAG records in the assembled metadata table, counted after merging all inputs; typical range 1 to 10^6 rows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_assembly_qc_flag",
+          "descr": "Coarse quality-control status of the table assembly process, recorded after consolidation and before final delivery; allowed values summarize whether the table passed completeness and consistency checks.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "The metadata_table node is a Derivative, so I included only computed output descriptors for the final consolidated table: table identity, storage location, format, file size, row count, column count, join coverage, and a derived delivery/QC flag. I excluded the table-building procedure because that belongs to the metadata_assembly_table Process, and I excluded the underlying sample, assembly, annotation, and quality values because those belong to upstream nodes and are already consolidated into this output. I also avoided reusing field ids that collided elsewhere in the DAG. The schema focuses on the final reusable metadata artefact that downstream ecological analyses will consume.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_id",
+          "descr": "Unique identifier for the final consolidated MAG metadata table, recorded when the table is created; string format example: MTAB_001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_file_path",
+          "descr": "Storage path or accession location for the final consolidated metadata table, recorded after table creation; example: /results/final_metadata/mag_metadata.tsv or an object-store URI.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_format",
+          "descr": "Technical file format of the final metadata table, recorded at file creation; for this node it is typically TSV, CSV, or XLSX.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metadata_table_file_size_bytes",
+          "descr": "Size of the final metadata table in bytes, measured after table creation and before downstream analysis; typical range depends on record count and can span 10^3 to 10^9 bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_row_count",
+          "descr": "Number of MAG records represented in the final consolidated metadata table, counted after table creation; typical range 1 to 10^6 rows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_column_count",
+          "descr": "Number of columns present in the final consolidated metadata table, counted after table creation; typical range 1 to 1000 columns.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_coverage_fraction",
+          "descr": "Fraction of expected records or keys successfully merged into the final metadata table, calculated after table creation; typical range 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_delivery_flag",
+          "descr": "Coarse delivery or usability flag for the final metadata table, recorded after assembly and before downstream ecological analysis; allowed values summarize whether the table is complete and ready to use.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,1717 @@
+{
+  "md_name": "Metagenomic MAG generation and quality workflow",
+  "md_description": "This DAG represents the generation of metagenome-assembled genomes from environmental samples using combined short-read and long-read sequencing. It covers sample preparation, library construction, sequencing captures, read preprocessing, assembly, genome binning, and quality assessment outputs such as completeness and contamination. The resulting data supports downstream evaluation of microbial biodiversity and functional potential in environmental communities.",
+  "fields_per_node": {
+    "environmental_sample": {
+      "reasoning": "For the environmental_sample entity, I included only intrinsic properties of the collected material: sample identity, origin/context, environment type, collection date, location, and preservation/transport status if needed to describe what the sample is. I excluded extraction, library prep, sequencing, and any instrument/software settings because those belong to downstream process/capture nodes. I also avoided repeating any identifiers that would be generated at the root once (e.g., experiment or subject IDs) and kept the schema focused on the entity’s provenance and physical context.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the environmental sample itself, assigned at collection; use a stable string format such as ENV-001 or siteA_sample12. This is the primary sample identifier for linking downstream nucleic acid, library, and sequencing records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_source_environment",
+          "descr": "Natural source of the collected material, recorded at the time of sampling. Examples include soil, freshwater, marine water, sediment, activated sludge, or biofilm.",
+          "type": "categorical",
+          "allowed_values": [
+            "soil",
+            "freshwater",
+            "marine_water",
+            "sediment",
+            "activated_sludge",
+            "biofilm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date when the environmental material was collected from the field or site; record in YYYY-MM-DD format. Used to anchor temporal context for the sample.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_name",
+          "descr": "Human-readable name or code for the sampling location, such as a field station name, basin name, transect label, or site code. Use a stable string that can be matched to field notes or a georeferencing table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "latitude_decimal",
+          "descr": "Latitude of the sampling location in decimal degrees recorded at collection time; typical range -90 to 90. Use the coordinate that best represents the sample origin.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longitude_decimal",
+          "descr": "Longitude of the sampling location in decimal degrees recorded at collection time; typical range -180 to 180. Use the coordinate that best represents the sample origin.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_matrix_description",
+          "descr": "Free-text description of the collected material and visible context, such as surface sediment, water column filtrate, rhizosphere soil, or biofilm scrapings. This captures what the entity physically consists of beyond the coarse environment category.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_method",
+          "descr": "Brief description of how the environmental material was collected, such as grab sample, corer, filtration, swab, or scrape. Record the field collection approach, not downstream DNA extraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "preservation_method",
+          "descr": "How the sample was preserved after collection and before nucleic acid extraction, such as flash freezing, dry ice transport, RNAlater, or chilled storage at 4 C. Record the method used to maintain sample integrity prior to processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the environmental sample was stored before DNA extraction, in degrees Celsius; common values include 4, -20, or -80. Record the temperature applicable to the preserved sample entity, not the instrument setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_mass_grams",
+          "descr": "Mass of collected solid environmental material, in grams, when the sample is a solid matrix such as soil or sediment. Record the amount collected at sampling time; typical values depend on matrix and protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_volume_milliliters",
+          "descr": "Volume of collected liquid environmental material, in milliliters, when the sample is a water or slurry sample. Record the amount collected at sampling time; typical values depend on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_context_notes",
+          "descr": "Additional provenance or contextual notes about the sample, such as depth, habitat, host association, or contamination concerns. Use for entity-level details that help interpret the microbial community source without describing any processing step.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nucleic_acid_extract": {
+      "reasoning": "For nucleic_acid_extract, I included only intrinsic properties of the extracted DNA entity and its provenance from the environmental sample: extract identifier, nucleic acid type, concentration, total yield, purity/integrity, and storage conditions. I excluded the extraction protocol, reagents, incubation conditions, and operator/software details because those belong to the DNA extraction process node. I also avoided repeating the sample-level identifiers already generated for the environmental_sample entity, and did not include library-prep or sequencing attributes because those belong downstream.",
+      "md_schema": [
+        {
+          "field_id": "extract_id",
+          "descr": "Unique identifier for the purified nucleic acid extract, assigned after extraction; use a stable string format such as DNAEXT-001 or extract_A12. This links the DNA entity to downstream library construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_sample_id",
+          "descr": "Identifier of the environmental sample from which this nucleic acid extract was obtained, linking the extract back to the collected material. Use the same sample ID format used for the parent environmental sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Type of purified nucleic acid represented by the extract. In this workflow it is expected to be DNA, but record the actual extracted analyte if mixed or atypical material was recovered.",
+          "type": "categorical",
+          "allowed_values": [
+            "DNA",
+            "RNA",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_yield_nanograms",
+          "descr": "Total amount of purified nucleic acid recovered from the extraction, in nanograms, measured after purification and before library preparation. Typical values vary widely with sample type and input biomass.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "concentration_nanograms_per_microliter",
+          "descr": "Measured concentration of the nucleic acid extract in nanograms per microliter, obtained after extraction and cleanup and before library construction. Use the concentration value used to normalize input to library prep.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_260_280_ratio",
+          "descr": "Absorbance-based purity ratio A260/A280 measured on the extracted nucleic acid. Typical DNA values are often around 1.8; record the actual post-extraction QC value used to judge contamination by protein or phenol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_260_230_ratio",
+          "descr": "Absorbance-based purity ratio A260/A230 measured on the extracted nucleic acid. Typical values near 2.0 to 2.2 indicate low carryover of salts or organics; record the post-extraction QC value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_size_bp",
+          "descr": "Approximate size distribution center or predominant fragment length of the extracted DNA in base pairs, assessed after extraction and before library construction. Use the main observed size if a full distribution is not stored elsewhere.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrity_metric",
+          "descr": "Optional DNA integrity measure recorded for the extract, such as DIN or a comparable QC score, used to characterize fragmentation before library preparation. Include the assay-specific score if available.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Post-extraction storage condition for the purified DNA extract prior to library preparation, such as 4 C short-term, -20 C, or -80 C. Record the actual storage state of the entity, not the freezer setting as a process parameter.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_days",
+          "descr": "Number of days the purified DNA extract was stored before use in library preparation, measured from extraction completion to library input. Use integer days or the closest recorded duration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_purity_flag",
+          "descr": "Indicator of whether the extract passed internal post-extraction QC for downstream library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "short_read_library": {
+      "reasoning": "For short_read_library, I included only entity-level properties of the prepared short-read sequencing library and avoided any process details from short_library_prep or capture details from short_read_sequencing. The fields focus on what the library is: identifier, source extract linkage, library type/indexing, insert size, adapter/barcode information, and post-prep QC or storage status. I did not repeat sample or extract provenance fields already handled upstream except for a necessary parent link, and I excluded instrument/software settings because those belong to the preparation or capture nodes.",
+      "md_schema": [
+        {
+          "field_id": "short_read_library_id",
+          "descr": "Unique identifier for the prepared short-read sequencing library, assigned after library construction; use a stable string format such as SRLIB-001 or lib_short_A12. This is the library entity used for downstream short-read sequencing capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_extract_id",
+          "descr": "Identifier of the nucleic acid extract used to construct this short-read library, linking the library back to the purified DNA entity. Use the same extract ID format used for the parent nucleic_acid_extract entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Sequencing library class represented by this entity. For this node it should denote a short-read library prepared for a short-read platform.",
+          "type": "categorical",
+          "allowed_values": [
+            "shotgun_short_read",
+            "amplicon_short_read",
+            "mate_pair",
+            "other_short_read"
+          ]
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate library insert size in base pairs measured after construction and before sequencing capture. Typical short-read metagenomic libraries may fall in the 150 to 600 bp range depending on protocol.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_system",
+          "descr": "Adapter or ligation system present in the prepared library, such as Illumina-compatible indexed adapters, Y-adapters, or custom platform-specific adapters. Record the construct actually incorporated into the library entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "indexing_scheme",
+          "descr": "Barcode/index arrangement used to identify this library during multiplexed sequencing, such as single index, dual index, or none. Record the indexing design applied during library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_concentration_nanograms_per_microliter",
+          "descr": "Measured concentration of the finalized short-read library, in nanograms per microliter, obtained after library cleanup and before sequencing capture. This is the quantity used to pool or load the library.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_molarity_nanomolar",
+          "descr": "Molar concentration of the finalized library, in nanomolar, if normalized for sequencing loading. Record the value measured after construction and QC, before instrument capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "average_insert_size_bp",
+          "descr": "Estimated mean insert size of the prepared library, in base pairs, as determined by QC assay after construction and before sequencing. Use this if a central tendency is tracked separately from a nominal insert size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_pass",
+          "descr": "Boolean indicator of whether the prepared library passed the pre-sequencing QC threshold required for short-read capture.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_condition",
+          "descr": "Storage condition for the prepared short-read library prior to sequencing, such as 4 C short-term, -20 C, or -80 C. Record the state of the library entity between prep and capture.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "long_read_library": {
+      "reasoning": "I removed all colliding field names flagged as already generated and kept only long-read-library-specific fields that were not previously used elsewhere in the DAG. The revised schema stays within the entity territory of the prepared long-read library and preserves the key distinguishing attributes: unique library identity, long-read-specific insert/fragment characteristics, and barcode/size-selection details. I excluded any upstream provenance fields and any generic library QC/storage fields that would duplicate earlier metadata steps.",
+      "md_schema": [
+        {
+          "field_id": "long_read_library_id",
+          "descr": "Unique identifier for the prepared long-read sequencing library, assigned after library construction; use a stable string format such as LRLIB-001 or lib_long_A12. This is the library entity used for downstream long-read sequencing capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_insert_size_bp",
+          "descr": "Target or nominal insert size in base pairs for the prepared long-read library, measured or specified after construction and before sequencing capture. Typical long-read metagenomic libraries often exceed 1,000 bp and may extend into tens of kilobases.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_average_fragment_length_bp",
+          "descr": "Estimated average fragment length of the prepared long-read library in base pairs, determined by QC after library construction and before loading. Record the observed central tendency if the library is size distributed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_barcode_scheme",
+          "descr": "Barcode or multiplexing arrangement used for this long-read library, such as none, single barcode, or dual barcode. Record the indexing design applied during library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_barcode",
+            "dual_barcode",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "long_read_size_selection_applied",
+          "descr": "Whether a size-selection step was applied during or after library construction to enrich long fragments for long-read capture.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_library_notes",
+          "descr": "Free-text notes describing any library-specific characteristics not captured by the structured fields, such as unusually low yield, re-elution, or special cleanup steps retained as part of the entity record. Use only for residual entity-level information.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_short_reads": {
+      "reasoning": "For raw_short_reads, I kept only raw signal artifact fields and corrected the collision by replacing the reused library-link field name with a node-specific parent reference that does not duplicate prior metadata. I included file identity, format, size, read counts, base counts, read length, compression, storage location, and technical quality. I excluded capture settings, trimming, and biological interpretation because those belong to other node types, and I avoided any field names already generated elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "raw_short_reads_id",
+          "descr": "Unique identifier for the raw short-read sequencing file set or record, assigned when sequencing output is generated; use a stable string format such as RSR-001 or runA_lane2_sample5. This identifies the raw signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_library_ref",
+          "descr": "Identifier of the short-read library that produced these raw reads, linking the signal back to the upstream library entity used for capture. Use the same identifier value that identifies the originating short-read library, without introducing a new sample or library naming scheme.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Primary file format of the raw short-read data artifact, recorded at output generation. Typical values include FASTQ or FASTQ_GZ for compressed read files.",
+          "type": "categorical",
+          "allowed_values": [
+            "FASTQ",
+            "FASTQ_GZ",
+            "BCL",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw short-read data file set in bytes, measured from the stored artifact after sequencing completion. Record the total size of the raw signal files if multiple files are included.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_reads_count",
+          "descr": "Total number of short reads in the raw sequencing output, counted after basecalling and before any trimming or filtering. Typical values depend on run depth and multiplexing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_bases_count",
+          "descr": "Total number of bases in the raw short-read output, measured across all reads before preprocessing. Use this as the raw yield metric for the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Nominal or typical read length in base pairs for the raw short-read output, measured from the sequencing file before trimming. Common values are 50, 100, 150, or 250 bp depending on platform configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end",
+          "descr": "Whether the raw short-read output contains paired-end reads from the sequencing run.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_format",
+          "descr": "Compression applied to the stored raw short-read files, such as gzip or none, recorded as an artifact property after file generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "gzip",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "File path, URI, or object-store location of the raw short-read artifact, such as /data/run1/sampleA_R1.fastq.gz or s3://bucket/path/file.fastq.gz. This identifies where the signal is stored.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_technical_quality_flag",
+          "descr": "Simple technical quality indicator for the raw short-read output, such as pass, warn, or fail, based on file integrity and basecalling output completeness. Do not use this for biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_long_reads": {
+      "reasoning": "For raw_long_reads, I limited the schema to long-read-specific raw artifact descriptors that do not collide with previously generated fields. Since file-format, size, counts, compression, storage, and generic QC fields were already used elsewhere in the DAG, I replaced them with unique long-read artifact properties that still help users understand the signal: identifier, long-read length summary statistics, run/channel summaries, and basecalling status. I excluded capture settings, correction, and downstream analysis because those belong to other nodes.",
+      "md_schema": [
+        {
+          "field_id": "raw_long_reads_id",
+          "descr": "Unique identifier for the raw long-read sequencing file set or record, assigned when sequencing output is generated; use a stable string format such as RLR-001 or runB_sample7. This identifies the raw signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_mean_bp",
+          "descr": "Mean read length in base pairs for the raw long-read output, measured from the sequencing file before any correction or filtering. Long-read runs often show broad length distributions, so record the average value used for summary QC.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_n50_bp",
+          "descr": "Read length N50 in base pairs for the raw long-read output, computed from read lengths before preprocessing. This is a common summary statistic for long-read datasets and should reflect the raw signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_max_bp",
+          "descr": "Maximum observed read length in base pairs in the raw long-read output, measured before any preprocessing. Use the longest successfully basecalled read as stored in the signal artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channel_count",
+          "descr": "Number of active sequencing channels or pores contributing to the raw long-read output, as reported for the run or file set. This describes the technical scale of the raw signal collection.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bases_called_count",
+          "descr": "Total number of bases successfully basecalled from the long-read run before any filtering or correction. This is a raw output metric distinct from downstream processed-base counts.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "basecalling_status",
+          "descr": "Status of the raw long-read basecalling output at the time the signal artifact was created, such as complete, partial, or rerun_required. Use this to indicate whether the raw reads are ready for downstream processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "rerun_required",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_run_identifier",
+          "descr": "Run-level identifier for the sequencing session that produced the raw long reads, such as flow cell ID, run ID, or acquisition batch code. Use a stable string that can be matched to run logs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "artifact_integrity_check_passed",
+          "descr": "Boolean indicator that the raw long-read artifact passed integrity checks at creation time, such as file completeness and readable record structure. This is a technical signal-level QC flag, not a biological quality measure.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "trimmed_short_reads": {
+      "reasoning": "For trimmed_short_reads, I included only raw/processed signal artifact properties specific to the trimmed read files: artifact identifier, provenance from raw_short_reads, trimming status, trimming statistics, post-trim read counts and length summaries, and a technical quality flag. I excluded the trimming algorithm and parameters because those belong to the trim_reads process node, and I excluded sequencing instrument settings and biological sample properties because they belong upstream. I also avoided all field names already generated elsewhere in the DAG, including generic file/storage fields that were previously used for the raw read artifacts.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_short_reads_id",
+          "descr": "Unique identifier for the trimmed short-read data artifact, assigned after adapter removal and quality filtering; use a stable string format such as TSR-001 or sampleA_trimmed. This identifies the post-trimming signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_short_reads_source_id",
+          "descr": "Identifier of the raw short-read artifact that was input to trimming, linking the processed reads back to the original raw signal. Use the same ID format used for the parent raw_short_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_status",
+          "descr": "Outcome of the trimming operation for this read set, recorded after preprocessing. Use pass when trimming completed normally, warn when partial issues occurred, and fail when the artifact is not suitable for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "reads_retained_count",
+          "descr": "Number of reads retained after adapter removal and quality trimming, counted in the final trimmed output. Record the post-filtering read yield at the end of preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reads_removed_count",
+          "descr": "Number of reads removed during trimming because of adapters, low quality, or minimum length filtering. Record the total discarded reads for this artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bases_retained_count",
+          "descr": "Total number of bases retained in the trimmed read set after adapter removal and quality filtering. Use this as the output base yield of the trimming step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_trimmed_read_length_bp",
+          "descr": "Mean read length in base pairs after trimming and filtering, measured on the final output artifact. Typical values depend on the original run and trimming stringency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_trimmed_read_length_bp",
+          "descr": "Minimum read length in base pairs allowed or observed in the trimmed output, recorded after quality filtering. This can reflect the length cutoff used to retain reads for assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_removal_rate_percent",
+          "descr": "Percentage of reads or bases identified as adapter-contaminated and removed or clipped during trimming. Record the summary trimming efficiency for this output artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trimming_rate_percent",
+          "descr": "Percentage of reads or bases altered or removed due to low-quality sequence trimming. Record the summary rate for quality-based preprocessing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_trim_quality_flag",
+          "descr": "Technical quality indicator for the trimmed short-read artifact, such as pass, warn, or fail, based on retention fraction, read length distribution, and trimming outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "corrected_long_reads": {
+      "reasoning": "For corrected_long_reads, I revised the schema to remove all colliding generic count/length fields already used in prior steps. I kept only fields that remain specific to the corrected long-read entity: identifier, provenance from raw_long_reads, correction status, corrected-read summary statistics that are uniquely named, correction yield, correction mode, and a post-correction quality flag. I continued to exclude process parameters and capture settings because those belong elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "corrected_long_reads_id",
+          "descr": "Unique identifier for the corrected long-read data artifact, assigned after error correction and cleanup; use a stable string format such as CLR-001 or sampleB_corrected. This identifies the post-correction signal artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_long_reads_source_id",
+          "descr": "Identifier of the raw long-read artifact that was input to correction, linking the corrected reads back to the original raw signal. Use the same ID format used for the parent raw_long_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_status",
+          "descr": "Outcome of the long-read correction step for this read set, recorded after preprocessing. Use pass when correction completed normally, warn when partial issues occurred, and fail when the artifact is not suitable for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "corrected_reads_count",
+          "descr": "Number of reads retained in the final corrected long-read output after error correction and cleanup. Record the post-correction read yield for this artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_bases_count",
+          "descr": "Total number of bases retained in the corrected long-read set after cleanup and filtering. Use this as the output base yield of the correction step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_corrected_read_length_bp",
+          "descr": "Mean read length in base pairs after error correction and cleanup, measured on the final output artifact. Long-read datasets often retain broad length distributions after correction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_yield_percent",
+          "descr": "Percentage of raw long-read bases or reads retained after correction and cleanup, calculated relative to the input raw long-read artifact. Use this as a summary of correction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "error_correction_mode",
+          "descr": "High-level correction mode reflected in the corrected artifact, such as self-corrected, hybrid-corrected, or filtered-only. Record the mode only if it is evident from the output record and not as a process parameter.",
+          "type": "categorical",
+          "allowed_values": [
+            "self_corrected",
+            "hybrid_corrected",
+            "filtered_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "post_correction_quality_flag",
+          "descr": "Technical quality indicator for the corrected long-read artifact, such as pass, warn, or fail, based on retention fraction, read-length summaries, and correction outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "hybrid_assembly_contigs": {
+      "reasoning": "For hybrid_assembly_contigs, I included only derivative/output properties of the assembled contig set: contig set identity, provenance from trimmed and corrected reads, assembler association at a high level, assembly size and contiguity statistics, sequence length summaries, and an assembly quality indicator. I excluded process parameters and software version details because those belong to the hybrid_assembly process node, and I excluded binning or downstream MAG quality metrics because those belong to later derivative nodes. I also avoided every previously generated field name, especially generic read-count and length metrics that collided with earlier signal nodes, and kept only assembly-specific outputs needed to interpret the contig artifact.",
+      "md_schema": [
+        {
+          "field_id": "hybrid_assembly_contigs_id",
+          "descr": "Unique identifier for the hybrid assembly contig set, assigned when assembly is completed; use a stable string format such as HAC-001 or assembly_run1_contigs. This identifies the assembled sequence artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_short_reads_source_id",
+          "descr": "Identifier of the trimmed short-read artifact that contributed to this assembly, linking the contigs back to the processed short-read input. Use the same ID format used for the parent trimmed_short_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_long_reads_source_id",
+          "descr": "Identifier of the corrected long-read artifact that contributed to this assembly, linking the contigs back to the processed long-read input. Use the same ID format used for the parent corrected_long_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_name",
+          "descr": "High-level assembler used to generate the contig set, recorded on the derivative artifact as the method responsible for the output. Examples include metaSPAdes or other hybrid metagenomic assemblers.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_category",
+          "descr": "Broad class of assembly approach reflected in the contig artifact. For this node, the expected class is hybrid metagenomic assembly combining short and long reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "hybrid_metagenomic",
+            "short_read_only",
+            "long_read_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_count",
+          "descr": "Number of contigs in the assembled output, counted after completion of hybrid assembly and before binning. Use the final contig count retained in the assembly artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_length_bp",
+          "descr": "Total assembled sequence length in base pairs across all contigs, measured in the completed contig set. This summarizes the size of the assembled metagenomic output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_contig_bp",
+          "descr": "Length in base pairs of the longest contig in the assembled output, measured after hybrid assembly completion. This is a common contiguity summary statistic.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp",
+          "descr": "Contig N50 in base pairs for the assembled output, computed from contig lengths after assembly. This is a standard assembly contiguity statistic for the derivative artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_contig_length_bp",
+          "descr": "Mean contig length in base pairs across the assembled output, measured after hybrid assembly completion. Use this as a summary of contig size distribution.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_content_percent",
+          "descr": "Overall GC content percentage of the assembled contig set, computed from the final contigs after assembly. Use this as an assembly-level compositional summary.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_flag",
+          "descr": "Technical quality indicator for the contig assembly artifact, such as pass, warn, or fail, based on contiguity, total assembly size, and completeness of the assembled output.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "mag_bins": {
+      "reasoning": "For mag_bins, I included only derivative-level properties describing the inferred genome bins themselves: bin set identity, provenance from assembly contigs, binning method category, number of bins, bin size and continuity summaries, taxonomic/annotation summary if available at the bin level, and a bin quality flag. I excluded binning software parameters and thresholds because those belong to the bin_contigs process node, and I excluded completeness/contamination because those are explicitly owned by the downstream assembly_quality_metrics derivative. I also avoided reusing any field IDs already generated in earlier nodes, especially generic count and quality field names that would collide across the DAG.",
+      "md_schema": [
+        {
+          "field_id": "mag_bins_id",
+          "descr": "Unique identifier for the MAG bin set or binning result, assigned when contigs are grouped into draft genomes; use a stable string format such as MAG-001 or binset_run1. This identifies the derivative binning artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hybrid_assembly_contigs_source_id",
+          "descr": "Identifier of the assembled contig artifact used as input to binning, linking the MAG bins back to the hybrid assembly output. Use the same ID format used for the parent hybrid_assembly_contigs entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_method",
+          "descr": "High-level binning approach represented by the MAG set, such as tetranucleotide composition, differential coverage, or a hybrid method. Record the effective method used to infer bins from contigs.",
+          "type": "categorical",
+          "allowed_values": [
+            "composition_based",
+            "coverage_based",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "bin_count",
+          "descr": "Number of genome bins produced from the assembled contigs, counted after binning completion. Use the final number of draft MAGs inferred in this result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_binned_length_bp",
+          "descr": "Total length in base pairs of all contigs assigned to bins, measured after completion of the binning step. This summarizes how much assembly sequence contributed to draft MAGs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "largest_bin_size_bp",
+          "descr": "Length in base pairs of the largest individual MAG bin, measured from the final binned output. Use this as a bin-level size summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_n50_bp",
+          "descr": "Bin N50 in base pairs for the set of MAG bins, computed from contig lengths within bins after binning. This is a contiguity-style summary of the derivative bin artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_bin_size_bp",
+          "descr": "Mean genome bin size in base pairs across all final bins, measured after binning completion. Use this as a central tendency summary for the MAG set.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "estimated_taxonomic_summary",
+          "descr": "Optional summary of the taxonomic assignments inferred for the bins, such as dominant phylum or genus labels. Record this only if the derivative includes a bin-level taxonomic characterization.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bin_contamination_screen_flag",
+          "descr": "Technical screening flag indicating whether bins appear internally consistent before formal quality assessment, based on the binning result itself. Use pass, warn, or fail to summarize the initial bin-set condition.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "binning_output_note",
+          "descr": "Free-text note capturing any important characteristics of the MAG bin set, such as highly fragmented bins, strain heterogeneity, or partial recovery. Use for derivative-level interpretation of the binning output only.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembly_quality_metrics": {
+      "reasoning": "For assembly_quality_metrics, I included only computed quality outputs for the MAG/bin set: metric record identity, provenance from mag_bins, completeness, contamination, strain heterogeneity, genome coverage or representation summaries if available, and quality classification flags. I excluded the quality-assessment software, database, and command parameters because those belong to the evaluate_bins process node, and I avoided repeating bin identity or assembly metrics already owned by upstream derivatives. I also made sure not to reuse any field IDs generated earlier in the DAG, especially generic count/quality names, and focused on the derived quality measurements that define this node.",
+      "md_schema": [
+        {
+          "field_id": "assembly_quality_metrics_id",
+          "descr": "Unique identifier for the quality-metric record associated with the MAG bins, assigned when quality assessment is completed; use a stable string format such as AQM-001 or checkm_run1_metrics. This identifies the derivative QC artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bins_source_id",
+          "descr": "Identifier of the MAG bin set used as input to quality assessment, linking the metrics back to the bins being evaluated. Use the same ID format used for the parent mag_bins entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent",
+          "descr": "Estimated completeness of the genome bins, expressed as a percentage of expected marker content recovered in the evaluated MAGs. Record the computed value for the bin set as assessed in this workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent",
+          "descr": "Estimated contamination of the genome bins, expressed as a percentage of non-target or duplicated marker content in the evaluated MAGs. Record the computed value for the bin set as assessed in this workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "strain_heterogeneity_percent",
+          "descr": "Estimated strain heterogeneity percentage reported for the evaluated MAG bins, if available. This quantifies within-bin variation and should be recorded as the post-computation quality metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "single_copy_marker_recovery_percent",
+          "descr": "Percentage of expected single-copy marker genes recovered in the evaluated bins, if reported by the QC method. Use this as a derived support metric for completeness assessment.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tier",
+          "descr": "High-level quality category assigned to the MAG bins based on computed completeness and contamination metrics. Typical categories separate high-quality, medium-quality, and low-quality bins according to the study’s criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "other"
+          ]
+        },
+        {
+          "field_id": "passes_quality_threshold",
+          "descr": "Boolean indicator of whether the MAG bins meet the project’s minimum completeness/contamination thresholds for downstream use. Record the final threshold decision from the computed metrics.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_metric_source",
+          "descr": "Name of the marker-gene or QC framework that produced the metrics, recorded as part of the derivative output if available. Examples include CheckM-style assessments or comparable genome-quality frameworks.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_summary_note",
+          "descr": "Free-text summary of notable quality-assessment results for the MAG bins, such as bins with high completeness but elevated contamination or unusual marker recovery patterns. Use only for the derived QC output.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_biodiversity_profile": {
+      "reasoning": "For the community_biodiversity_profile node, I kept only downstream derivative fields describing the final biodiversity/functionality summary and removed the colliding mag_bins_source_id link. I preserved the profile identifier, the link to assembly_quality_metrics, diversity and functional potential metrics, interpretive summary, confidence, and quality note. I excluded process/software details and upstream artifact fields to stay within derivative territory and avoid collisions with already_generated metadata.",
+      "md_schema": [
+        {
+          "field_id": "community_biodiversity_profile_id",
+          "descr": "Unique identifier for the downstream biodiversity profile, assigned when the MAG-based community summary is completed; use a stable string format such as CBP-001 or profile_run1. This identifies the derivative interpretation artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_metrics_source_id",
+          "descr": "Identifier of the assembly-quality metric record used to inform confidence in the downstream profile, linking the summary back to the evaluated bins. Use the same ID format used for the parent assembly_quality_metrics entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_richness_index",
+          "descr": "Computed taxonomic richness metric for the MAG-derived community profile, such as observed MAG count or a diversity estimator. Record the value at the time the biodiversity summary is generated.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_evenness_index",
+          "descr": "Computed evenness metric describing how uniformly MAGs are represented across the community profile. Use the metric reported by the downstream analysis for the final profile artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_diversity_index",
+          "descr": "Overall alpha diversity statistic computed from the MAG set, such as Shannon or Simpson index. Record the value used to summarize within-sample microbial diversity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_potential_score",
+          "descr": "Aggregate score or summary statistic reflecting inferred microbial functional potential from the MAG set, if reported by the downstream analysis. Record the computed profile-level value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pathway_coverage_percent",
+          "descr": "Percentage of targeted metabolic pathways or functional modules detected in the MAG-derived profile, if available. Record this as a downstream functional summary metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_structure_summary",
+          "descr": "Concise textual summary of the community-level interpretation produced from the MAG set, such as dominance patterns, diversity trends, or major functional themes. This is a derivative interpretation field, not a process description.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_confidence_level",
+          "descr": "High-level confidence category for the downstream biodiversity profile, reflecting how strongly the MAG set supports the summary interpretation. Use categories defined by the analysis workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "high",
+            "medium",
+            "low",
+            "uncertain"
+          ]
+        },
+        {
+          "field_id": "profile_quality_note",
+          "descr": "Free-text note capturing limitations or caveats in the biodiversity profile, such as sparse MAG recovery, incomplete functional annotation, or uncertainty due to contamination. Use only for the final derivative output.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "For dna_extraction, I included only process-level fields describing how nucleic acids were physically extracted from the environmental sample: process identifier, parent sample link, extraction method/category, reagent/kit used, input material amount, yield and recovery summaries, duration, and an extraction success flag. I excluded intrinsic properties of the sample and extracted DNA entity because those belong to environmental_sample and nucleic_acid_extract, respectively. I also avoided all already_generated field names and their close semantic equivalents, and I kept software/instrument details out because this is a wet-lab process node rather than a capture or computational operation.",
+      "md_schema": [
+        {
+          "field_id": "dna_extraction_id",
+          "descr": "Unique identifier for the DNA extraction process instance, assigned when extraction is performed; use a stable string format such as EXT-001 or extraction_runA. This identifies the process event rather than the DNA product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_sample_source_id",
+          "descr": "Identifier of the environmental sample used as input to the extraction process, linking the process back to the collected material. Use the same sample ID format used for the parent environmental_sample entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_method",
+          "descr": "High-level extraction approach used to obtain nucleic acids from the environmental sample, such as chemical lysis, bead beating, column-based purification, or phenol-chloroform extraction. Record the wet-lab method actually applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "chemical_lysis",
+            "bead_beating",
+            "column_based",
+            "phenol_chloroform",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Name of the extraction kit or reagent system used in the DNA extraction process, if applicable. Examples include commercial soil DNA kits or custom reagent workflows; record the actual kit used for the extraction event.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_sample_mass_grams",
+          "descr": "Mass of environmental material submitted to the extraction process, in grams, measured at the start of extraction for solid matrices such as soil or sediment. Typical values depend on protocol and matrix type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_sample_volume_milliliters",
+          "descr": "Volume of environmental material submitted to the extraction process, in milliliters, measured at the start of extraction for liquid or slurry matrices. Typical values depend on protocol and matrix type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_recovery_rate_percent",
+          "descr": "Estimated percentage of nucleic acid recovered from the input sample material, calculated after extraction as a process yield summary. Record the recovery rate at the end of the extraction event.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total duration of the DNA extraction process in minutes, measured from process start to completion. Typical extraction times depend on method and sample matrix.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final elution volume used to recover the purified nucleic acid, in microliters, measured at the end of the extraction process. Use the actual recovered volume for this process event.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_flag",
+          "descr": "Process outcome flag indicating whether the extraction produced usable nucleic acid for downstream library construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "inhibitor_removal_applied",
+          "descr": "Whether an inhibitor-removal cleanup was applied during the extraction workflow to reduce environmental contaminants such as humic substances or salts.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "short_library_prep": {
+      "reasoning": "For short_library_prep, I included only process-level fields that describe how sequencing-ready short-read libraries were prepared from extracted DNA: process identifier, parent extract link, library construction approach, key reagent/kit used, input DNA amount, fragmentation or size-selection mode, PCR amplification information, prep duration, and a library-prep success flag. I excluded intrinsic properties of the final library entity that belong on short_read_library, and I avoided capture or raw-read details because those belong downstream. I also did not reuse any already-generated field IDs or their close equivalents, and I kept the schema within the wet-lab process territory rather than describing the output artifact itself.",
+      "md_schema": [
+        {
+          "field_id": "short_library_prep_id",
+          "descr": "Unique identifier for the short-read library preparation process instance, assigned when library construction is performed; use a stable string format such as SLP-001 or short_prep_runA. This identifies the process event rather than the library product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_extract_source_id",
+          "descr": "Identifier of the purified nucleic acid extract used as input to short-read library preparation, linking the process back to the DNA entity. Use the same extract ID format used for the parent nucleic_acid_extract entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_construction_method",
+          "descr": "High-level method used to convert extracted DNA into a short-read sequencing library, such as tagmentation, ligation-based prep, or PCR-free prep. Record the actual construction strategy applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "tagmentation",
+            "ligation_based",
+            "pcr_free",
+            "amplicon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "prep_kit_name",
+          "descr": "Name of the library preparation kit or reagent system used for the short-read library prep, if applicable. Examples include commercial DNA library kits or custom reagent workflows; record the actual kit used for the preparation event.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_dna_mass_nanograms",
+          "descr": "Amount of purified DNA input into the short-read library preparation, in nanograms, measured at the start of the prep process. Typical inputs vary by kit and sample quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragmentation_method",
+          "descr": "Whether and how the input DNA was fragmented during library preparation, such as enzymatic fragmentation, mechanical shearing, tagmentation, or no fragmentation. Record the method actually applied in the prep process.",
+          "type": "categorical",
+          "allowed_values": [
+            "enzymatic",
+            "mechanical",
+            "tagmentation",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "size_selection_method",
+          "descr": "Size-selection approach used during short-read library preparation, if any, such as bead-based selection or gel extraction. Record the method applied during prep, not the resulting insert size.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycles",
+          "descr": "Number of PCR amplification cycles used during the short-read library preparation, measured as part of the prep protocol. Use the actual cycle count if amplification was performed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prep_duration_minutes",
+          "descr": "Total duration of the short-read library preparation process in minutes, measured from prep start to completion. Typical durations depend on kit and workflow complexity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_success_flag",
+          "descr": "Process outcome flag indicating whether the short-read library prep produced a sequencing-ready library for downstream capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "clean_up_applied",
+          "descr": "Whether a cleanup step such as bead purification or column cleanup was applied during library preparation to remove enzymes, primers, or short fragments.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "long_library_prep": {
+      "reasoning": "For long_library_prep, I kept only process-level fields that had not collided with prior DAG metadata: a process identifier, a high-level long-read prep workflow descriptor, size-selection application flag, barcoding application flag, and an optional prep note. I excluded the parent extract link and common prep attributes already generated elsewhere in the DAG, as flagged by the collision errors. I also avoided any output-library properties, capture settings, or downstream signal/derivative fields, staying within the wet-lab process territory only.",
+      "md_schema": [
+        {
+          "field_id": "long_library_prep_id",
+          "descr": "Unique identifier for the long-read library preparation process instance, assigned when library construction is performed; use a stable string format such as LLP-001 or long_prep_runA. This identifies the process event rather than the library product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_prep_workflow",
+          "descr": "High-level description of the long-read library preparation workflow actually used, such as ligation-based long-read prep, rapid prep, or size-selected long-read prep. Record the workflow class applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "ligation_based",
+            "rapid_prep",
+            "size_selected",
+            "amplicon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "size_selection_applied",
+          "descr": "Whether a size-selection step was applied during long-read library preparation to enrich longer fragments for sequencing capture.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "barcoding_applied",
+          "descr": "Whether sample barcoding was incorporated during the long-read library preparation for multiplexed sequencing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prep_note",
+          "descr": "Free-text note capturing any important long-read library preparation detail not represented by the structured fields, such as unusually low input, special cleanup, or sample-specific handling considerations. Keep this as a process note only.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "short_read_sequencing": {
+      "reasoning": "For short_read_sequencing, I included only capture-session and instrument-configuration fields: sequencing run identifier, instrument manufacturer/model/serial, run date, flow cell or chip type, read configuration, loading concentration, output target settings, and run-level QC/status. I excluded sample/library properties and raw file properties because those belong on the short_read_library and raw_short_reads nodes, respectively. I also avoided all already-generated field IDs and semantically equivalent names, including parent-library linkage and generic prep fields, and kept the schema focused on the actively configured measurement session and hardware description for the short-read capture node.",
+      "md_schema": [
+        {
+          "field_id": "short_read_sequencing_id",
+          "descr": "Unique identifier for the short-read sequencing capture session or run, assigned when the instrument run is initiated; use a stable string format such as SRSEQ-001 or runA_lane1. This identifies the capture event rather than the output files.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "short_read_instrument_manufacturer",
+          "descr": "Manufacturer of the short-read sequencing instrument used for this capture session, recorded as part of the instrument configuration. Examples include Illumina or another platform vendor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "short_read_instrument_model",
+          "descr": "Instrument model used for the short-read capture session, such as NovaSeq 6000, NextSeq, or equivalent. Record the actual model configured for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "short_read_instrument_serial_number",
+          "descr": "Serial number of the short-read sequencing instrument used for this capture session, recorded from the hardware configuration. Use the exact device serial string as maintained by the facility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell or consumable type loaded for the short-read sequencing run, such as S4, SP, or another platform-specific flow cell designation. Record the actual consumable type configured for the session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_read_configuration",
+          "descr": "Read configuration of the capture run, such as single-end or paired-end and the intended read lengths. Record the configuration set on the instrument for this session, for example paired-end 2 x 150 bp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_date",
+          "descr": "Date on which the short-read sequencing capture session was performed, recorded in YYYY-MM-DD format. Use the run date for the instrument session rather than the sample collection date.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_loading_concentration_nanomolar",
+          "descr": "Concentration of the short-read library loaded onto the instrument, in nanomolar, measured at the time of run setup. Typical values depend on platform and run chemistry.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cluster_density_k_per_mm2",
+          "descr": "Observed cluster density or comparable loading density metric for the short-read run, in thousands per square millimeter or equivalent platform-specific units. Record the value monitored during the sequencing session.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_read_output_gigabases",
+          "descr": "Target or expected sequencing output for the short-read run, in gigabases, configured at run setup. Use the planned output target rather than the final output artifact size.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_quality_status",
+          "descr": "High-level outcome flag for the sequencing capture session, indicating whether the run completed successfully and produced usable signal. Use categories reflecting the instrument-level run status.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "instrument_maintenance_state",
+          "descr": "Maintenance or calibration state of the sequencing instrument at the time of the run, if tracked as part of the capture session. Record whether the instrument was in a normal, serviced, or flagged state.",
+          "type": "categorical",
+          "allowed_values": [
+            "normal",
+            "recent_service",
+            "flagged",
+            "other"
+          ]
+        }
+      ]
+    },
+    "long_read_sequencing": {
+      "reasoning": "For long_read_sequencing, I retained only capture-session and instrument-description fields that did not collide with earlier DAG steps: run identifier, instrument manufacturer/model/serial, and long-read-specific chemistry/runtime descriptors. I excluded flow cell, read configuration, run date, loading concentration, output targets, and generic run quality/maintenance fields because those IDs were already generated elsewhere in the DAG. I also avoided any library or raw-file provenance fields, keeping the schema strictly focused on the long-read capture session and hardware configuration.",
+      "md_schema": [
+        {
+          "field_id": "long_read_sequencing_id",
+          "descr": "Unique identifier for the long-read sequencing capture session or run, assigned when the instrument run is initiated; use a stable string format such as LRSEQ-001 or runB_lane3. This identifies the capture event rather than the output files.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_instrument_manufacturer",
+          "descr": "Manufacturer of the long-read sequencing instrument used for this capture session, recorded as part of the instrument configuration. Examples include Oxford Nanopore or another platform vendor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_instrument_model",
+          "descr": "Instrument model used for the long-read capture session, such as MinION, GridION, PromethION, or equivalent. Record the actual model configured for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_instrument_serial_number",
+          "descr": "Serial number of the long-read sequencing instrument used for this capture session, recorded from the hardware configuration. Use the exact device serial string as maintained by the facility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry_version",
+          "descr": "Chemistry or kit version used for the long-read capture session, if the platform exposes a chemistry designation. Record the version applied at run time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adaptive_sampling_enabled",
+          "descr": "Whether adaptive sampling or a comparable on-instrument enrichment mode was enabled during the long-read capture session.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "basecalling_mode",
+          "descr": "Basecalling mode or setting associated with the long-read capture session, such as live, offline, or high-accuracy mode. Record the capture-session configuration as applied on the instrument.",
+          "type": "categorical",
+          "allowed_values": [
+            "live",
+            "offline",
+            "high_accuracy",
+            "other"
+          ]
+        },
+        {
+          "field_id": "run_duration_hours",
+          "descr": "Actual duration in hours of the long-read sequencing capture session, measured from run start to run stop. Typical runs may last several hours to days depending on platform and chemistry.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_capture_status",
+          "descr": "High-level outcome flag for the long-read capture session, indicating whether the run completed successfully and produced usable signal. Use categories reflecting the instrument-level run status.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "trim_reads": {
+      "reasoning": "For trim_reads, I kept only process-level computational metadata and removed the colliding source-link field. The schema now describes the trimming operation itself: software identity, version, repository, adapter/quality trimming settings, threshold parameters, and process success status. I excluded any output-file properties because those belong on trimmed_short_reads, and I avoided all previously generated field IDs and their close semantic equivalents.",
+      "md_schema": [
+        {
+          "field_id": "trim_reads_id",
+          "descr": "Unique identifier for the trimming process instance, assigned when adapter removal and quality filtering are performed; use a stable string format such as TRIM-001 or trim_runA. This identifies the computational process event rather than the output reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Name of the computational tool used to trim the short-read data, recorded for the process event. Examples include fastp or another adapter/quality trimming program.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the trimming software used for this process instance, recorded exactly as executed. Use a version string such as 0.23.4 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository, package source, or project homepage for the trimming software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_mode",
+          "descr": "Mode used to remove adapters during trimming, such as automatic detection, known adapter list, or no adapter trimming. Record the method applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "automatic",
+            "known_adapters",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quality_cutoff_phred",
+          "descr": "Minimum acceptable Phred quality score used to trim or filter short reads, measured as a numeric threshold in this process. Typical cutoffs are in the range 10 to 40 depending on workflow stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length in base pairs retained after trimming, used as a filtering threshold in this process. Typical values depend on downstream assembly requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_strategy",
+          "descr": "High-level trimming strategy applied to the short-read data, such as fixed-window trimming, sliding-window trimming, or aggressive quality filtering. Record the actual computational strategy used in the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "sliding_window",
+            "fixed_window",
+            "end_trimming",
+            "adapter_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "base_quality_filtering_applied",
+          "descr": "Whether base-quality filtering was applied during trimming in addition to adapter removal. Record true if low-quality bases were removed or reads were discarded based on quality.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_process_success_flag",
+          "descr": "Process outcome flag indicating whether trimming completed successfully and produced usable reads for downstream assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "correct_long_reads": {
+      "reasoning": "For correct_long_reads, I kept only process-level computational metadata and renamed all fields to avoid collisions with already_generated items. I retained the process identifier, input linkage, correction mode and thresholds, filtering options, and a success flag, while excluding corrected-output artifact properties that belong on corrected_long_reads. I also avoided generic software field names that had already been used elsewhere in the DAG by replacing them with step-specific names.",
+      "md_schema": [
+        {
+          "field_id": "correct_long_reads_id",
+          "descr": "Unique identifier for the long-read correction process instance, assigned when error correction and filtering are performed; use a stable string format such as CLRPROC-001 or correct_runA. This identifies the computational process event rather than the output reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "long_read_input_signal_id",
+          "descr": "Identifier of the raw long-read artifact used as input to correction, linking the process back to the original sequencing output. Use the same ID format used for the parent raw_long_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_pipeline_label",
+          "descr": "Name of the computational tool or pipeline used to correct the long-read data, recorded for the process event. Examples include Flye, NextDenovo, or a comparable correction workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_pipeline_version_label",
+          "descr": "Version of the correction software or pipeline used for this process instance, recorded exactly as executed. Use a version string such as 2.9 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_pipeline_source",
+          "descr": "Repository, package source, or project homepage for the correction software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_mode",
+          "descr": "High-level correction mode applied to the long reads, such as self-correction, hybrid correction using short reads, or filtering-only cleanup. Record the actual computational mode used in the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "self_correction",
+            "hybrid_correction",
+            "filtering_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "minimum_corrected_read_length_bp",
+          "descr": "Minimum read length in base pairs retained after correction and filtering, used as a threshold in this process. Typical values depend on downstream assembly requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_quality_score",
+          "descr": "Minimum read quality score or equivalent threshold used to filter long reads during correction, measured as the cutoff applied in this process. Record the actual numeric criterion used by the pipeline.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_filtering_applied",
+          "descr": "Whether chimeric or suspect reads were explicitly filtered during the long-read correction process. Record true if the process removed potential chimeras before assembly.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correction_process_success_flag",
+          "descr": "Process outcome flag indicating whether long-read correction completed successfully and produced usable reads for downstream assembly.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "hybrid_assembly": {
+      "reasoning": "For hybrid_assembly, I kept only process-level computational metadata and removed the colliding assembler name field. The remaining fields describe the assembly event itself: process ID, links to the trimmed short-read and corrected long-read inputs, assembler version/repository, assembly strategy, key assembly parameters, and a success flag. I excluded contig outputs, binning outputs, and downstream quality metrics because those belong to later derivative nodes, and I avoided all previously generated field IDs.",
+      "md_schema": [
+        {
+          "field_id": "hybrid_assembly_id",
+          "descr": "Unique identifier for the hybrid assembly process instance, assigned when contig assembly is performed; use a stable string format such as ASM-001 or hybrid_assembly_runA. This identifies the computational process event rather than the contig product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_short_reads_input_id",
+          "descr": "Identifier of the trimmed short-read artifact used as one of the inputs to hybrid assembly, linking the process back to the processed short-read signal. Use the same ID format used for the parent trimmed_short_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "corrected_long_reads_input_id",
+          "descr": "Identifier of the corrected long-read artifact used as one of the inputs to hybrid assembly, linking the process back to the processed long-read signal. Use the same ID format used for the parent corrected_long_reads entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_version",
+          "descr": "Version of the assembly software used for this process instance, recorded exactly as executed. Use a version string such as 3.15 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembler_repository",
+          "descr": "Repository, package source, or project homepage for the assembly software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_strategy",
+          "descr": "High-level assembly strategy applied in this process, such as reference-free de novo hybrid assembly, iterative assembly, or long-read-guided assembly. Record the actual strategy used to build the contigs.",
+          "type": "categorical",
+          "allowed_values": [
+            "de_novo_hybrid",
+            "iterative",
+            "long_read_guided",
+            "other"
+          ]
+        },
+        {
+          "field_id": "kmer_size",
+          "descr": "Primary k-mer size or assembly k-mer setting used during contig assembly, if applicable. Record the value configured for the assembly process, typically as an integer such as 21, 33, 55, or similar.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length in base pairs retained by the assembly process, used as a filtering threshold during output generation. Typical values depend on downstream binning requirements.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_graph_resolution_parameter",
+          "descr": "Optional numeric parameter controlling graph simplification or resolution during assembly, if exposed by the assembler. Record the configured value used in the process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_process_success_flag",
+          "descr": "Process outcome flag indicating whether hybrid assembly completed successfully and produced contigs suitable for downstream binning.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "bin_contigs": {
+      "reasoning": "For bin_contigs, I included only process-level computational metadata for the binning operation: process identifier, link to the assembled contigs input, binning tool/pipeline name and version, high-level binning strategy, key threshold settings, and a process outcome flag. I excluded the MAG bin artifact properties because those belong on mag_bins, and I did not include completeness/contamination or other QC outputs because those belong on assembly_quality_metrics. I also avoided all already-generated field IDs and close semantic equivalents, keeping the schema scoped to the contig-to-bin transformation process.",
+      "md_schema": [
+        {
+          "field_id": "bin_contigs_id",
+          "descr": "Unique identifier for the contig binning process instance, assigned when contigs are grouped into draft MAGs; use a stable string format such as BIN-001 or binning_runA. This identifies the computational process event rather than the bin product.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "hybrid_assembly_contigs_input_id",
+          "descr": "Identifier of the assembled contig artifact used as input to binning, linking the process back to the assembly output. Use the same ID format used for the parent hybrid_assembly_contigs entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_tool_name",
+          "descr": "Name of the binning software or pipeline used to group contigs into draft MAGs, recorded for the process event. Examples include MetaBAT2, CONCOCT, or a comparable genome binning tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_tool_version",
+          "descr": "Version of the binning software used for this process instance, recorded exactly as executed. Use a version string such as 2.15 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_tool_repository",
+          "descr": "Repository, package source, or project homepage for the binning software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_strategy",
+          "descr": "High-level binning strategy applied in this process, such as composition-based, coverage-based, or hybrid binning. Record the actual strategy used to infer genome bins from contigs.",
+          "type": "categorical",
+          "allowed_values": [
+            "composition_based",
+            "coverage_based",
+            "hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "min_contig_length_for_binning_bp",
+          "descr": "Minimum contig length in base pairs included in the binning process, used as a threshold before assigning contigs to bins. Typical values depend on binning tool and assembly quality.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_bin_contamination_threshold_percent",
+          "descr": "Maximum contamination threshold in percent configured for binning or post-binning filtering, if the pipeline uses such a cutoff during generation of draft MAGs. Record the threshold used in this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_bin_completeness_threshold_percent",
+          "descr": "Minimum completeness threshold in percent configured for binning or post-binning filtering, if the pipeline uses such a cutoff during generation of draft MAGs. Record the threshold used in this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_process_success_flag",
+          "descr": "Process outcome flag indicating whether contig binning completed successfully and produced draft MAG bins for downstream quality assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "evaluate_bins": {
+      "reasoning": "For evaluate_bins, I included only process-level computational metadata for quality assessment of genome bins: process identifier, link to the MAG bin input, evaluation tool name/version/repository, marker set or reference basis, key thresholds/settings for completeness and contamination calculation, and a process outcome flag. I excluded the resulting completeness/contamination values because those belong on the assembly_quality_metrics derivative, and I did not include bin identity or assembly outputs because those belong upstream/downstream. I also avoided all already-generated field IDs and close semantic equivalents, keeping the schema focused on the evaluation process itself rather than the computed quality record.",
+      "md_schema": [
+        {
+          "field_id": "evaluate_bins_id",
+          "descr": "Unique identifier for the bin evaluation process instance, assigned when genome bins are assessed for quality; use a stable string format such as EVAL-001 or checkm_runA. This identifies the computational process event rather than the metric output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_bins_input_id",
+          "descr": "Identifier of the MAG bin set used as input to quality evaluation, linking the process back to the binning output. Use the same ID format used for the parent mag_bins entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tool_name",
+          "descr": "Name of the computational tool used to evaluate genome bin completeness and contamination, recorded for the process event. Examples include CheckM or another genome quality assessment framework.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tool_version",
+          "descr": "Version of the quality-evaluation software used for this process instance, recorded exactly as executed. Use a version string such as 1.2 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_tool_repository",
+          "descr": "Repository, package source, or project homepage for the quality-evaluation software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "marker_gene_set",
+          "descr": "Marker-gene set or reference marker collection used by the evaluation tool to estimate genome completeness and contamination. Record the basis used for the quality assessment in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_threshold_percent",
+          "descr": "Minimum completeness threshold in percent used by the evaluation or reporting workflow, if applicable. Record the numeric cutoff used to judge bin quality in this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_threshold_percent",
+          "descr": "Maximum contamination threshold in percent used by the evaluation or reporting workflow, if applicable. Record the numeric cutoff used to judge bin quality in this process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "strain_heterogeneity_reporting_enabled",
+          "descr": "Whether strain heterogeneity was requested or reported as part of the bin evaluation process. Record true if the evaluation pipeline computed this additional measure.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evaluation_process_success_flag",
+          "descr": "Process outcome flag indicating whether the bin evaluation completed successfully and produced quality metrics for downstream use.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "profile_biodiversity": {
+      "reasoning": "For profile_biodiversity, I kept only process-level metadata and removed the collided MAG input link. I retained the process identifier, linkage to the assembly-quality metrics record, analysis tool configuration, comparison scope, metric family, functional annotation basis, and process success flag. I excluded derived profile values and any upstream bin identifiers to avoid overlap with earlier nodes and to stay within the process node’s semantic territory.",
+      "md_schema": [
+        {
+          "field_id": "profile_biodiversity_id",
+          "descr": "Unique identifier for the biodiversity profiling process instance, assigned when MAG-based comparative analysis is performed; use a stable string format such as PROF-001 or profile_runA. This identifies the computational process event rather than the profile output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_metrics_input_id",
+          "descr": "Identifier of the assembly-quality metric record used as input or reference for the profiling workflow, linking the process back to the evaluated bins. Use the same ID format used for the parent assembly_quality_metrics entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_tool_name",
+          "descr": "Name of the downstream analysis software or pipeline used to summarize microbial diversity and functional potential, recorded for the process event. Examples include a comparative genomics or community profiling workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_tool_version",
+          "descr": "Version of the downstream analysis software used for this process instance, recorded exactly as executed. Use a version string such as 1.0 or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_tool_repository",
+          "descr": "Repository, package source, or project homepage for the downstream analysis software used in this process. Record the canonical source used to obtain the tool for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_scope",
+          "descr": "Scope of the comparative analysis performed on the MAG set, such as within-sample summary, between-sample comparison, or cohort-level profiling. Record the actual analysis scope used in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "within_sample",
+            "between_samples",
+            "cohort_level",
+            "other"
+          ]
+        },
+        {
+          "field_id": "diversity_metric_set",
+          "descr": "Set or family of diversity metrics requested by the profiling workflow, such as alpha diversity, richness, evenness, or functional summary statistics. Record the metric family used to generate the profile.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_annotation_basis",
+          "descr": "Basis used for functional potential analysis, such as gene families, pathway databases, or orthology assignments. Record the annotation framework used in the process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_generation_success_flag",
+          "descr": "Process outcome flag indicating whether the biodiversity profiling completed successfully and produced a usable community summary.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

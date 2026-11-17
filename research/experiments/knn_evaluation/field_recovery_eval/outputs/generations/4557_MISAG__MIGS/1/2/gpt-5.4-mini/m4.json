@@ -1,0 +1,824 @@
+{
+  "md_name": "Soil microbiome sequencing across agricultural fields",
+  "md_description": "This workflow captures soil sampling from agricultural fields in multiple geographical regions, laboratory preparation of soil-derived DNA, high-throughput sequencing of microbial communities, and downstream computational processing to produce community abundance profiles. The resulting dataset supports comparison of microbial diversity across crop types and management practices, alongside field location and soil environmental parameters, to study links between farming practice, soil microbiome structure, and crop yield potential.",
+  "fields_per_node": {
+    "field_soil_sample": {
+      "reasoning": "This node is an Entity, so I included only intrinsic identity/origin fields for the collected soil sample: where it came from, what agronomic context it belongs to, and basic sample identity needed to link downstream workflow outputs back to the field sample. I excluded process variables like homogenization, DNA extraction, sequencing, and analysis settings because those belong to downstream Process/Capture/Derivative nodes. I also avoided repeating any experiment-wide identifiers if they were already generated elsewhere; since none were provided in already_generated, I kept this node focused on sample provenance and field metadata rather than measurement or file properties. The field context in the description justifies location, crop, management, and environmental context fields relevant to a starting material entity.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the soil sample collected from a field for this workflow, used to track the specimen across all downstream steps; example format: FS001 or SITE12_2024-05-18_01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "country",
+          "descr": "Country where the agricultural field was located at the time of soil collection; record the administrative country name for provenance of the sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "region",
+          "descr": "Administrative region, state, province, or county describing the field location more precisely than country; use the locally relevant geographic subdivision name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gps_latitude",
+          "descr": "Latitude of the sampling location in decimal degrees captured at the field collection point; typical range -90 to 90, recorded at the time of soil sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gps_longitude",
+          "descr": "Longitude of the sampling location in decimal degrees captured at the field collection point; typical range -180 to 180, recorded at the time of soil sampling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crop_type",
+          "descr": "Crop grown in the field from which the soil was collected, as observed or reported at sampling time; use the crop name relevant to the sampled plot (for example wheat, maize, soybean).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "management_practice",
+          "descr": "Agricultural management system used in the sampled field at collection time; categorizes the farming practice context for the soil sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "organic",
+            "conventional",
+            "integrated",
+            "regenerative",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "soil_ph",
+          "descr": "Soil pH associated with the collected field sample, measured on the sample or field subsample at collection or near-collection time; typical range 3.0 to 10.5.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_moisture_content_percent",
+          "descr": "Volumetric or gravimetric soil moisture content expressed as percent for the collected field sample at sampling time; typical range 0 to 100 depending on method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_texture",
+          "descr": "Soil texture class describing the sampled field soil based on the relative proportions of sand, silt, and clay; record the textural class assigned for the collected sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "sand",
+            "loamy_sand",
+            "sandy_loam",
+            "loam",
+            "silt_loam",
+            "silt",
+            "sandy_clay_loam",
+            "clay_loam",
+            "silty_clay_loam",
+            "sandy_clay",
+            "silty_clay",
+            "clay",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_homogenization": {
+      "reasoning": "This node is a Process, so I included only operational details of how the soil was homogenized and subsampled to produce a representative aliquot for DNA extraction. I excluded intrinsic sample provenance fields (country, crop, moisture, etc.) because those belong to the Entity node, and I excluded downstream DNA/library properties because those belong to later nodes. No already_generated fields were provided here, so I focused on process parameters that a downstream user would need to reproduce homogenization and assess its adequacy, including mixing method, subsample amount, duration, and representative quality.",
+      "md_schema": [
+        {
+          "field_id": "mixing_method",
+          "descr": "Method used to homogenize the collected soil before subsampling; record the physical mixing approach applied to the field soil sample, such as manual mixing, sterile spatula mixing, sieve-based homogenization, or mechanical mixing.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_mixing",
+            "spatula_mixing",
+            "sieve_homogenization",
+            "mechanical_mixing",
+            "other"
+          ]
+        },
+        {
+          "field_id": "homogenization_duration_minutes",
+          "descr": "Total time spent mixing the soil sample before aliquoting, measured during the homogenization process in minutes; typical range 1 to 60 minutes depending on sample volume and soil heterogeneity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subsample_mass_grams",
+          "descr": "Mass of the soil portion taken after homogenization for downstream DNA extraction, measured at the point of subsampling and expressed in grams; typical range 0.1 to 50 g depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subsample_representativeness_flag",
+          "descr": "Indicator of whether the resulting subsample was judged to be representative of the original field soil after homogenization, based on operator inspection or protocol criteria at the end of the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "representative",
+            "partially_representative",
+            "not_representative",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "homogenized_soil": {
+      "reasoning": "This node is an Entity, so I included only intrinsic properties of the homogenized soil aliquot itself: its identity as a subsample derived from the field soil, the amount/material remaining in the aliquot, and its storage state before DNA extraction. I excluded the homogenization procedure details because those belong to the upstream Process node, and I excluded DNA extraction inputs/outputs because they belong downstream. I also avoided repeating fields already used for the original field sample, since this entity represents the aliquot rather than the field provenance. The chosen fields help downstream users track the aliquot through extraction while distinguishing it from the source soil sample.",
+      "md_schema": [
+        {
+          "field_id": "aliquot_id",
+          "descr": "Unique identifier for the homogenized soil aliquot prepared from the original field soil sample; example format: HSA001 or FS001_A.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aliquot_mass_grams",
+          "descr": "Mass of the homogenized soil aliquot available for downstream DNA extraction, measured after subsampling and expressed in grams; typical range 0.1 to 50 g.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition under which the homogenized soil aliquot was held before DNA extraction, describing the preservation state of the entity rather than a process step.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "refrigerated",
+            "frozen",
+            "air_dried",
+            "buffer_preserved",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Storage temperature of the homogenized soil aliquot before extraction, measured in degrees Celsius and recorded at the time the aliquot was stored; typical range -80 to 25 depending on preservation method.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "This node is a Process, so I included operational extraction details only: the protocol used to isolate DNA from the homogenized soil aliquot, the reagents or kit employed, key step settings that affect yield and purity, and a simple output-quality indicator for the extraction step itself. I excluded properties of the input aliquot because those belong to the upstream Entity node, and I excluded properties of the extracted DNA product because those belong to the downstream soil_dna Entity node. I also avoided any fields already generated for earlier nodes, and kept software-specific fields out because this process is a wet-lab extraction rather than a computational step.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_or_protocol",
+          "descr": "Name of the DNA extraction kit or laboratory protocol used to isolate microbial DNA from the homogenized soil aliquot; record the exact method applied at the extraction step, for example DNeasy PowerSoil or phenol-chloroform extraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_soil_mass_grams",
+          "descr": "Mass of homogenized soil loaded into the extraction procedure, measured at the start of DNA extraction and expressed in grams; typical range 0.1 to 10 g depending on kit or protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bead_beating_duration_minutes",
+          "descr": "Duration of mechanical lysis or bead-beating applied during extraction, measured in minutes at the extraction step; typical range 0 to 30 minutes depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final elution volume used to recover extracted DNA at the end of the extraction procedure, expressed in microliters; typical range 10 to 200 µL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_yield_quality_flag",
+          "descr": "Operator- or protocol-based quality indicator summarizing whether the extraction produced DNA suitable for library preparation at the end of the extraction step.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_dna": {
+      "reasoning": "This node is an Entity, so I included intrinsic properties of the purified soil DNA extract itself: identity, concentration, purity, and whether the DNA is suitable for library construction. I excluded extraction protocol details because those belong to the upstream Process node, and I excluded library construction parameters because those belong downstream to library_preparation. I also avoided repeating field/sample provenance metadata already assigned to the original soil sample. These fields are the minimum needed to understand the DNA material that enters library prep and to assess whether it is usable for sequencing.",
+      "md_schema": [
+        {
+          "field_id": "dna_extract_id",
+          "descr": "Unique identifier for the purified soil DNA extract derived from the homogenized soil aliquot; example format: DNA001 or FS001_DNA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_ng_per_ul",
+          "descr": "Concentration of the recovered soil DNA measured on the purified extract prior to library preparation, expressed in ng/µL; typical range 0 to 500 ng/µL depending on extraction yield.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_ng",
+          "descr": "Total amount of purified DNA recovered from the soil extraction, measured on the final extract before library preparation and expressed in nanograms; typical range 0 to 10000 ng.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "a260_a280_ratio",
+          "descr": "UV absorbance purity ratio of the DNA extract measured on the purified soil DNA before library preparation; typical range about 1.6 to 2.1 for relatively pure DNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of whether the purified soil DNA is intact and suitable for downstream library construction, evaluated after extraction and before library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_degraded",
+            "degraded",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "This node is a Process, so I included only library construction operations: the preparation method, amplification and adapter-related settings, indexed adapter details, and an overall library-prep success indicator. I excluded intrinsic DNA properties because those belong to the upstream soil_dna entity, and I excluded sequencing instrument settings and raw file properties because those belong downstream to capture and signal nodes. I also avoided duplicating any previously generated fields and kept software fields out because this is a wet-lab process rather than a computational one. The selected fields are the minimum needed to reproduce how sequencing-ready libraries were built from soil DNA.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_method",
+          "descr": "Overall method used to convert extracted soil DNA into a sequencing-ready library; record the exact workflow or kit used at the library preparation step, for example amplicon PCR library prep or shotgun library prep.",
+          "type": "categorical",
+          "allowed_values": [
+            "amplicon_pcr",
+            "shotgun",
+            "ligation_based",
+            "tagmentation_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "pcr_cycle_number",
+          "descr": "Number of amplification cycles used during library preparation, measured at the library construction step; typical range 0 to 40 cycles depending on input DNA and protocol.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primer_pair",
+          "descr": "Primer pair used to amplify the target region during library preparation, if applicable; record the exact forward and reverse primer names or sequences used at this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_index_set",
+          "descr": "Indexed adapter or barcode set added during library preparation to enable multiplexing; record the adapter set or barcode scheme used for the sequencing-ready library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_success_flag",
+          "descr": "Quality indicator for whether the library preparation produced a sequencing-ready library at the end of the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "sequencing_library": {
+      "reasoning": "This node is an Entity, so I included only intrinsic properties of the prepared sequencing library itself: its identity, the library concentration and size distribution that describe the ready-to-sequence material, and whether it passed QC for sequencing. I excluded library construction parameters because those belong to the upstream library_preparation Process node, and I excluded instrument/run settings and raw file details because those belong downstream to the sequencing Capture and raw_fastq_reads Signal nodes. I also avoided repeating sample provenance or DNA extract attributes. These fields are the minimum needed to track the prepared library into sequencing and to judge its readiness and expected performance.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the prepared sequencing library derived from the soil DNA extract; example format: LIB001 or FS001_LIB.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the prepared sequencing library measured before sequencing, expressed in ng/µL; typical range 0 to 100 ng/µL depending on assay and library type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_bp",
+          "descr": "Representative fragment size of the prepared sequencing library measured before sequencing, expressed in base pairs; typical range depends on assay and may be approximately 150 to 1000 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_qc_status",
+          "descr": "Quality-control assessment of whether the prepared library is suitable for sequencing, evaluated after library preparation and before instrument loading.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "high_throughput_sequencing": {
+      "reasoning": "This node is a Capture, so I included the instrument session and actively configured acquisition settings that control how the sequencing library was read, plus hardware identity details required to identify the sequencer. I excluded sample or library intrinsic properties because those belong upstream to Entity nodes, and I excluded raw read file properties because those belong downstream to the Signal node. I also avoided computational analysis settings because those belong to later Process nodes. The fields selected are the minimum needed to document the sequencing run configuration and instrument provenance for reproducibility and troubleshooting.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the capture session; record the hardware vendor responsible for the sequencer, for example Illumina.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or designation of the sequencing instrument used in the capture session; record the exact sequencer model, for example MiSeq, NextSeq 550, or NovaSeq 6000.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for the capture session; use the manufacturer's serial identifier for the specific machine that generated the reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_id",
+          "descr": "Identifier for the sequencing run session in which the soil DNA library was read; example format: RUN001 or 2024-05-18_MiSeq_01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for the sequencing capture session, recorded as the planned or achieved length of each read; typical range depends on platform, for example 50 to 300 bp per read.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or reagent kit version used during the capture session, describing the active instrument configuration that affects signal generation and base calling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_quality_flag",
+          "descr": "Operator or instrument-level quality indicator summarizing whether the sequencing session completed successfully and met run-level QC expectations.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties: file identity, file format, size, basic sequence dimensions, and technical quality metrics directly describing the FASTQ output. I excluded capture settings and instrument details because those belong to the upstream Capture node, and I excluded trimming, filtering, and analysis settings because those belong downstream to Process and Derivative nodes. I also avoided sample and library provenance fields already handled earlier. The selected fields are the minimum needed to locate, inspect, and validate the raw read files before processing.",
+      "md_schema": [
+        {
+          "field_id": "fastq_file_path",
+          "descr": "Storage location or path of the raw FASTQ file produced by the sequencing run; provide the filesystem path, object-store URI, or accession string used to retrieve the raw reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fastq_file_size_bytes",
+          "descr": "File size of the raw FASTQ signal artefact, measured after sequencing and before any processing, expressed in bytes; typically ranges from megabytes to many gigabytes depending on run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of sequencing reads contained in the raw FASTQ file, counted from the unprocessed sequencing output; typically ranges from thousands to hundreds of millions depending on run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_format",
+          "descr": "Raw read layout of the FASTQ output, describing how sequence reads are represented in the file at acquisition time.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "mean_phred_quality_score",
+          "descr": "Mean base-call quality score for the raw FASTQ reads, computed from the unprocessed signal artefact as a technical quality metric; typical values often fall between 10 and 40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_contamination_flag",
+          "descr": "Indicator of whether adapter sequence contamination is detected in the raw FASTQ file prior to read processing, assessed from the raw signal artefact itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "present",
+            "absent",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_processing": {
+      "reasoning": "This node is a Process, so I included only computational preprocessing operations applied to the raw FASTQ reads: the demultiplexing scheme, trimming and filtering criteria, and a simple output-quality indicator for the processing step. I excluded raw file properties because those belong to the upstream Signal node, and I excluded inferred biological results because those belong downstream to processed_reads and later derivative nodes. I also avoided software-agent fields that are already implied by the process agent and kept the schema focused on reproducible preprocessing parameters needed before inference.",
+      "md_schema": [
+        {
+          "field_id": "demultiplexing_strategy",
+          "descr": "Method used to separate reads by sample during preprocessing, applied to the raw FASTQ reads before downstream inference; record the demultiplexing approach used for the processing step.",
+          "type": "categorical",
+          "allowed_values": [
+            "barcode_based",
+            "sample_sheet_based",
+            "none",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "quality_trim_phred_threshold",
+          "descr": "Minimum Phred score threshold used to trim low-quality bases from reads during preprocessing; recorded at the read processing step and typically ranges from 0 to 40.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering during preprocessing, expressed in base pairs; reads shorter than this threshold are discarded at the read processing step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_filtering_method",
+          "descr": "Method used to detect and remove chimeric sequences during read processing; record the specific algorithm or approach applied before inference.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "reference_based",
+            "de_novo",
+            "combined",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "read_processing_success_flag",
+          "descr": "Quality indicator for whether the preprocessing step produced read data suitable for downstream inference at the end of processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "processed_reads": {
+      "reasoning": "This node is a Signal, so I included only technical properties of the processed read artefact: where the file is stored, its size, how many reads remain, the post-processing layout, and basic post-QC quality metrics. I excluded trimming/filtering parameters because those belong to the upstream read_processing Process node, and I excluded inferred biological outputs because those belong downstream to amplicon_inference and later derivatives. I also avoided repeating raw FASTQ file fields by focusing on the post-processed read artefact rather than the original signal. These fields let a user locate the QC’d reads and assess how much data survived processing before inference.",
+      "md_schema": [
+        {
+          "field_id": "processed_reads_file_path",
+          "descr": "Storage location or path of the quality-controlled read file produced after preprocessing; provide the filesystem path, object-store URI, or accession used to retrieve the processed reads.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_file_size_bytes",
+          "descr": "File size of the processed read artefact after trimming and filtering, measured in bytes; typically smaller than the raw FASTQ size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_read_count",
+          "descr": "Total number of reads retained after quality control and filtering, counted from the processed read artefact before downstream inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_qc_read_format",
+          "descr": "Read layout of the processed sequencing data after preprocessing, indicating whether the retained reads are stored as single-end or paired-end data.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "post_qc_mean_phred_quality_score",
+          "descr": "Mean Phred quality score of the processed reads after trimming and filtering, computed from the QC'd read artefact as a technical quality metric; typical values often fall between 20 and 40.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_retention_fraction",
+          "descr": "Fraction of raw reads retained after preprocessing, calculated as processed_read_count divided by raw read count; values range from 0 to 1 and summarize processing yield.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "amplicon_inference": {
+      "reasoning": "This node is a Process, so I included only the computational inference settings that transform processed reads into biological sequence variants: the denoising/clustering algorithm, key parameters that control variant calling, and a simple success/quality indicator for the inference step. I excluded processed-read file properties because those belong to the upstream Signal node, and I excluded the resulting feature table properties because those belong downstream to the feature_table Derivative node. I also avoided repeating software-agent fields beyond what is already implied by the process agent. The selected fields are the minimum needed to reproduce how sequence variants were inferred from the reads.",
+      "md_schema": [
+        {
+          "field_id": "denoising_algorithm",
+          "descr": "Algorithm used to denoise and infer amplicon sequence variants from processed reads at the inference step; record the exact method applied, for example DADA2, Deblur, or closed-reference clustering.",
+          "type": "categorical",
+          "allowed_values": [
+            "dada2",
+            "deblur",
+            "closed_reference_clustering",
+            "open_reference_clustering",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trim_left_bp",
+          "descr": "Number of bases removed from the left end of reads before denoising, specified at the amplicon inference step; typical range 0 to 300 base pairs depending on primer trimming needs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trunc_len_bp",
+          "descr": "Read truncation length used during denoising, expressed in base pairs and applied to processed reads prior to variant inference; reads shorter than this length are excluded.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_table_frequency",
+          "descr": "Minimum sequence abundance threshold used to retain inferred variants in the resulting feature set, applied at the inference step to suppress low-frequency artefacts; typical values depend on dataset depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplicon_inference_success_flag",
+          "descr": "Quality indicator for whether the inference step successfully produced biological sequence variants suitable for downstream abundance table construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "feature_table": {
+      "reasoning": "This node is a Derivative, so I included only computed result properties of the abundance matrix: table identity, matrix dimensions, sparsity/coverage, and a quality metric describing the inferred feature table itself. I excluded inference algorithm and parameters because those belong to the upstream amplicon_inference Process node, and I excluded taxonomic labels because those belong downstream to taxonomic_annotation. I also avoided reusing file-level raw signal fields or sample provenance fields already covered earlier. These fields are the minimum needed for a downstream user to understand the size and completeness of the inferred abundance matrix.",
+      "md_schema": [
+        {
+          "field_id": "feature_table_id",
+          "descr": "Unique identifier for the inferred abundance matrix of sequence variants across samples; example format: FT001 or STUDY1_FEATURES.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_samples",
+          "descr": "Number of soil samples represented as columns or rows in the feature table, depending on table orientation, measured after amplicon inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_features",
+          "descr": "Number of inferred sequence variants or features represented in the abundance matrix, measured after denoising and clustering.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_sparsity_fraction",
+          "descr": "Fraction of entries in the feature table that are zero, calculated from the inferred abundance matrix as a measure of sparsity; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_feature_counts",
+          "descr": "Total summed abundance across all features and samples in the inferred matrix, reflecting the size of the computed result after amplicon inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_table_qc_status",
+          "descr": "Quality indicator for the inferred abundance matrix, summarizing whether the table is suitable for downstream taxonomic annotation and community analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "taxonomic_annotation": {
+      "reasoning": "This node is a Process, so I included only the computational annotation settings that map inferred sequence variants to taxonomy: the reference database, annotation method and thresholds, and a success indicator for the labeling step. I excluded feature table dimensions because those belong to the upstream Derivative node, and I excluded the resulting labeled table content because that belongs downstream to the taxon_table Derivative node. I also avoided software provenance beyond the process agent already given. The selected fields are the minimum needed to reproduce how taxa were assigned to the inferred variants.",
+      "md_schema": [
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the taxonomic reference database used to assign labels to inferred sequence variants at the annotation step; record the exact database used, for example SILVA, Greengenes, or UNITE.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the taxonomic reference database used during annotation, recorded at the time sequence variants were assigned labels.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_assignment_method",
+          "descr": "Method used to assign taxonomy to sequence variants at the annotation step, describing the computational approach used against the reference database.",
+          "type": "categorical",
+          "allowed_values": [
+            "naive_bayes",
+            "blast",
+            "consensus",
+            "classify_sklearn",
+            "other"
+          ]
+        },
+        {
+          "field_id": "confidence_threshold",
+          "descr": "Minimum confidence threshold required to accept a taxonomic assignment during annotation; values typically range from 0 to 1 and are applied at the time of labeling.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_annotation_success_flag",
+          "descr": "Quality indicator for whether the annotation step produced taxonomic labels suitable for downstream community profiling and comparison.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "taxon_table": {
+      "reasoning": "This node is a Derivative, so I included only computed-result properties of the taxonomically annotated community profile: an identifier, table dimensions at the taxon level, taxonomic resolution, coverage of assigned features, and a quality metric for the annotated profile itself. I excluded the reference database and assignment method because those belong to the upstream taxonomic_annotation Process node, and I excluded raw feature table details because those belong to the upstream feature_table Derivative. I also avoided repeating any field names already generated for earlier derivative nodes by using taxon-specific names. These fields are the minimum needed to understand the structure and completeness of the annotated community profile used in downstream analysis.",
+      "md_schema": [
+        {
+          "field_id": "taxon_table_id",
+          "descr": "Unique identifier for the taxonomically annotated community profile derived from the feature table; example format: TT001 or STUDY1_TAXA.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_taxa",
+          "descr": "Number of taxonomic groups represented in the annotated profile, measured after assignment of sequence variants to taxa.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_rank",
+          "descr": "Taxonomic rank at which the community profile is summarized, such as genus or species, reflecting the level of annotation in the derivative table.",
+          "type": "categorical",
+          "allowed_values": [
+            "kingdom",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species",
+            "otu_asv",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "assigned_feature_fraction",
+          "descr": "Fraction of inferred features from the source feature table that received a taxonomic label in the annotated profile; values range from 0 to 1 and summarize annotation coverage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxon_table_qc_status",
+          "descr": "Quality indicator for whether the taxonomically annotated community profile is suitable for downstream ecological comparison and statistical analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "alpha_beta_analysis": {
+      "reasoning": "This node is a Process, so I included only the computational analysis settings and outputs that describe how abundance profiles were compared across sample metadata groups: the analysis framework, distance/diversity metrics, grouping variables, and a high-level success indicator. I excluded the underlying taxon table properties because those belong to the upstream Derivative node, and I excluded the resulting statistical tables/figures because those belong downstream to community_comparison_results. I also avoided repeating software-agent information beyond the process agent already given. The fields selected are the minimum needed to reproduce the community comparison analysis and interpret what metadata factors were tested.",
+      "md_schema": [
+        {
+          "field_id": "analysis_framework",
+          "descr": "Computational framework or package used to compare microbial abundance profiles across crop type, management practice, and soil environment; record the analysis tool or workflow applied at this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_diversity_metric",
+          "descr": "Distance or dissimilarity metric used to compare community composition between samples in the analysis step; record the specific metric used for the abundance profile comparison.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "weighted_unifrac",
+            "unweighted_unifrac",
+            "aitchison",
+            "other"
+          ]
+        },
+        {
+          "field_id": "alpha_diversity_metric",
+          "descr": "Within-sample diversity metric used to summarize microbial diversity in the community comparison analysis; record the specific metric calculated from the taxon abundance profiles.",
+          "type": "categorical",
+          "allowed_values": [
+            "observed_features",
+            "shannon",
+            "simpson",
+            "faith_pd",
+            "chao1",
+            "other"
+          ]
+        },
+        {
+          "field_id": "grouping_variables",
+          "descr": "Sample metadata variables used to stratify or compare community profiles in the analysis step, such as crop type, management practice, or soil pH; record the variables explicitly tested.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_success_flag",
+          "descr": "Quality indicator for whether the community comparison analysis completed successfully and produced interpretable statistical outputs at the end of the process.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "community_comparison_results": {
+      "reasoning": "This node is a Derivative, so I included only computed statistical result properties: the result object identity, what comparison was performed, summary significance metrics, effect-size style outputs, and overall result quality. I excluded analysis framework and metric choices because those belong to the upstream alpha_beta_analysis Process node, and I excluded the source taxon table because that belongs upstream as well. I also avoided repeating sample provenance or group metadata fields already generated for the field sample entity. The selected fields are the minimum needed for a downstream user to interpret the statistical comparison results among crop type, management practice, and soil environment groups.",
+      "md_schema": [
+        {
+          "field_id": "comparison_results_id",
+          "descr": "Unique identifier for the computed community comparison result object; example format: CCR001 or STUDY1_COMPARISON.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tested_groups",
+          "descr": "Metadata grouping variables compared in the statistical output, such as crop type, management practice, or soil pH categories, as represented in the derivative results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_test_name",
+          "descr": "Name of the statistical test or model used to evaluate differences among community groups in the derivative result, as reported in the computed output.",
+          "type": "categorical",
+          "allowed_values": [
+            "permanova",
+            "adonis",
+            "anova",
+            "kruskal_wallis",
+            "wilcoxon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "p_value",
+          "descr": "Observed p-value for the primary community difference test reported in the comparison results, summarizing the significance of group separation in the computed output; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adjusted_p_value",
+          "descr": "Multiple-testing-corrected p-value reported for the comparison results when applicable, summarizing significance after correction; values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_size",
+          "descr": "Effect size or proportion of variance explained by the community comparison, reported as a computed summary of group differences in the derivative output; values typically range from 0 to 1 depending on the statistic.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_result_qc_status",
+          "descr": "Quality indicator for whether the statistical output is complete and interpretable for downstream reporting and reuse.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

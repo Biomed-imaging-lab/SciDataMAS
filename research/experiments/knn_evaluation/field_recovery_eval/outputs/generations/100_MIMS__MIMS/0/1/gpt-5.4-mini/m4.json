@@ -1,0 +1,1589 @@
+{
+  "md_name": "soil_metagenome_environmental_variation_workflow",
+  "md_description": "This workflow captures agricultural soil samples from different locations and seasons, measures soil environmental descriptors, extracts nucleic acids, sequences metagenomes, and computes community composition and diversity. Integrated analysis relates microbial profiles to pH, moisture, temperature, location, and season to support interpretation of seasonal and geographic variation in agricultural soils.",
+  "fields_per_node": {
+    "agricultural_soil_sample": {
+      "reasoning": "For the Entity node agricultural_soil_sample, I included only intrinsic sample identity and provenance fields: what the soil specimen is, where and when it was collected, and coarse contextual origin needed to interpret seasonal/geographic variation. I excluded measurement outputs (pH, moisture, temperature) because those belong to the downstream Capture/Signal nodes, and I excluded any extraction, library, sequencing, or analysis details because those belong to Process/Capture/Derivative nodes later in the DAG. I also avoided sample identifiers if already_generated may have covered them elsewhere, but since no already_generated list was provided here, I kept the schema focused on non-duplicative root-entity descriptors that a downstream user needs to interpret the sample origin and reuse the specimen metadata.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the agricultural soil specimen, assigned at collection time and used to link this sample to all downstream measurements and omics products; format example: AS-000123.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the soil specimen was collected in the field, recorded at the time of sampling; use ISO 8601 date format (YYYY-MM-DD), e.g. 2026-04-18.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_time_local",
+          "descr": "Local clock time of soil collection, recorded at the moment the specimen was taken from the field; use 24-hour time in HH:MM or HH:MM:SS, e.g. 08:35.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "country",
+          "descr": "Country where the agricultural soil specimen was collected; capture the collection provenance for geographic comparison, e.g. 'United States'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "region",
+          "descr": "Administrative or ecological region of collection within the country, such as state, province, or agroecological zone; used to distinguish broad geographic settings.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "latitude_decimal_degrees",
+          "descr": "Geographic latitude of the collection site in decimal degrees, recorded at sampling or from a referenced field boundary; typical range -90 to 90.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "longitude_decimal_degrees",
+          "descr": "Geographic longitude of the collection site in decimal degrees, recorded at sampling or from a referenced field boundary; typical range -180 to 180.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_site_name",
+          "descr": "Human-readable name or code for the agricultural field or sampling location, for example a farm name, plot label, or site code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "season",
+          "descr": "Season during which the soil specimen was collected, used to relate microbial variation to seasonal change; choose the season assignment used by the study.",
+          "type": "categorical",
+          "allowed_values": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter",
+            "wet_season",
+            "dry_season",
+            "other"
+          ]
+        },
+        {
+          "field_id": "crop_system",
+          "descr": "Primary agricultural context of the sampled field at collection time, describing the cultivated system rather than the sample itself; examples include 'corn', 'wheat', 'orchard', or 'fallow'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "soil_depth_cm",
+          "descr": "Depth interval from which the soil specimen was collected, measured at sampling time from the soil surface downward; use centimeters, e.g. 0-10 cm or 5 cm if a single depth is recorded.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "replicate_label",
+          "descr": "Field or sampling replicate label for this specimen when multiple soil samples were collected from the same site and time point; examples include 'A', 'B', 'rep1', or 'core_03'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition used to hold the soil specimen after collection and before downstream processing, such as short-term chilled transport or frozen storage; records sample preservation context only.",
+          "type": "categorical",
+          "allowed_values": [
+            "ambient",
+            "chilled",
+            "frozen",
+            "desiccated",
+            "other"
+          ]
+        }
+      ]
+    },
+    "soil_environment_measurement": {
+      "reasoning": "For the Capture node soil_environment_measurement, I included instrument/session configuration and field-level measurement context that define how the soil pH, moisture, and temperature were acquired. I excluded the actual pH/moisture/temperature values because those belong on the downstream Signal nodes, and I excluded sample identity, location provenance, and seasonal context because those belong to the Entity node agricultural_soil_sample. I also included the measurement platform metadata required by Rule 3, such as device manufacturer, model, and serial number, plus operational settings and calibration status that affect acquisition quality. I avoided any file-format or storage fields because those are Signal territory, not Capture territory.",
+      "md_schema": [
+        {
+          "field_id": "measurement_session_id",
+          "descr": "Unique identifier for the soil environmental measurement session performed on a collected soil specimen; format example: SEM-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_datetime_local",
+          "descr": "Date and local time when soil pH, moisture, and temperature were measured for the specimen or field context; record at the point of acquisition, e.g. 2026-04-18 08:42.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the field probe kit or measurement device used to acquire soil environmental readings, recorded for instrument provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name or number of the soil environment measurement instrument used in this capture session, e.g. 'FieldScout SC 900' or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Instrument serial number for the soil environment measurement device used in this capture session; use the manufacturer's serial identifier format, e.g. 'SN1234567'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_mode",
+          "descr": "Operational mode of the soil environmental measurement session describing how readings were obtained from the specimen or field context; select the mode used for this workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "in_field",
+            "ex_situ_sample",
+            "laboratory_bench",
+            "other"
+          ]
+        },
+        {
+          "field_id": "probe_calibration_status",
+          "descr": "Whether the soil probe or sensor set was calibrated immediately before acquisition of soil pH, moisture, and temperature values; records acquisition readiness, not the measured values.",
+          "type": "categorical",
+          "allowed_values": [
+            "calibrated",
+            "not_calibrated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "calibration_date",
+          "descr": "Date on which the measurement instrument was last calibrated before this soil environmental capture session; use ISO 8601 date format (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "probe_type",
+          "descr": "Type of sensing probe or sensor configuration used for the soil environmental capture, such as pH electrode, volumetric water content sensor, or temperature probe, depending on the acquisition setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_depth_cm",
+          "descr": "Depth in the soil profile at which environmental readings were acquired during the capture session, if applicable; use centimeters and record the measurement point, e.g. 5 cm or 0-10 cm.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reading_replicates_count",
+          "descr": "Number of replicate sensor readings collected for the same specimen or field point during this measurement session; integer count, typically 1 or more.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "acquisition_quality_flag",
+          "descr": "Overall acquisition quality indicator assigned at the end of the soil environmental capture session, reflecting whether readings were accepted for downstream use; use the study's validation status.",
+          "type": "categorical",
+          "allowed_values": [
+            "passed",
+            "warning",
+            "failed",
+            "missing"
+          ]
+        }
+      ]
+    },
+    "soil_ph_profile": {
+      "reasoning": "For the Signal node soil_ph_profile, I included only raw data artefact properties: the pH readout value as captured, its technical representation, file/record format if applicable, storage location, dimensions/size if the readout is serialized as a file or table, and basic technical quality indicators. I excluded the instrument configuration and calibration because those belong to the upstream Capture node soil_environment_measurement, and I excluded sample provenance because that belongs to agricultural_soil_sample. I also avoided interpretation or environmental association fields because those are downstream Derivative/Process territory, not raw signal territory.",
+      "md_schema": [
+        {
+          "field_id": "signal_id",
+          "descr": "Unique identifier for the raw soil pH readout artifact; format example: PH-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_ph_value",
+          "descr": "Raw soil pH value as recorded by the sensor or data logger at acquisition time; typical range 0-14, usually recorded as a floating-point value such as 6.8.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ph_value_representation",
+          "descr": "Numeric representation used for the pH readout in the raw artifact, such as direct reading, averaged reading, or logged channel value; describes the raw encoding only.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reading",
+            "average_of_replicates",
+            "sensor_channel_output",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format or record format used to store the raw pH readout, if serialized as a file or export; examples include CSV, JSON, or TXT.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw pH readout file in bytes, measured for the stored signal artifact after acquisition and export; use integer bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_count",
+          "descr": "Number of raw records or rows contained in the pH readout artifact; typically 1 for a single point measurement or greater for repeated logging.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_storage_uri",
+          "descr": "Storage location or URI of the raw pH signal artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/ph_reading.csv.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "technical_quality_flag",
+          "descr": "Technical quality status of the raw pH readout artifact, based on signal integrity checks such as completeness or parseability; this is not a scientific interpretation of the measurement.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_moisture_reading": {
+      "reasoning": "I corrected the soil_moisture_reading Signal schema by removing all field names that collided with previously generated DAG fields: file_format, file_size_bytes, record_count, data_storage_uri, and technical_quality_flag. The revised schema keeps only soil-moisture-specific raw signal descriptors that remain within Signal territory and are not duplicates of prior metadata. I also preserved the moisture measurement value and its unit/representation, since those are the core raw-data attributes needed downstream.",
+      "md_schema": [
+        {
+          "field_id": "moisture_signal_id",
+          "descr": "Unique identifier for the raw soil moisture readout artifact; format example: SM-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_moisture_value",
+          "descr": "Raw soil moisture measurement recorded at acquisition time, typically volumetric water content or similar sensor output; typical range 0 to 100 percent if expressed as percent, or 0 to 1 if expressed as fraction, depending on the device.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "moisture_unit",
+          "descr": "Unit used for the raw moisture value in this artifact, recorded as emitted by the sensor or export; examples include percent, fraction, or m3/m3.",
+          "type": "categorical",
+          "allowed_values": [
+            "percent",
+            "fraction",
+            "m3_per_m3",
+            "other"
+          ]
+        },
+        {
+          "field_id": "moisture_reading_mode",
+          "descr": "Raw measurement mode or encoding used for the moisture readout, such as single sensor point, averaged replicate, or logged channel output.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reading",
+            "average_of_replicates",
+            "sensor_channel_output",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_storage_format",
+          "descr": "Digital format used to store the raw moisture readout artifact, if serialized as a file or exported record; examples include CSV, JSON, TSV, TXT, or XLSX.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_size_bytes",
+          "descr": "Size of the raw moisture readout artifact in bytes, measured after acquisition and export; use integer bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_record_count",
+          "descr": "Number of raw records or rows contained in the moisture readout artifact; often 1 for a single point measurement or greater for time-series logging.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_storage_uri",
+          "descr": "Storage location or URI of the raw moisture signal artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/moisture_reading.csv.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_quality_status",
+          "descr": "Technical quality status of the raw moisture readout artifact based on signal integrity checks such as completeness or parseability; this is not a scientific interpretation of soil moisture status.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_temperature_reading": {
+      "reasoning": "For the Signal node soil_temperature_reading, I included only raw artifact descriptors for the temperature readout and renamed all generic storage/quality fields to avoid collisions with already_generated fields from prior steps. I excluded capture settings, sample provenance, and any interpretation because those belong to upstream Capture/Entity nodes or downstream analysis. The schema focuses on the raw temperature value, its unit, serialization, storage, and technical integrity as a signal artifact, while using unique field names to respect the DAG-wide no-duplication constraint.",
+      "md_schema": [
+        {
+          "field_id": "temperature_signal_id",
+          "descr": "Unique identifier for the raw soil temperature readout artifact; format example: ST-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_temperature_value",
+          "descr": "Raw soil temperature measurement recorded at acquisition time; typical range depends on field conditions and instrument, commonly about -20 to 60 degrees Celsius for soil measurements in this workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_unit",
+          "descr": "Unit used for the raw temperature value in this artifact, recorded as emitted by the sensor or export; usually degrees Celsius.",
+          "type": "categorical",
+          "allowed_values": [
+            "celsius",
+            "kelvin",
+            "fahrenheit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "temperature_reading_mode",
+          "descr": "Raw measurement mode or encoding used for the temperature readout, such as single sensor point, averaged replicate, or logged channel output.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reading",
+            "average_of_replicates",
+            "sensor_channel_output",
+            "other"
+          ]
+        },
+        {
+          "field_id": "temperature_file_format",
+          "descr": "Digital file format or record format used to store the raw temperature readout, if serialized as a file or exported record; examples include CSV, JSON, or TXT.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "xlsx",
+            "other"
+          ]
+        },
+        {
+          "field_id": "temperature_file_size_bytes",
+          "descr": "Size of the raw temperature readout file in bytes, measured after acquisition and export; use integer bytes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_record_count",
+          "descr": "Number of raw records or rows contained in the temperature readout artifact; often 1 for a single point measurement or greater for time-series logging.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_data_storage_uri",
+          "descr": "Storage location or URI of the raw temperature signal artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/temperature_reading.csv.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_technical_quality_flag",
+          "descr": "Technical quality status of the raw temperature readout artifact based on signal integrity checks such as completeness or parseability; this is not a scientific interpretation of soil temperature status.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "nucleic_acid_extraction": {
+      "reasoning": "For the Process node nucleic_acid_extraction, I included only process-level details that define how nucleic acids were isolated from the soil sample: extraction protocol, kit/reagent identity, operator, batch context, input amount, key lysis/elution settings, and extraction performance/quality indicators. I excluded sample provenance and environmental descriptors because those belong to the Entity and Capture/Signal nodes, and I excluded properties of the downstream extract object itself because those belong to the output Entity node soil_nucleic_acid_extract. I also avoided software fields because this is a wet-lab process rather than a computational one; per Rule 3, software name/version/repository would be included only for software-driven Process nodes.",
+      "md_schema": [
+        {
+          "field_id": "extraction_process_id",
+          "descr": "Unique identifier for the nucleic acid extraction run applied to a soil specimen; format example: EXT-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protocol_name",
+          "descr": "Name of the extraction protocol used to isolate microbial DNA and other nucleic acids from the soil sample, e.g. a kit protocol or in-house method name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "kit_or_reagent_kit_name",
+          "descr": "Commercial kit or primary reagent kit used for extraction, if applicable, such as a soil DNA extraction kit; record the product name used in the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "kit_lot_number",
+          "descr": "Lot or batch number of the extraction kit or critical reagent used in the nucleic acid extraction step, recorded for traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "operator_id",
+          "descr": "Identifier of the laboratory technician or operator who performed the extraction; use the lab's personnel code or initials format, e.g. LT-07.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_soil_mass_mg",
+          "descr": "Mass of soil input used for extraction, measured before the process begins; use milligrams and record the actual sample input amount, typically in the range of tens to hundreds of milligrams.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used during extraction, describing how cells were disrupted to release nucleic acids; examples include bead beating, chemical lysis, or enzymatic lysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "chemical_lysis",
+            "enzymatic_lysis",
+            "combined_lysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "elution_volume_ul",
+          "descr": "Final elution volume used to recover nucleic acids from the extraction matrix, measured at the end of the process in microliters; typical range 10 to 100 uL.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_indicator",
+          "descr": "Overall extraction performance indicator captured at the end of the process, such as approximate nucleic acid yield or pass/fail outcome based on internal QC; this is a process-level quality indicator, not the extract object itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "low_yield",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "contamination_control_used",
+          "descr": "Whether contamination control measures such as blanks, dedicated consumables, or clean-workflow practices were used during extraction; records process safeguards applied during the run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "soil_nucleic_acid_extract": {
+      "reasoning": "For the Entity node soil_nucleic_acid_extract, I kept only intrinsic properties of the extracted material and removed the duplicated field_id storage_condition because it collided with a previously generated DAG field. I retained identifiers, composition, concentration, purity, volume, integrity, and downstream suitability because these describe the extract itself rather than the extraction process or later library/sequencing steps. I also avoided adding any process parameters or downstream product fields to stay within Entity territory.",
+      "md_schema": [
+        {
+          "field_id": "extract_id",
+          "descr": "Unique identifier for the soil nucleic acid extract material, assigned after extraction and used to link the extract to downstream library construction; format example: EXTCT-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_sample_id",
+          "descr": "Identifier of the originating agricultural soil sample from which this nucleic acid extract was obtained; use the sample identifier format established for the root entity, e.g. AS-000123.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Type of nucleic acid represented in the extract, describing the material itself rather than the extraction method; select the category that best matches the prepared extract.",
+          "type": "categorical",
+          "allowed_values": [
+            "dna",
+            "rna",
+            "mixed_dna_rna",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extract_concentration_ng_per_ul",
+          "descr": "Concentration of nucleic acid in the extract measured after extraction and before library preparation; use nanograms per microliter, typically reported from a fluorometric or spectrophotometric assay.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_total_mass_ng",
+          "descr": "Estimated total mass of nucleic acid recovered in the extract, calculated from concentration and volume or measured directly; use nanograms, recorded for the extract material itself.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_a260_a280",
+          "descr": "Optical purity ratio of the nucleic acid extract measured after extraction and before library preparation; typical DNA values are roughly 1.7 to 2.0, depending on sample quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_a260_a230",
+          "descr": "Secondary optical purity ratio of the nucleic acid extract measured after extraction and before library preparation; used to assess salt and organic carryover, typically around 1.8 to 2.2 for clean DNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_volume_ul",
+          "descr": "Final recovered volume of the nucleic acid extract available for downstream library construction; use microliters, measured on the recovered material itself.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrity_metric",
+          "descr": "Measure of nucleic acid integrity or fragment preservation in the extract, such as DNA integrity number, smear score, or similar extract-level QC metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_compatibility_status",
+          "descr": "Indicator of whether the extract met the basic material requirements for library preparation at the time of assessment; this is an entity-level suitability flag, not a process outcome.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "needs_cleanup",
+            "insufficient_quantity",
+            "degraded",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "library_preparation": {
+      "reasoning": "For the Process node library_preparation, I included only process-level parameters that describe how the metagenomic library was constructed from the nucleic acid extract: preparation protocol, kit/reagent identity, input mass, operator and batch context, enzyme/barcode conditions, fragment-size target, amplification cycles, and a process-level QC outcome. I excluded properties of the output library itself because those belong to the downstream Entity node metagenomic_library, and I excluded sequencing settings because those belong to the downstream Capture node metagenomic_sequencing. I also avoided repeating any generic storage-condition field because that collided with already_generated metadata in the DAG, and I kept the fields specific to this preparation operation.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_process_id",
+          "descr": "Unique identifier for the library preparation run performed on a soil nucleic acid extract; format example: LIBPREP-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_protocol_name",
+          "descr": "Name of the library preparation protocol used to convert the extract into a sequencing-ready metagenomic library, such as a kit workflow or in-house method name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Commercial library preparation kit or primary reagent system used for this process, if applicable; record the product name used in the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_kit_lot_number",
+          "descr": "Lot or batch number of the key library preparation kit or critical reagent used in the process, recorded for traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_prep_operator_id",
+          "descr": "Identifier of the laboratory technician or operator who performed the library preparation; use the lab's personnel code or initials format, e.g. LP-03.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_extract_mass_ng",
+          "descr": "Amount of nucleic acid input used to start library preparation, measured from the soil nucleic acid extract before conversion to library; use nanograms, typically in the low-ng to hundreds-of-ng range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_size_target_bp",
+          "descr": "Target fragment size or insert size selected during library preparation, measured in base pairs and recorded as the desired library construction setting; typical metagenomic ranges often span about 200 to 600 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplification_cycle_count",
+          "descr": "Number of PCR or amplification cycles applied during library construction, if amplification was part of the preparation process; record the cycle count used.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_barcode_strategy",
+          "descr": "Adapter and indexing strategy used to prepare the library for sequencing, such as dual-indexing or unique molecular indices; describes the preparation setup, not the output library.",
+          "type": "categorical",
+          "allowed_values": [
+            "dual_indexing",
+            "single_indexing",
+            "umi",
+            "adapter_ligation_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "enzyme_or_polymerase_system",
+          "descr": "Enzyme or polymerase system used in the library preparation workflow, if relevant, such as end-repair enzyme mix or PCR polymerase system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "process_qc_result",
+          "descr": "Overall quality outcome of the library preparation process, based on checks such as size distribution, yield, and adapter incorporation; this is a process-level assessment, not a property of the final library entity.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "metagenomic_library": {
+      "reasoning": "For the Entity node metagenomic_library, I included intrinsic properties of the prepared sequencing library itself: its identity, linkage to the parent extract, library type, insert-size distribution, concentration, molarity, adapter/index content, fragment-size distribution, whether it passed QC, and how it is stored/handled as a material. I excluded library preparation protocol, kit, reagents, and operator details because those belong to the upstream Process node library_preparation. I also excluded sequencing instrument settings because those belong to the downstream Capture node metagenomic_sequencing. Since storage-related fields have already been used elsewhere in the DAG, I avoided a generic storage_condition name and used library-specific preservation metadata instead.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the sequencing-ready metagenomic library derived from the soil nucleic acid extract; format example: MGLIB-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_extract_id",
+          "descr": "Identifier of the soil nucleic acid extract used to create this metagenomic library; use the extract identifier assigned at the prior Entity step, e.g. EXTCT-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Library class represented by this material, describing what the library is intended for rather than how it was made; for this workflow the library should be metagenomic DNA-based.",
+          "type": "categorical",
+          "allowed_values": [
+            "metagenomic_dna",
+            "metatranscriptomic",
+            "amplicon",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the prepared library measured after construction and before sequencing; use nanograms per microliter, typically obtained from a fluorometric assay.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_molarity_nm",
+          "descr": "Molar concentration of the prepared library measured after construction and before sequencing; use nanomolar units and record the value used for loading decisions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Average insert size of the prepared library fragment population, measured after library construction; use base pairs and record the representative size of the library material.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_size_distribution_bp",
+          "descr": "Observed fragment size distribution of the prepared library, typically summarized as a range or modal profile from a sizing assay; record the library material's size characteristics in base pairs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_index_configuration",
+          "descr": "Adapter and index configuration present on the sequencing-ready library, such as dual-index or barcode assignment pattern used to identify the library during sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "dual_indexed",
+            "single_indexed",
+            "umi_tagged",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_qc_status",
+          "descr": "Quality status of the final prepared library based on material-level checks such as size distribution, concentration, and amplifiability; records whether the library is suitable for sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "borderline",
+            "failed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "library_hold_condition",
+          "descr": "Current holding condition of the prepared library material before sequencing, such as chilled, frozen, or short-term ambient handling; this describes the library entity's preservation state.",
+          "type": "categorical",
+          "allowed_values": [
+            "ambient",
+            "chilled",
+            "frozen",
+            "other"
+          ]
+        }
+      ]
+    },
+    "metagenomic_sequencing": {
+      "reasoning": "For the Capture node metagenomic_sequencing, I included only sequencing-session and instrument-configuration metadata: run identifier, instrument manufacturer/model/serial, flow cell, chemistry, read length, run mode, loading concentration, multiplexing/indexing, basecalling/software on the instrument side, and a run-level QC outcome. I excluded properties of the raw FASTQ files because those belong to the downstream Signal node raw_metagenomic_reads, and I excluded library identity or concentration because those belong to the upstream Entity node metagenomic_library. I also avoided generic storage or file-format fields because those are signal-artifact territory, not capture territory. Per Rule 3, I included hardware provenance details for the sequencer in this capture step.",
+      "md_schema": [
+        {
+          "field_id": "sequencing_run_id",
+          "descr": "Unique identifier for the metagenomic sequencing run performed on a prepared library; format example: SEQ-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the metagenomic capture session, recorded for instrument provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model name or number of the sequencing instrument used in this capture session, e.g. 'NovaSeq 6000' or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Serial number of the sequencing instrument used for this run; use the manufacturer's serial identifier format, e.g. 'SN987654'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_cell_type",
+          "descr": "Flow cell type used for the sequencing run, as configured on the instrument; record the specific platform-compatible flow cell designation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or kit version used for the run, recorded as the active chemistry configuration on the instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for the sequencing run, typically the number of cycles or bases requested per read; example 150 bp or 2x150 bp.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_type",
+          "descr": "General sequencing run mode used for the capture session, such as single-end or paired-end metagenomic sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "loading_concentration_pm",
+          "descr": "Final library loading concentration used on the sequencer at run setup, measured in picomolar; typical values depend on platform and library complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiplexing_level",
+          "descr": "Number of libraries or indexed samples pooled in this sequencing run; record the multiplexing level used for the capture session.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "basecalling_software_name",
+          "descr": "Name of the onboard or associated basecalling software used during sequencing, if applicable to the run configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "basecalling_software_version",
+          "descr": "Version of the basecalling software used for the metagenomic sequencing session, recorded for run reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_qc_flag",
+          "descr": "Overall technical quality status assigned to the sequencing run based on instrument metrics such as cluster density, Q30, and yield; this is a capture-level outcome, not a property of the raw files.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_metagenomic_reads": {
+      "reasoning": "For the Signal node raw_metagenomic_reads, I kept only raw artifact descriptors and fixed the collision by renaming the read length field to a signal-specific identifier. I excluded sequencing settings, sample provenance, and downstream filtering or analysis because those belong to the Capture node, Entity nodes, or later Process/Derivative nodes. The schema remains focused on file/record characteristics, read counts, quality summaries, storage, and integrity of the raw sequencing artefact.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_id",
+          "descr": "Unique identifier for the raw metagenomic read file or file set generated by the sequencing run; format example: RMR-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_file_format",
+          "descr": "Digital format of the raw metagenomic sequencing reads as stored after capture, typically FASTQ; record the primary file format used for the raw artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fq",
+            "bam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "paired_end_status",
+          "descr": "Whether the raw read artifact contains paired-end reads or single-end reads, as represented in the stored raw file set; records the raw file organization.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_end",
+            "single_end",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_count",
+          "descr": "Number of raw files comprising the read artifact, such as two FASTQ files for paired-end data or one file for single-end data; integer count measured at storage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_count",
+          "descr": "Total number of raw sequencing reads contained in the artifact, measured after the sequencing run and before downstream processing; use integer read count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_read_length_bp",
+          "descr": "Observed raw sequencing read length in base pairs for the raw metagenomic read artifact; for paired-end data this may represent the per-read length. Typical metagenomic read lengths often fall around 75 to 300 bp depending on the platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_base_quality_score",
+          "descr": "Mean per-base quality score across the raw read artifact, computed as a technical summary of read quality at the file level; use the typical Phred scale value reported for the raw data.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_fraction",
+          "descr": "Fraction of bases in the raw metagenomic reads that are G or C, measured from the raw file contents as a technical summary; typical values depend on community composition.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_storage_uri",
+          "descr": "Storage location or URI of the raw metagenomic read artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/raw_reads.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "artifact_integrity_flag",
+          "descr": "Technical integrity status of the raw read artifact based on file readability, completeness, and checksum or transfer validation; this is a signal-quality flag, not a scientific interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "read_filtering": {
+      "reasoning": "For the Process node read_filtering, I included only computational process details: the filtering software and version (per Rule 3), key parameters used to remove low-quality and contaminant reads, thresholds, host/adapter contaminant references if applicable, input/output counts, and a process-level QC outcome. I excluded raw file properties because those belong to the upstream Signal node raw_metagenomic_reads, and I excluded the filtered-read file properties because those belong to the downstream Signal node filtered_metagenomic_reads. I also avoided any field names that would collide with already_generated DAG-wide metadata, including generic read-length naming, by using filter-specific process fields.",
+      "md_schema": [
+        {
+          "field_id": "filtering_process_id",
+          "descr": "Unique identifier for the computational read-filtering run applied to raw metagenomic reads; format example: FILT-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software used to filter low-quality and contaminant reads from the raw metagenomic data, e.g. 'fastp'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the read-filtering software used in this process run, recorded for reproducibility, e.g. '0.23'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository or source reference for the filtering software used in this process, such as a GitHub URL, package source, or workflow image tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Minimum per-base Phred quality threshold used to trim or discard low-quality bases during read filtering; typical values are in the range 15 to 30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "min_length_after_filtering_bp",
+          "descr": "Minimum retained read length in base pairs after trimming/filtering; reads shorter than this threshold are removed or flagged during the process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Whether adapter trimming was enabled during read filtering to remove library adapter sequence from raw metagenomic reads.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contaminant_reference_name",
+          "descr": "Name of the contaminant reference used for removal of non-target reads, such as host genome, adapter database, or PhiX reference, if applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_read_count",
+          "descr": "Number of reads supplied to the filtering process, measured from the upstream raw read artifact before processing begins.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_read_count",
+          "descr": "Number of reads retained after filtering, measured at the end of the filtering process; this is a process output count, not a file property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_retention_rate",
+          "descr": "Fraction or percentage of reads retained after filtering, calculated from input and output counts as a process-level efficiency metric; typical values vary by sample quality.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_qc_flag",
+          "descr": "Overall quality outcome of the read-filtering process, reflecting whether trimming and contaminant removal met study criteria; this is a process-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "filtered_metagenomic_reads": {
+      "reasoning": "For the Signal node filtered_metagenomic_reads, I kept only artifact-level properties of the processed read files and renamed the technical integrity field to avoid collision with already_generated DAG metadata. I excluded filtering parameters and software because those belong to the upstream read_filtering process, and I excluded downstream taxonomic output because it belongs later in the workflow. The schema now uses filtered-read-specific identifiers and storage descriptors while preserving the raw file characterization needed for reuse.",
+      "md_schema": [
+        {
+          "field_id": "filtered_reads_file_id",
+          "descr": "Unique identifier for the filtered metagenomic read file or file set retained after quality trimming and contaminant removal; format example: FRM-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_file_format",
+          "descr": "Digital format of the filtered metagenomic reads as stored after processing, typically FASTQ; record the primary file format used for this signal artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fq",
+            "bam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filtered_read_file_count",
+          "descr": "Number of files comprising the filtered read artifact, such as two FASTQ files for paired-end data or one file for single-end data; integer count measured at storage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_count",
+          "descr": "Total number of reads retained after filtering, measured at the artifact level after the upstream filtering process has completed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_length_bp",
+          "descr": "Observed read length in base pairs for the filtered reads, typically the retained read length distribution after trimming; for paired-end data this may represent the per-read length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_filtered_base_quality_score",
+          "descr": "Mean per-base quality score across the filtered read artifact, computed as a technical summary of read quality after filtering; use the Phred-scale summary reported for the retained reads.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contaminant_removed_flag",
+          "descr": "Indicator of whether contaminant sequences such as adapters, host reads, or other non-target reads were removed from the filtered read artifact during upstream processing.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_data_storage_uri",
+          "descr": "Storage location or URI of the filtered metagenomic read artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/filtered_reads.fastq.gz.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_artifact_qc_flag",
+          "descr": "Technical integrity status of the filtered read artifact based on file readability, completeness, and checksum or transfer validation; this is a signal-quality flag for the processed read file itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profiling": {
+      "reasoning": "For the Process node taxonomic_profiling, I included only computational workflow details: profiling software and version (per Rule 3), reference database, taxonomic assignment settings, confidence thresholds, input/output counts, and a process-level QC outcome. I excluded the filtered read artifact properties because those belong to the upstream Signal node filtered_metagenomic_reads, and I excluded the taxonomic abundance table itself because that belongs to the downstream Derivative node taxonomic_abundance_table. I also avoided any field name that would collide with already_generated DAG-wide metadata, including generic integrity flags, by using process-specific QC naming.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_profiling_process_id",
+          "descr": "Unique identifier for the computational taxonomic profiling run applied to filtered metagenomic reads; format example: TAXP-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_software_name",
+          "descr": "Name of the software used to assign filtered metagenomic reads to taxa, e.g. 'Kraken2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_software_version",
+          "descr": "Version of the taxonomic profiling software used in this process run, recorded for reproducibility, e.g. '2.1'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_software_repository",
+          "descr": "Repository or source reference for the taxonomic profiling software used in this process, such as a GitHub URL, package source, or workflow image tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the taxonomic reference database used for read-to-taxon assignment, such as GTDB, SILVA, or a custom database, depending on the workflow configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_threshold",
+          "descr": "Minimum assignment confidence threshold used to accept taxonomic calls from filtered reads; the exact numeric scale depends on the software, so record the threshold value used in this run.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assignment_level",
+          "descr": "Taxonomic rank or resolution targeted by the profiling process, such as species, genus, family, or higher rank, depending on the study design.",
+          "type": "categorical",
+          "allowed_values": [
+            "species",
+            "genus",
+            "family",
+            "order",
+            "class",
+            "phylum",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_filtered_read_count",
+          "descr": "Number of filtered reads supplied to the taxonomic profiling process, measured from the upstream filtered read artifact before profiling begins.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classified_read_count",
+          "descr": "Number of reads assigned to one or more taxa by the profiling process, measured at the end of the computation before table generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unclassified_read_count",
+          "descr": "Number of filtered reads that remained unassigned after taxonomic profiling, measured at the end of the process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profiling_qc_flag",
+          "descr": "Overall quality outcome of the taxonomic profiling process, reflecting whether assignment rates and database matching met study criteria; this is a process-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "taxonomic_abundance_table": {
+      "reasoning": "For the Derivative node taxonomic_abundance_table, I included only computed-result descriptors: the derivative identity, linkage to the upstream profiling output, table dimensions, taxonomic rank represented, normalization/abundance units, sparsity, summary diversity/completeness indicators, and output storage. I excluded profiling software, database, and thresholds because those belong to the upstream Process node taxonomic_profiling, and I excluded raw read properties because those belong to upstream Signal nodes. I also avoided using a generic integrity flag already generated elsewhere in the DAG by keeping the derivative quality field specific to the abundance table artifact.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_table_id",
+          "descr": "Unique identifier for the derived taxonomic abundance table computed from taxonomic profiling results; format example: TAB-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_profiling_process_id",
+          "descr": "Identifier of the taxonomic profiling process run that produced this abundance table; link to the upstream profiling step, e.g. TAXP-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of taxa represented as rows in the derived abundance table, measured after aggregation and table construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of sample columns or sample entries in the derived abundance table, measured after table construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_rank",
+          "descr": "Taxonomic rank used to summarize abundance values in the table, such as species, genus, family, or higher rank; records the resolution of the derivative output.",
+          "type": "categorical",
+          "allowed_values": [
+            "species",
+            "genus",
+            "family",
+            "order",
+            "class",
+            "phylum",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "abundance_units",
+          "descr": "Units used for abundance values in the derived table, such as relative abundance fraction, percentage, or count-based abundance depending on the normalization applied.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "percent",
+            "counts",
+            "log_transformed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sparsity_fraction",
+          "descr": "Fraction of table cells that are zero or empty after aggregation, calculated as a structural property of the derived table; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization or scaling method applied to the abundance values in the derived table, if any; describes how the raw taxon counts were transformed into the final derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dominant_taxon_label",
+          "descr": "Label of the most abundant taxon represented in the derived table for quick reference, typically the taxon with highest abundance in the summarized output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_quality_flag",
+          "descr": "Overall quality status of the derived abundance table based on completeness, consistency, and expected dimensional structure; this is a derivative-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "output_storage_uri",
+          "descr": "Storage location or URI of the derived abundance table artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/taxonomic_abundance_table.tsv.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_diversity_analysis": {
+      "reasoning": "For the Process node community_diversity_analysis, I included only computational analysis parameters and outputs at the process level: software and version (per Rule 3), metric set, grouping or reference scheme, rarefaction/depth choices, distance metric, input table reference, and a process-level QC outcome. I excluded the diversity metrics themselves because those belong to the downstream Derivative node diversity_metrics, and I excluded taxonomic table properties because those belong to the upstream Derivative node taxonomic_abundance_table. I also avoided using any field names that would collide with already_generated DAG-wide metadata, including generic output or integrity names, by keeping the schema analysis-specific.",
+      "md_schema": [
+        {
+          "field_id": "diversity_analysis_process_id",
+          "descr": "Unique identifier for the community diversity analysis run applied to taxonomic abundance data; format example: DIV-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or package used to compute alpha and beta diversity metrics, e.g. 'QIIME 2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the diversity analysis software used in this process run, recorded for reproducibility, e.g. '2024.2'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Repository or source reference for the diversity analysis software used in this process, such as a GitHub URL, package source, or workflow image tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_metric_set",
+          "descr": "Set of alpha diversity metrics computed during the analysis, such as richness, Shannon, or Simpson indices; record the metrics selected for this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_distance_metric",
+          "descr": "Distance or dissimilarity metric used to compute beta diversity, such as Bray-Curtis, Jaccard, or UniFrac, depending on the analysis design.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "weighted_unifrac",
+            "unweighted_unifrac",
+            "euclidean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "rarefaction_depth_reads",
+          "descr": "Rarefaction depth or subsampling level used before diversity computation, measured in reads or equivalent units; record the depth used in this process if applicable.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "grouping_variable",
+          "descr": "Sample grouping variable used in diversity comparisons, such as site, season, or treatment, when the analysis stratifies samples by a metadata factor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_taxonomic_table_id",
+          "descr": "Identifier of the taxonomic abundance table used as input for diversity analysis; link to the upstream derivative table, e.g. TAB-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diversity_analysis_qc_flag",
+          "descr": "Overall quality outcome of the community diversity analysis, reflecting whether the computation completed successfully and produced expected metric outputs; this is a process-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "diversity_metrics": {
+      "reasoning": "For the Derivative node diversity_metrics, I kept only computed-result descriptors of the diversity outputs themselves and renamed the storage field to avoid the already_generated collision with output_storage_uri. I excluded upstream software/settings from the analysis process and excluded taxonomic table details because they belong earlier in the DAG. The resulting schema focuses on what the diversity result artifact contains, how large it is, and its quality, while using node-specific field names to stay DAG-unique.",
+      "md_schema": [
+        {
+          "field_id": "diversity_metrics_id",
+          "descr": "Unique identifier for the derived diversity metrics artifact; format example: DIVM-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_diversity_analysis_process_id",
+          "descr": "Identifier of the community diversity analysis process that produced this derivative artifact; link to the upstream analysis step, e.g. DIV-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_metrics_present",
+          "descr": "List or label describing which alpha diversity metrics are included in the derivative output, such as richness, Shannon, or Simpson; records the computed content of the result artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_metrics_present",
+          "descr": "List or label describing which beta diversity metrics or pairwise dissimilarity summaries are included in the derivative output, such as Bray-Curtis or UniFrac distance matrices.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of samples represented in the diversity metrics artifact, measured after computation across the dataset.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_count",
+          "descr": "Total number of distinct diversity metrics or summary components contained in the derivative artifact; integer count of output metric types.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_alpha_diversity_value",
+          "descr": "Mean value of the alpha diversity metric(s) summarized in the derivative artifact when a single aggregate summary is available; use the metric's native scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "beta_matrix_dimension",
+          "descr": "Dimension of the beta diversity distance matrix or comparable pairwise summary, usually number of samples by number of samples; record the primary matrix size.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ordination_method",
+          "descr": "Ordination or visualization method included in the diversity metrics derivative, if applicable, such as PCoA, NMDS, or PCA, describing the computed output rather than the process settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "pcoa",
+            "nmds",
+            "pca",
+            "tsne",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "result_quality_flag",
+          "descr": "Overall quality status of the diversity metrics derivative based on completeness, internal consistency, and expected output structure; this is a derivative-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "diversity_output_storage_uri",
+          "descr": "Storage location or URI of the derived diversity metrics artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/diversity_metrics.tsv.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_association_analysis": {
+      "reasoning": "For the Process node environmental_association_analysis, I kept only process-level statistical analysis fields and renamed software fields to avoid collisions with already_generated DAG metadata from earlier analysis steps. I excluded environmental measurements and microbial result artifacts because they belong to upstream Capture/Signal/Derivative nodes. The schema focuses on the modeling framework, variables, thresholds, diagnostics, and a process-level QC flag, while using association-specific names for software provenance to stay unique within the DAG.",
+      "md_schema": [
+        {
+          "field_id": "association_analysis_process_id",
+          "descr": "Unique identifier for the integrated environmental association analysis run; format example: ENVASSOC-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "env_assoc_software_name",
+          "descr": "Name of the software used for the environmental association analysis, e.g. 'R'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "env_assoc_software_version",
+          "descr": "Version of the analysis software used in this process run, recorded for reproducibility, e.g. '4.4'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "env_assoc_software_repository",
+          "descr": "Repository or source reference for the analysis software or workflow used in this process, such as a package source, GitHub URL, or workflow image tag.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_model_type",
+          "descr": "Primary statistical model or framework used to relate microbial profiles to environmental variables, such as linear model, multivariate regression, mixed model, or ordination-based method.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "multiple_regression",
+            "mixed_model",
+            "permanova",
+            "redundancy_analysis",
+            "canonical_correlation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "response_variable_type",
+          "descr": "Type of microbial response analyzed in the association step, such as taxon abundance, alpha diversity, beta diversity, or a combined profile.",
+          "type": "categorical",
+          "allowed_values": [
+            "taxon_abundance",
+            "alpha_diversity",
+            "beta_diversity",
+            "combined_profile",
+            "other"
+          ]
+        },
+        {
+          "field_id": "predictor_variables",
+          "descr": "Environmental predictor variables included in the association analysis, such as pH, moisture, temperature, location, and season; record the variable set used in this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "covariates_included",
+          "descr": "Additional covariates or nuisance variables included in the statistical model, if any, such as sampling depth, batch, or replicate; record the adjustment set used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold_p_value",
+          "descr": "P-value threshold used to declare statistical significance in the association analysis; typical values are 0.05 or a multiple-testing corrected threshold.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction_method",
+          "descr": "Multiple-testing correction method applied to association results, if any, such as FDR or Bonferroni.",
+          "type": "categorical",
+          "allowed_values": [
+            "fdr",
+            "bonferroni",
+            "holm",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "model_fit_metric",
+          "descr": "Primary model fit or explanatory power metric reported for the association analysis, such as R-squared, adjusted R-squared, or pseudo-R2; record the metric used in this run.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_analysis_qc_flag",
+          "descr": "Overall quality status of the environmental association analysis based on model diagnostics, convergence, and result completeness; this is a process-level assessment.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "soil_metadata_table": {
+      "reasoning": "For the Signal node soil_metadata_table, I kept only artifact-level table descriptors and renamed the quality field to avoid DAG-wide collisions with previously generated metadata. The schema covers table identity, serialization, dimensions, schema versioning, whether environmental/omics columns are included, missingness, sample coverage, and storage location. I excluded sample provenance, environmental measurements, and microbial results because those belong to upstream entity/capture/derivative nodes, not the metadata-table artifact itself.",
+      "md_schema": [
+        {
+          "field_id": "soil_metadata_table_id",
+          "descr": "Unique identifier for the structured soil metadata table artifact; format example: SMT-2026-04-18-001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_file_format",
+          "descr": "Digital file format used to store the soil metadata table artifact, typically CSV, TSV, XLSX, or JSON; record the primary serialized format of the table.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "table_row_count",
+          "descr": "Number of sample rows contained in the soil metadata table, measured as the count of records in the structured artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_column_count",
+          "descr": "Number of columns in the soil metadata table, measured at the artifact level after schema construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_version",
+          "descr": "Version identifier for the column schema used in the soil metadata table, recorded so downstream users can interpret the table layout; format example: v1.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "includes_environmental_descriptors",
+          "descr": "Whether the table contains environmental descriptor columns such as pH, moisture, and temperature in addition to sample metadata; this describes table content only.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "includes_omics_linkages",
+          "descr": "Whether the table contains link columns to metagenomic outputs such as abundance tables or diversity metrics; records whether downstream result references are embedded in the table.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_fraction",
+          "descr": "Fraction of table cells that are missing or null after consolidation of sample, environmental, and linked omics metadata; typical values range from 0 to 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unique_sample_id_count",
+          "descr": "Number of unique sample identifiers represented in the soil metadata table; this is a table-level summary of coverage across samples.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_health_flag",
+          "descr": "Overall quality status of the soil metadata table based on completeness, schema consistency, and parseability; this is a signal-level artifact assessment for the table itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "table_storage_uri",
+          "descr": "Storage location or URI of the soil metadata table artifact, such as a file path, object store URI, or database record locator; format example: s3://bucket/path/soil_metadata_table.tsv.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

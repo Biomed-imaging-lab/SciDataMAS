@@ -1,0 +1,1482 @@
+{
+  "md_name": "marine_microbiome_sequencing_workflow",
+  "md_description": "This DAG represents the workflow for marine microbiome sequencing from water, sediment, and marine organism-associated samples collected across oceanic regions. It includes environmental measurements at sampling time, nucleic acid extraction and library preparation, sequencing, and downstream bioinformatic analyses to assess microbial diversity and functional potential under varying temperature, salinity, and depth conditions.",
+  "fields_per_node": {
+    "marine_sample_collection": {
+      "reasoning": "This node is an Entity, so I included only intrinsic sample identity and origin attributes for the collected marine samples. I did not include environmental measurements, extraction details, sequencing/library properties, or downstream analysis outputs because those belong to Capture, Process, or Derivative nodes. I also avoided sample/subject/experiment identifier fields if they were likely to be repeated elsewhere, per the no-duplication rule; instead I focused on core entity descriptors that define what the sample is and where it came from before processing.",
+      "md_schema": [
+        {
+          "field_id": "sample_type",
+          "descr": "Primary physical sample matrix collected before any laboratory processing; use to distinguish water, sediment, and marine organism-associated microbiome samples. Typical values: water, sediment, organism_associated. Measurement point: at collection, as recorded on the sample itself or field record.",
+          "type": "categorical",
+          "allowed_values": [
+            "water",
+            "sediment",
+            "organism_associated"
+          ]
+        },
+        {
+          "field_id": "marine_region",
+          "descr": "Oceanic region or named sampling area where the sample was collected. Example values: North Atlantic, South Pacific, coastal upwelling zone. Measurement point: at collection site or assigned from the field station record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_location_id",
+          "descr": "String identifier for the sampling location or station associated with the collected sample, formatted as a site/station code used in the field log (for example, STN-12 or ATL_SITE_A3). Measurement point: assigned at collection and used to link multiple samples from the same location.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_date",
+          "descr": "Date the marine sample was collected in the field, recorded in ISO format YYYY-MM-DD. Measurement point: collection date from the field log or expedition record.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_depth_meters",
+          "descr": "Collection depth of the sample in meters below sea surface or sediment surface, depending on sample matrix. Typical range depends on expedition design; record the measured or assigned depth at collection. Measurement point: field collection record.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_preservation_state",
+          "descr": "Condition or preservation status of the sample immediately after collection and prior to laboratory processing. Use to capture whether the sample was fresh, chilled, frozen, or chemically preserved. Measurement point: after collection during field handling.",
+          "type": "categorical",
+          "allowed_values": [
+            "fresh",
+            "chilled",
+            "frozen",
+            "chemically_preserved"
+          ]
+        },
+        {
+          "field_id": "collection_container_material",
+          "descr": "Material of the container or vessel used to store the collected sample prior to extraction, such as polypropylene tube, glass bottle, or sterile bag. Measurement point: field collection and initial storage setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_volume_or_mass",
+          "descr": "Amount of material collected for this sample, expressed as volume for water samples or mass for sediment/biomass samples; units must be stated in the dataset accompanying this field (for example, mL, L, g, or mg). Measurement point: collection event before extraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_volume_or_mass_units",
+          "descr": "Units used for sample_volume_or_mass, selected to make the quantity interpretable across matrices. Typical values include mL, L, g, mg. Measurement point: stored alongside the collected-sample amount.",
+          "type": "categorical",
+          "allowed_values": [
+            "mL",
+            "L",
+            "g",
+            "mg"
+          ]
+        }
+      ]
+    },
+    "environment_measurement_capture": {
+      "reasoning": "This node is a Capture, so I included only actively measured field-instrument settings and acquisition-context metadata for the environmental measurement session. I kept the fields centered on how the temperature, salinity, and depth readings were captured at sampling time, plus the hardware identity of the field sensor suite as required for operation nodes. I excluded sample intrinsic properties, raw output file characteristics, and downstream derived summaries because those belong to the Entity, Signal, or Derivative nodes. I also avoided repeating any sample identifiers or collection descriptors that should remain on the marine_sample_collection node or elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "capture_device_manufacturer",
+          "descr": "Manufacturer of the field sensor suite used for environmental measurement at the sampling location and time. Example: YSI, Sea-Bird, Thermo Fisher. Measurement point: recorded for the capture instrument configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_device_model",
+          "descr": "Model name or number of the field sensor suite used to measure temperature, salinity, and depth. Example: EXO2, SBE 19plus, ProDSS. Measurement point: recorded for the configured capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_device_serial_number",
+          "descr": "Unique serial number of the field sensor suite used during the environmental measurement session. Example format: SN-12345 or alphanumeric hardware serial. Measurement point: instrument record for the specific capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_temperature_celsius",
+          "descr": "In situ water temperature measured during the environmental capture session at the sampling site. Record as degrees Celsius, typically within marine field ranges from about -2 to 35. Measurement point: during sample collection, using the configured field sensor suite.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_salinity_psu",
+          "descr": "In situ salinity measured during the environmental capture session, reported in practical salinity units (PSU) or equivalent instrument output. Typical marine range is about 0 to 40+. Measurement point: during sample collection.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_depth_meters",
+          "descr": "Depth associated with the environmental capture session, recorded in meters. This may correspond to water depth, sampling depth, or depth below surface as configured for the field measurement. Typical marine values range from 0 to several thousand meters. Measurement point: during sample collection.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_timestamp",
+          "descr": "Date and time when the environmental measurements were acquired at the sampling location. Use an ISO 8601 datetime string, for example 2026-08-18T14:32:00Z. Measurement point: exact capture time in the field.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_quality_flag",
+          "descr": "Operational quality status of the environmental capture session indicating whether the reading was usable without correction. Use to mark routine acquisition issues such as sensor drift or out-of-range values. Measurement point: assigned after field acquisition review.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "environment_conditions_signal": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties for the recorded environmental measurements: file/storage identity, format, dimensionality, size, and technical quality flags. I excluded capture-instrument settings and the scientific meaning of the measurements, since those belong to the Capture node and the raw values themselves are already represented there. I also avoided sample identifiers and collection context because those are Entity-level metadata and should not be repeated on the raw signal artifact.",
+      "md_schema": [
+        {
+          "field_id": "signal_file_name",
+          "descr": "Name of the raw environmental readings file as stored in the dataset, for example a CSV, TXT, or instrument export filename. Measurement point: after acquisition and export to storage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_file_format",
+          "descr": "File format of the raw environmental measurements artifact. Use a controlled value such as csv, tsv, json, txt, or instrument_native. Measurement point: when the raw signal is saved.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "txt",
+            "instrument_native"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "File size of the raw environmental measurements artifact in bytes, measured after export and storage. Typical values depend on session length and instrument verbosity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_row_count",
+          "descr": "Number of recorded measurement rows in the raw environmental readings file. Measurement point: counted on the stored artifact after acquisition. Typical values depend on sampling duration and logging frequency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_column_count",
+          "descr": "Number of columns or variables in the raw environmental measurements file, such as timestamp, temperature, salinity, and depth. Measurement point: from the stored raw artifact structure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the raw environmental readings file is stored. Example: s3://bucket/path/file.csv or /data/raw/env_readings.csv. Measurement point: repository or archive location after capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_data_integrity_status",
+          "descr": "Technical integrity status of the raw environmental signal artifact, indicating whether the stored file is readable and complete. Use a controlled status value to support downstream reuse. Measurement point: after file generation and verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial"
+          ]
+        }
+      ]
+    },
+    "sample_to_extract_process": {
+      "reasoning": "This node is a Process, so I included only the extraction procedure parameters, reagents/method details, and process-level QC for converting marine samples into nucleic acids. Per the node's territory, I avoided sample origin properties, raw extract file/storage properties, and downstream library or sequencing settings. I also did not repeat any sample identifiers or environmental descriptors already handled by upstream Entity/Capture/Signal nodes. Since operation nodes must describe the agent, I included the laboratory extraction protocol/software-equivalent details only insofar as they define the method used for the process.",
+      "md_schema": [
+        {
+          "field_id": "extraction_method",
+          "descr": "Name of the nucleic acid extraction method or kit used to process the marine sample, recorded at the time of extraction. Example values: phenol_chloroform, bead_beating_kit, column_kit. This describes how DNA/RNA was isolated from the collected sample, not the sample itself.",
+          "type": "categorical",
+          "allowed_values": [
+            "phenol_chloroform",
+            "bead_beating_kit",
+            "column_kit",
+            "magnetic_bead_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_target",
+          "descr": "Type of nucleic acid targeted by the extraction workflow. Use to indicate whether the protocol was optimized for DNA, RNA, or both. Measurement point: during protocol selection for the sample extraction step.",
+          "type": "categorical",
+          "allowed_values": [
+            "DNA",
+            "RNA",
+            "DNA_RNA"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit name or custom protocol label used for nucleic acid extraction, for example DNeasy PowerSoil Pro or RNeasy. Measurement point: recorded during the extraction process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_replicate_number",
+          "descr": "Replicate number for the extraction from the same marine sample, if multiple extractions were performed to improve yield or assess reproducibility. Measurement point: assigned during laboratory extraction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_input_amount",
+          "descr": "Amount of starting material entering the extraction process, expressed in the appropriate unit for the matrix (for example g of sediment, mL of water filtrate, or mg of biomass). Measurement point: immediately before extraction setup.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_input_amount_units",
+          "descr": "Units used for extraction_input_amount, such as mL, L, g, mg, or number of filters. Measurement point: stored with the extraction input quantity.",
+          "type": "categorical",
+          "allowed_values": [
+            "mL",
+            "L",
+            "g",
+            "mg",
+            "filters"
+          ]
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total elapsed time of the extraction procedure in minutes, from sample lysis to nucleic acid recovery. Typical values depend on the protocol, often tens to hundreds of minutes. Measurement point: after extraction completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_ng_per_ul",
+          "descr": "Concentration of recovered nucleic acids after extraction, reported as nanograms per microliter. Typical values vary by sample type and protocol efficiency. Measurement point: after elution and before downstream library preparation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_purity_ratio_260_280",
+          "descr": "Spectrophotometric purity ratio of the extracted nucleic acids at 260/280 nm, used as a process quality indicator. Typical values for clean nucleic acids are near 1.8 for DNA and near 2.0 for RNA. Measurement point: after extraction QC.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_quality_flag",
+          "descr": "Overall quality outcome of the extraction process, indicating whether the extracted nucleic acids were suitable for downstream library preparation. Measurement point: after extraction QC review.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "extracted_nucleic_acids": {
+      "reasoning": "This node is an Entity, so I included intrinsic properties of the extracted nucleic acid material itself: identity, nucleic acid class, concentration, purity, integrity, and storage conditions. I excluded extraction protocol details because those belong to the upstream Process node, and I excluded library/sequencing properties because those belong downstream. I also avoided sample origin descriptors that belong to the original marine sample entity and any file-oriented metadata, since this node represents purified biological material rather than a signal artifact.",
+      "md_schema": [
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Type of purified nucleic acid recovered from the marine sample, indicating whether the extract contains DNA, RNA, or both. Measurement point: after extraction and QC of the isolated material.",
+          "type": "categorical",
+          "allowed_values": [
+            "DNA",
+            "RNA",
+            "DNA_RNA"
+          ]
+        },
+        {
+          "field_id": "extract_identifier",
+          "descr": "Unique identifier for the purified nucleic acid extract, formatted as a sample-specific extract code such as EXT-001 or EXTRACT_A12. Measurement point: assigned after extraction and before library preparation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_concentration_ng_per_ul",
+          "descr": "Measured concentration of the purified nucleic acid extract in nanograms per microliter. Typical values vary by sample type and extraction efficiency. Measurement point: after extraction QC using fluorometric or spectrophotometric quantification.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_total_yield_ng",
+          "descr": "Total mass of nucleic acid recovered from the extraction, reported in nanograms. Typical values depend on input material and extraction performance. Measurement point: after elution and quantification.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_purity_ratio_260_280",
+          "descr": "Absorbance ratio at 260/280 nm used to assess nucleic acid purity. Typical values are near 1.8 for DNA and near 2.0 for RNA. Measurement point: after extraction QC.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_purity_ratio_260_230",
+          "descr": "Absorbance ratio at 260/230 nm used to assess contamination from salts, organics, or extraction reagents. Typical clean extracts are often near 2.0 to 2.2. Measurement point: after extraction QC.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_integrity_score",
+          "descr": "Measured integrity score or equivalent quality metric for the purified nucleic acid extract, such as RIN for RNA or DIN for DNA when available. Measurement point: after extraction QC and before library preparation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_storage_temperature_celsius",
+          "descr": "Storage temperature of the purified nucleic acid extract prior to downstream processing, reported in degrees Celsius. Typical values include 4, -20, or -80. Measurement point: during post-extraction storage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_storage_duration_days",
+          "descr": "Number of days the purified nucleic acid extract was held in storage before library preparation or other downstream use. Measurement point: calculated from extraction completion to downstream processing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extract_storage_condition",
+          "descr": "Preservation state of the purified nucleic acid extract during holding before library preparation. Use to indicate routine storage classes such as refrigerated, frozen_short_term, or frozen_long_term. Measurement point: post-extraction storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "refrigerated",
+            "frozen_short_term",
+            "frozen_long_term",
+            "ambient"
+          ]
+        }
+      ]
+    },
+    "library_prep_process": {
+      "reasoning": "This node is a Process, so I included only library preparation procedure details, reagent/method choices, and process-level QC/efficiency needed to reproduce conversion of extracted nucleic acids into sequencing-ready libraries. I excluded the library object’s own properties, which belong to the downstream Entity node, and I did not repeat raw signal or sequencing acquisition settings. I also avoided extraction-specific fields from the upstream nucleic acid entity/process and kept the schema focused on how the library was constructed and whether the process succeeded.",
+      "md_schema": [
+        {
+          "field_id": "library_prep_method",
+          "descr": "Library construction method used to convert extracted marine nucleic acids into sequencing-ready libraries. Example values: tagmentation, ligation_based, amplicon_pcr, stranded_rna_seq. Measurement point: selected at the start of the library preparation workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "tagmentation",
+            "ligation_based",
+            "amplicon_pcr",
+            "stranded_rna_seq",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_prep_kit_name",
+          "descr": "Commercial kit name or custom library preparation protocol label used in the workflow. Example: Nextera XT, TruSeq, Swift DNA kit. Measurement point: recorded during library setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_input_amount_ng",
+          "descr": "Mass of extracted nucleic acid input used for library construction, reported in nanograms. Typical values depend on protocol requirements and sample yield. Measurement point: immediately before library prep.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_input_volume_ul",
+          "descr": "Volume of nucleic acid input applied to the library preparation reaction, reported in microliters. Measurement point: immediately before library prep reaction setup.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used during library preparation, if applicable. Typical values are protocol dependent and often range from 0 to about 15 cycles. Measurement point: during library amplification step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragment_size_target_bp",
+          "descr": "Target insert or fragment size in base pairs specified for the sequencing library. Typical marine microbiome libraries may target a few hundred base pairs. Measurement point: during library design/setup.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_adapter_strategy",
+          "descr": "Adapter/indexing strategy used during library construction, such as dual_index, single_index, or inline_barcode. Measurement point: during library preparation design.",
+          "type": "categorical",
+          "allowed_values": [
+            "dual_index",
+            "single_index",
+            "inline_barcode",
+            "no_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_prep_replicate_number",
+          "descr": "Replicate number for independently prepared libraries originating from the same nucleic acid extract. Measurement point: assigned during library construction.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_yield_ng_per_ul",
+          "descr": "Concentration of the finished library after cleanup and quantification, reported in nanograms per microliter. Typical values depend on input amount and protocol efficiency. Measurement point: after library QC and before sequencing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_quality_flag",
+          "descr": "Overall quality outcome of the library preparation process, indicating whether the library was suitable for sequencing. Measurement point: after library QC review.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "sequencing_library_entity": {
+      "reasoning": "This node is an Entity, so I included intrinsic properties of the prepared sequencing library itself: library identity, platform compatibility, indexed/adaptor configuration, insert size characteristics, quantified concentration, and storage status. I excluded the library construction procedure and reagents because those belong to the upstream Process node, and I excluded sequencing run settings and raw read file properties because those belong to the downstream Capture/Signal nodes. I also avoided repeating source-sample or extract identifiers that were already handled earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "library_identifier",
+          "descr": "Unique identifier for the prepared sequencing library, formatted as a sample-specific library code such as LIB-001 or LIB_A12. Measurement point: assigned after library preparation and before sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_type",
+          "descr": "Type of prepared library, indicating the intended sequencing assay or amplicon/library class. Use values consistent with the experiment design, for example metagenomic, amplicon, or metatranscriptomic. Measurement point: after library construction and QC.",
+          "type": "categorical",
+          "allowed_values": [
+            "metagenomic",
+            "amplicon",
+            "metatranscriptomic",
+            "other"
+          ]
+        },
+        {
+          "field_id": "adapter_index_scheme",
+          "descr": "Indexing or adapter scheme incorporated into the sequencing library, such as single_index, dual_index, inline_barcode, or no_index. Measurement point: after library construction and before sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "inline_barcode",
+            "no_index",
+            "other"
+          ]
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Observed or target insert size of the prepared sequencing library in base pairs. Typical values for marine sequencing libraries are often in the low hundreds of base pairs, depending on assay design. Measurement point: after library QC.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the prepared library measured after cleanup and QC, reported in nanograms per microliter. Typical values vary by protocol and sample yield. Measurement point: before sequencing load.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_molarity_nm",
+          "descr": "Molar concentration of the prepared library used for sequencing normalization, reported in nanomolar. Typical values depend on platform requirements and library size. Measurement point: after library quantification and normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_temperature_celsius",
+          "descr": "Storage temperature of the prepared sequencing library prior to sequencing, reported in degrees Celsius. Typical values include 4, -20, or -80. Measurement point: during pre-sequencing storage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_storage_condition",
+          "descr": "Storage condition of the prepared sequencing library before sequencing. Use to indicate whether the library was kept refrigerated, frozen, or at ambient temperature for a short period. Measurement point: pre-sequencing storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "refrigerated",
+            "frozen",
+            "ambient"
+          ]
+        },
+        {
+          "field_id": "library_quality_score",
+          "descr": "Library quality assessment score or equivalent QC metric indicating whether the prepared library met sequencing requirements. Measurement point: after library QC and before sequencing.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_ready_flag",
+          "descr": "Boolean indicator showing whether the library passed final QC and was ready to enter sequencing. Measurement point: final library release decision.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_capture": {
+      "reasoning": "This node is a Capture, so I included only the sequencing session and instrument configuration: platform identity, run setup, lane/cell details, configured read parameters, loading and cycle settings, and the hardware agent identity required to reproduce the measurement session. I excluded raw read file properties because those belong to the downstream Signal node, and I did not include library intrinsic properties or downstream preprocessing details. I also avoided repeating sample or library identifiers from upstream Entity nodes except where needed to describe the sequencing session context without duplicating those IDs.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the run. Example: Illumina, Oxford Nanopore, Thermo Fisher. Measurement point: recorded for the sequencing capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model name or number of the sequencing instrument used for the capture session. Example: MiSeq, NovaSeq 6000, MinION, NextSeq 2000. Measurement point: instrument configuration for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Unique serial number of the sequencing instrument used for the run. Example format: SN-12345 or alphanumeric hardware serial. Measurement point: specific instrument instance for this capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_platform",
+          "descr": "Sequencing technology platform used to acquire the raw reads. Use a controlled value aligned with the instrument and assay design. Measurement point: at run setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina",
+            "nanopore",
+            "pacbio",
+            "ion_torrent",
+            "other"
+          ]
+        },
+        {
+          "field_id": "flow_cell_or_lane_id",
+          "descr": "Identifier of the flow cell, lane, or equivalent sequencing partition used for the run. Example: FC123, lane 2, or cartridge ID depending on platform. Measurement point: at run setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read, such as 150, 250, or platform-specific equivalent. Measurement point: set before sequencing run start.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end_flag",
+          "descr": "Boolean indicator specifying whether the sequencing run was configured as paired-end rather than single-end. Measurement point: run configuration.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_cycles",
+          "descr": "Total number of sequencing cycles configured for the run, when applicable to the platform. Typical values depend on the read length and chemistry. Measurement point: before run start.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_loading_concentration_nm",
+          "descr": "Concentration of the library loaded onto the sequencer, reported in nanomolar. Typical values are platform and protocol dependent. Measurement point: just before instrument loading.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_timestamp",
+          "descr": "Date and time when sequencing acquisition started, recorded in ISO 8601 datetime format, for example 2026-08-18T14:32:00Z. Measurement point: run initiation time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_status",
+          "descr": "Operational status of the sequencing run indicating whether the capture session completed as intended. Measurement point: after run completion or termination.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_reads_signal": {
+      "reasoning": "This node is a Signal, so I included only raw data artefact properties for the sequencing output files: file identity, format, size, read counts, dimensions, storage location, and technical quality/validity indicators. I excluded sequencing instrument settings and library properties because those belong to the Capture and Entity nodes, and I did not include preprocessing or biological interpretation because those belong downstream. I also avoided repeating capture metadata or sample/library identifiers except where needed to reference the stored raw file artifact itself.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_name",
+          "descr": "Name of the raw sequencing output file as stored in the dataset, for example a FASTQ, BAM, or instrument-export filename. Measurement point: after sequencing run completion and file export.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_file_format",
+          "descr": "File format of the raw sequencing output artifact. Use a controlled value such as fastq, fastq_gz, bam, or instrument_native. Measurement point: when the raw reads file is written to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bam",
+            "instrument_native",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_reads_file_size_bytes",
+          "descr": "File size of the raw sequencing output artifact in bytes, measured after export and storage. Typical values vary widely with run depth and sequencing platform.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_read_count",
+          "descr": "Total number of reads contained in the raw sequencing output file or files. Measurement point: counted on the stored raw artifact after sequencing. Typical values depend on platform and run depth.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_base_count",
+          "descr": "Total number of bases represented across all reads in the raw sequencing output artifact. Measurement point: calculated from the stored raw reads file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the raw sequencing output is stored. Example: s3://bucket/path/sample_R1.fastq.gz or /data/raw/reads.fastq.gz. Measurement point: repository or archive location after sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_compression_flag",
+          "descr": "Boolean indicator specifying whether the raw sequencing file is compressed in storage. Measurement point: on the stored artifact, for example true for .gz files.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_integrity_status",
+          "descr": "Technical integrity status of the raw sequencing output file, indicating whether the stored file is readable and complete. Measurement point: after file generation and checksum or parsing verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial"
+          ]
+        },
+        {
+          "field_id": "raw_reads_quality_metric",
+          "descr": "Aggregate technical quality metric for the raw reads artifact, such as overall Q30 rate or equivalent run-level quality summary when reported with the file. Measurement point: after sequencing output generation. This is a file-level technical metric, not a biological interpretation.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_qc_process": {
+      "reasoning": "This node is a Process, so I included only computational read-processing parameters, the software agent details required to reproduce the pipeline, and process-level QC outcomes. I excluded raw-read file properties because those belong to the upstream Signal node, and I excluded processed-read artifact properties because those belong to the downstream Signal node. I also avoided taxonomic/functional interpretation because that belongs to later Derivative nodes.",
+      "md_schema": [
+        {
+          "field_id": "qc_software_name",
+          "descr": "Name of the software or pipeline used for read trimming and filtering. Example: fastp, Trimmomatic, cutadapt, or a custom workflow. Measurement point: selected before preprocessing begins.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_software_version",
+          "descr": "Version of the read preprocessing software or pipeline used for trimming and filtering. Example format: 0.23.4 or v1.2.0. Measurement point: recorded for the exact execution environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_software_repository",
+          "descr": "Repository, package source, or project location for the read preprocessing software, such as a GitHub URL, conda package name, or container image reference. Measurement point: documented with the pipeline configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Boolean indicator specifying whether adapter trimming was performed during read preprocessing. Measurement point: preprocessing configuration for the run.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_threshold_phred",
+          "descr": "Minimum base quality threshold used to trim or filter reads, reported as a Phred score. Typical values are often in the range 15 to 30. Measurement point: preprocessing configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering, reported in base pairs. Reads shorter than this threshold are discarded. Measurement point: preprocessing configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "maximum_ambiguous_bases",
+          "descr": "Maximum number of ambiguous bases allowed per read after preprocessing. Measurement point: preprocessing configuration; reads exceeding this limit are filtered out.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "host_decontamination_enabled",
+          "descr": "Boolean indicator specifying whether reads were screened against a host or contaminant reference and removed if matched. Measurement point: preprocessing configuration.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_input_read_count",
+          "descr": "Number of reads entering the preprocessing step from the raw sequencing signal. Measurement point: immediately before trimming and filtering begins.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_output_read_count",
+          "descr": "Number of reads retained after trimming and filtering. Measurement point: after preprocessing completion; this is a process-level output quality indicator, not the stored file property.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_retention_rate",
+          "descr": "Fraction of input reads retained after preprocessing, calculated as output read count divided by input read count. Typical values depend on raw data quality and filtering settings. Measurement point: after preprocessing completion.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qc_process_status",
+          "descr": "Overall outcome of the preprocessing step indicating whether the trimming and filtering run completed successfully. Measurement point: after pipeline execution.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "processed_reads_signal": {
+      "reasoning": "This node is a Signal, so I included only file-level properties of the quality-controlled read artifact: filename, format, size, read count, length distribution, storage location, and technical integrity/quality metrics. I excluded trimming/filtering parameters and software details because those belong to the upstream Process node, and I excluded taxonomic or functional summaries because those belong to downstream Derivative nodes. I also avoided repeating raw-read artifact fields except where the processed file needs its own storage and technical description.",
+      "md_schema": [
+        {
+          "field_id": "processed_reads_file_name",
+          "descr": "Name of the quality-controlled sequencing read file as stored in the dataset, for example a FASTQ or FASTQ.GZ filename after trimming and filtering. Measurement point: after preprocessing and export to storage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_file_format",
+          "descr": "File format of the processed sequencing reads artifact. Use a controlled value such as fastq, fastq_gz, or other read-oriented text/binary format. Measurement point: when the processed reads file is written to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "processed_reads_file_size_bytes",
+          "descr": "File size of the processed sequencing read artifact in bytes, measured after preprocessing and storage. Measurement point: on the stored QC-passed read file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_read_count",
+          "descr": "Number of reads retained in the processed sequencing read file after trimming and filtering. Measurement point: counted on the stored processed artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_base_count",
+          "descr": "Total number of bases represented across all reads in the processed read file. Measurement point: calculated from the stored QC-passed reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_length_mean_bp",
+          "descr": "Mean read length in base pairs after preprocessing. Typical values depend on the sequencing platform and trimming settings. Measurement point: computed from the stored processed read artifact.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the processed sequencing reads are stored. Example: s3://bucket/path/sample_trimmed.fastq.gz or /data/processed/reads.fastq.gz. Measurement point: repository or archive location after preprocessing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_reads_integrity_status",
+          "descr": "Technical integrity status of the processed sequencing read file, indicating whether the stored file is readable and complete. Measurement point: after file generation and verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial"
+          ]
+        },
+        {
+          "field_id": "processed_reads_quality_metric",
+          "descr": "Aggregate technical quality metric for the processed reads artifact, such as mean Q score or retained high-quality base fraction when reported at the file level. Measurement point: after preprocessing completion.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembly_annotation_process": {
+      "reasoning": "This node is a Process, so I included only computational assembly and annotation method parameters, the software agent details required to reproduce the workflow, and process-level output quality indicators. I excluded processed-read file properties because those belong to the upstream Signal node, and I excluded the assembled/annotated outputs themselves because those belong to downstream Derivative nodes. I also avoided taxonomic profiling fields and any sample provenance metadata, keeping the schema focused on how assembly, gene prediction, and functional annotation were performed.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name",
+          "descr": "Name of the software or pipeline used for sequence assembly from processed reads. Example: MEGAHIT, metaSPAdes, SPAdes, or a custom workflow. Measurement point: selected before assembly begins.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version",
+          "descr": "Version of the assembly software or pipeline used in the workflow. Example format: 1.2.9 or v3.15.5. Measurement point: recorded for the exact execution environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_repository",
+          "descr": "Repository, package source, or project location for the assembly and annotation software, such as a GitHub URL, conda package name, or container image reference. Measurement point: documented with the pipeline configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_kmer_sizes",
+          "descr": "K-mer sizes used during assembly, if applicable to the chosen assembler. Record as one or more integer values representing the assembly configuration. Measurement point: assembly parameterization before execution.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length retained after assembly, reported in base pairs. Contigs shorter than this threshold are discarded from the assembly output. Measurement point: assembly filtering configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gene_prediction_tool",
+          "descr": "Software used for gene prediction on assembled contigs or unassembled sequences. Example: Prodigal, MetaGeneMark, or a custom gene caller. Measurement point: configured before annotation workflow execution.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_annotation_database",
+          "descr": "Reference database used for functional annotation, such as KEGG, eggNOG, Pfam, or custom curated databases. Measurement point: selected during annotation setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "KEGG",
+            "eggNOG",
+            "Pfam",
+            "COG",
+            "GO",
+            "custom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "annotation_evalue_threshold",
+          "descr": "Maximum E-value threshold used to accept functional annotation hits. Typical values are small, such as 1e-5 or 1e-10. Measurement point: annotation parameter setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_contig_count",
+          "descr": "Number of contigs produced or retained after assembly. Measurement point: after assembly completion; this is a process-level output quality indicator.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_n50_bp",
+          "descr": "Assembly N50 statistic in base pairs, summarizing contiguity of the produced assembly. Typical values vary widely with data complexity and coverage. Measurement point: after assembly completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annotation_success_rate",
+          "descr": "Fraction or percentage of predicted genes that received at least one functional annotation. Measurement point: after annotation completion; this is a process-level output quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_process_status",
+          "descr": "Overall outcome of the assembly and annotation step indicating whether the workflow completed successfully. Measurement point: after pipeline execution.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "functional_potential_derivative": {
+      "reasoning": "This node is a Derivative, so I included only computed-result properties that summarize inferred functional capacity: the method/software used to derive the profile, the annotation database or pathway framework, the key output dimensions, and result-level quality summaries. I excluded assembly and annotation process parameters because those belong to the upstream Process node, and I did not repeat raw or processed read properties because those belong to Signal nodes. I also avoided sample-origin metadata, since the derivative summarizes community function rather than defining the sample itself.",
+      "md_schema": [
+        {
+          "field_id": "functional_profile_method",
+          "descr": "Computational method used to derive the functional potential profile from assembled/annotated sequence data. Example values: gene_abundance, pathway_inference, read_based_annotation, contig_based_annotation. Measurement point: at derivation time when the result is generated.",
+          "type": "categorical",
+          "allowed_values": [
+            "gene_abundance",
+            "pathway_inference",
+            "read_based_annotation",
+            "contig_based_annotation",
+            "other"
+          ]
+        },
+        {
+          "field_id": "functional_profile_software_name",
+          "descr": "Name of the software or analysis package used to generate the functional potential profile. Example: HUMAnN, eggNOG-mapper, METABOLIC, or a custom pipeline. Measurement point: recorded with the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_software_version",
+          "descr": "Version of the software or analysis package used for functional profiling. Example format: 3.0.0 or v1.2.1. Measurement point: exact execution environment for the derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_database",
+          "descr": "Reference database or pathway framework used to interpret functional potential, such as KEGG, MetaCyc, eggNOG, or custom pathway catalogs. Measurement point: at derivation configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "KEGG",
+            "MetaCyc",
+            "eggNOG",
+            "Pfam",
+            "COG",
+            "custom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "functional_profile_feature_count",
+          "descr": "Number of functional features reported in the final profile, such as genes, ortholog groups, or pathways. Measurement point: after derivation completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_pathway_count",
+          "descr": "Number of distinct pathways inferred or summarized in the functional potential result. Measurement point: after derivation completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_normalization_method",
+          "descr": "Normalization method applied to the derived functional profile, such as relative abundance, copies per million, or coverage-normalized counts. Measurement point: during result generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "cpm",
+            "rpkm",
+            "tpm",
+            "coverage_normalized",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "functional_profile_completeness_score",
+          "descr": "Aggregate completeness or recovery score for the derived functional profile, indicating how much of the expected functional space was represented. Measurement point: after derivation completion; this is a result-level quality indicator.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_confidence_score",
+          "descr": "Overall confidence score or support metric for the derived functional potential summary, if provided by the analysis workflow. Measurement point: after derivation completion.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "functional_profile_output_format",
+          "descr": "File or table format used to store the derived functional potential result, such as tsv, csv, json, or biom. Measurement point: when the derivative is exported to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "biom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "functional_profile_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the derived functional potential profile is stored. Example: s3://bucket/path/function_profile.tsv or /data/results/functional_profile.json. Measurement point: repository or archive location after derivation.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomic_profiling_process": {
+      "reasoning": "This node is a Process, so I included only the taxonomic classification workflow parameters, the software agent details required to reproduce the analysis, and process-level summary quality indicators. I excluded processed-read file properties because those belong to the upstream Signal node, and I excluded the derived abundance/community profile because that belongs to the downstream Derivative node. I also avoided functional annotation and joint-analysis metadata, keeping the schema focused on how processed reads were classified to estimate composition and diversity.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_classifier_name",
+          "descr": "Name of the software or pipeline used for taxonomic classification of processed reads. Example: Kraken2, Bracken, MetaPhlAn, Kaiju, or a custom workflow. Measurement point: selected before classification begins.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_classifier_version",
+          "descr": "Version of the taxonomic classification software or pipeline. Example format: 2.1.3 or v4.0.6. Measurement point: recorded for the exact execution environment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_classifier_repository",
+          "descr": "Repository, package source, or project location for the taxonomic classification software, such as a GitHub URL, conda package name, or container image reference. Measurement point: documented with the pipeline configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference database used to assign taxonomic labels, such as SILVA, GTDB, RefSeq, or a custom curated database. Measurement point: selected during classifier setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "SILVA",
+            "GTDB",
+            "RefSeq",
+            "RDP",
+            "custom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "classification_confidence_threshold",
+          "descr": "Minimum confidence score required to retain a taxonomic assignment. Typical values are classifier-specific and often range from 0 to 1. Measurement point: classification parameter setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_alignment_length_bp",
+          "descr": "Minimum read or alignment length required for taxonomic assignment, reported in base pairs. Measurement point: classification filtering configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_ranks_reported",
+          "descr": "Taxonomic ranks output by the profiling workflow, such as kingdom, phylum, class, order, family, genus, and species. Measurement point: set at classification/report generation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assignment_method",
+          "descr": "Strategy used to assign taxonomy, such as exact_kmer, marker_gene, alignment_based, or lca_based. Measurement point: configured before run start.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_kmer",
+            "marker_gene",
+            "alignment_based",
+            "lca_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "classified_read_count",
+          "descr": "Number of processed reads that received a taxonomic assignment. Measurement point: after classification completion; this is a process-level output quality indicator.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "unclassified_read_count",
+          "descr": "Number of processed reads that did not receive a taxonomic assignment. Measurement point: after classification completion; this is a process-level output quality indicator.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "classification_rate",
+          "descr": "Fraction or percentage of processed reads that were assigned to at least one taxon. Measurement point: after classification completion.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_process_status",
+          "descr": "Overall outcome of the taxonomic profiling step indicating whether the workflow completed successfully. Measurement point: after pipeline execution.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "taxonomic_profile_derivative": {
+      "reasoning": "This node is a Derivative, so I included only computed-result properties of the taxonomic abundance profile: the profiling method/software used to generate it, the taxonomic reference basis, the output dimensionality, abundance normalization, and result-level quality summaries. I excluded the classifier and filtering parameters because those belong to the upstream Process node, and I did not repeat raw or processed read properties. I also avoided sample-origin metadata, since this derivative summarizes inferred community composition rather than defining the sample itself.",
+      "md_schema": [
+        {
+          "field_id": "taxonomic_profile_method",
+          "descr": "Computational method used to generate the taxonomic abundance profile from processed reads. Example values: marker_gene_profile, kmer_classification, alignment_based_profile, lca_profile. Measurement point: at derivation time when the result is generated.",
+          "type": "categorical",
+          "allowed_values": [
+            "marker_gene_profile",
+            "kmer_classification",
+            "alignment_based_profile",
+            "lca_profile",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_software_name",
+          "descr": "Name of the software or analysis package used to generate the taxonomic profile. Example: Kraken2, Bracken, MetaPhlAn, Kaiju, or a custom pipeline. Measurement point: recorded with the derived result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_software_version",
+          "descr": "Version of the software or analysis package used for taxonomic profiling. Example format: 2.1.3 or v4.0.6. Measurement point: exact execution environment for the derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_reference_database",
+          "descr": "Reference database used to interpret taxonomic assignments, such as SILVA, GTDB, RefSeq, or RDP. Measurement point: at derivation configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "SILVA",
+            "GTDB",
+            "RefSeq",
+            "RDP",
+            "custom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_taxon_count",
+          "descr": "Number of taxa reported in the final abundance profile. Measurement point: after derivation completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_rank",
+          "descr": "Primary taxonomic rank represented in the abundance profile, such as phylum, genus, or species. Measurement point: at result generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "domain",
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species",
+            "strain",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_normalization_method",
+          "descr": "Normalization method applied to the taxonomic abundance profile, such as relative abundance, counts per million, or compositional normalization. Measurement point: during result generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "cpm",
+            "rpkm",
+            "tpm",
+            "compositional",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_alpha_diversity_metric",
+          "descr": "Alpha diversity metric computed from the taxonomic profile, if included in the derivative output, such as Shannon, Simpson, or observed richness. Measurement point: after derivation completion.",
+          "type": "categorical",
+          "allowed_values": [
+            "shannon",
+            "simpson",
+            "observed_richness",
+            "pielou_evenness",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_confidence_score",
+          "descr": "Overall confidence score or support metric for the derived taxonomic abundance profile, if provided by the analysis workflow. Measurement point: after derivation completion.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_profile_output_format",
+          "descr": "File or table format used to store the derived taxonomic profile, such as tsv, csv, json, or biom. Measurement point: when the derivative is exported to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "csv",
+            "json",
+            "biom",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_profile_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the derived taxonomic profile is stored. Example: s3://bucket/path/taxonomic_profile.tsv or /data/results/taxonomic_profile.json. Measurement point: repository or archive location after derivation.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_table_derivative": {
+      "reasoning": "This node is a Derivative, so I included only properties of the compiled metadata table itself: what source fields it aggregates, how it was generated, its table dimensions, and file/storage characteristics with a basic quality check. I excluded the underlying sample, capture, extraction, and sequencing details because those belong to upstream Entity/Capture/Process nodes and should not be repeated here except as provenance of included columns. I also avoided downstream analysis outputs because this derivative is specifically the curated metadata table artifact, not a biological result.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_format",
+          "descr": "File or table format used to store the compiled metadata table, such as csv, tsv, xlsx, or json. Measurement point: when the derivative table is exported to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metadata_table_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the compiled metadata table is stored. Example: s3://bucket/path/sample_metadata.tsv or /data/metadata/metadata_table.csv. Measurement point: repository or archive location after derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_row_count",
+          "descr": "Number of sample rows contained in the compiled metadata table. Measurement point: after table creation and before release.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_column_count",
+          "descr": "Number of columns contained in the compiled metadata table. Measurement point: after table creation and schema validation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_source_field_list",
+          "descr": "List or compact description of upstream fields merged into the compiled metadata table, such as sample_type, marine_region, temperature, salinity, extraction_method, and sequencing_platform. Measurement point: recorded when generating the derivative table to document provenance and included variables.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_join_key",
+          "descr": "Primary key or join key used to link rows in the compiled metadata table to sample records, for example sample_id or library_id. Measurement point: defined at table construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_generation_software",
+          "descr": "Name of the software, script, or package used to compile the metadata table, such as R, Python/pandas, or a workflow tool. Measurement point: recorded during table generation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_generation_software_version",
+          "descr": "Version of the software or package used to generate the compiled metadata table. Example format: 4.3.1, 2.2.2, or v1.0.0. Measurement point: exact execution environment for the derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_integrity_status",
+          "descr": "Technical integrity status of the compiled metadata table, indicating whether the stored file is readable, complete, and passes basic schema checks. Measurement point: after export and validation.",
+          "type": "categorical",
+          "allowed_values": [
+            "valid",
+            "corrupt",
+            "partial"
+          ]
+        },
+        {
+          "field_id": "metadata_table_completeness_fraction",
+          "descr": "Fraction of expected metadata fields populated across the compiled table, calculated as present values divided by expected values. Measurement point: after table assembly and validation.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "joint_analysis_process": {
+      "reasoning": "This node is a Process, so I included only the analysis workflow parameters, software agent details, statistical design settings, and process-level QC for integrating taxonomic profiles, functional potential, and metadata. I excluded the input signal/derivative properties themselves because those belong to upstream Signal and Derivative nodes, and I excluded the final comparative findings because those belong to the downstream Derivative node. I also avoided duplicating metadata-table fields or downstream result summaries, focusing instead on how the joint statistical analysis was configured and judged successful.",
+      "md_schema": [
+        {
+          "field_id": "joint_analysis_software_name",
+          "descr": "Name of the software, statistical package, or workflow used for the joint analysis. Example: R, Python, phyloseq, vegan, DESeq2, or a custom pipeline. Measurement point: selected before analysis begins.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "joint_analysis_software_version",
+          "descr": "Version of the software or statistical package used for the joint analysis. Example format: 4.3.1, 2.2.2, or v1.0.0. Measurement point: exact execution environment for the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "joint_analysis_software_repository",
+          "descr": "Repository, package source, or project location for the analysis software, such as a GitHub URL, conda package name, or container image reference. Measurement point: documented with the analysis configuration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_design",
+          "descr": "Statistical design used to compare microbial communities across regions and conditions. Example values: pairwise_comparison, multivariate_model, mixed_effects_model, ordination, permutation_test. Measurement point: analysis setup.",
+          "type": "categorical",
+          "allowed_values": [
+            "pairwise_comparison",
+            "multivariate_model",
+            "mixed_effects_model",
+            "ordination",
+            "permutation_test",
+            "other"
+          ]
+        },
+        {
+          "field_id": "distance_metric",
+          "descr": "Distance or dissimilarity metric used for community comparison, if applicable. Example values: bray_curtis, jaccard, euclidean, weighted_unifrac. Measurement point: analysis parameter setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "bray_curtis",
+            "jaccard",
+            "euclidean",
+            "weighted_unifrac",
+            "unweighted_unifrac",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Normalization or transformation applied before joint analysis, such as rarefaction, compositional scaling, log transformation, or centered log-ratio. Measurement point: analysis preprocessing configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "rarefaction",
+            "relative_abundance",
+            "clr",
+            "log_transform",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "covariate_terms",
+          "descr": "Environmental or technical covariates included in the joint statistical model, such as temperature, salinity, depth, sample_type, or region. Measurement point: model specification stage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "multiple_testing_correction",
+          "descr": "Method used to correct for multiple hypothesis testing in the joint analysis, if applicable. Example values: BH, Bonferroni, Holm, none. Measurement point: analysis configuration.",
+          "type": "categorical",
+          "allowed_values": [
+            "BH",
+            "Bonferroni",
+            "Holm",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "significance_threshold_p_value",
+          "descr": "P-value threshold used to declare statistical significance in the joint analysis. Typical values are 0.05, 0.01, or a study-specific cutoff. Measurement point: analysis configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_replication_count",
+          "descr": "Number of statistical resampling or replication runs used to assess stability of the joint analysis, if applicable. Example: bootstrap iterations, permutations, or repeated fits. Measurement point: during analysis execution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "joint_analysis_status",
+          "descr": "Overall outcome of the joint analysis process indicating whether the computation completed successfully. Measurement point: after pipeline execution.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "analysis_runtime_minutes",
+          "descr": "Total runtime of the joint analysis in minutes, measured from job start to completion. Measurement point: after analysis completion.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "marine_microbiome_comparative_results": {
+      "reasoning": "This node is a Derivative, so I included only final computed-result properties that summarize the comparative findings across regions, depths, and sample types: the analysis method/software that produced the result, the primary result types reported, key summary dimensions, significance/confidence indicators, and export/storage characteristics. I excluded the joint-analysis parameters and input profile metadata because those belong to the upstream Process and Derivative nodes, and I avoided repeating sample-level metadata or raw file properties. The goal here is to describe the final result artifact itself, not the workflow that generated the inputs.",
+      "md_schema": [
+        {
+          "field_id": "comparative_result_method",
+          "descr": "Computational method used to generate the final comparative results from taxonomic profiles, functional potential, and metadata. Example values: multivariate_analysis, differential_abundance, ordination_summary, mixed_effects_summary. Measurement point: at result generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "multivariate_analysis",
+            "differential_abundance",
+            "ordination_summary",
+            "mixed_effects_summary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparative_result_software_name",
+          "descr": "Name of the software or analysis package used to generate the final comparative results. Example: R, Python, vegan, phyloseq, DESeq2, or a custom pipeline. Measurement point: recorded with the result artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_software_version",
+          "descr": "Version of the software or analysis package used for the final comparative analysis. Example format: 4.3.1, 2.2.2, or v1.0.0. Measurement point: exact execution environment for the derivation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_summary_type",
+          "descr": "Primary summary type contained in the final result, such as diversity_patterns, functional_differences, region_comparison, depth_gradient, or sample_type_comparison. Measurement point: when the result is generated.",
+          "type": "categorical",
+          "allowed_values": [
+            "diversity_patterns",
+            "functional_differences",
+            "region_comparison",
+            "depth_gradient",
+            "sample_type_comparison",
+            "combined_summary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparative_result_feature_count",
+          "descr": "Number of biological features or comparison units summarized in the final result, such as taxa, pathways, regions, or sample-type contrasts. Measurement point: after result generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_group_count",
+          "descr": "Number of comparison groups included in the final analysis, such as regions, depth strata, or sample types. Measurement point: after result generation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_significant_feature_count",
+          "descr": "Number of features or contrasts meeting the study significance threshold in the final comparative analysis. Measurement point: after statistical evaluation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_adjusted_p_value_threshold",
+          "descr": "Adjusted p-value threshold used to summarize significant findings in the final results, if applicable. Typical values are 0.05 or a study-specific cutoff after multiple testing correction. Measurement point: result interpretation stage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_confidence_score",
+          "descr": "Overall confidence score or support metric for the final comparative results, if reported by the analysis workflow. Measurement point: after result generation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparative_result_output_format",
+          "descr": "File or report format used to store the final comparative results, such as pdf, html, tsv, csv, or json. Measurement point: when the derivative is exported to storage.",
+          "type": "categorical",
+          "allowed_values": [
+            "pdf",
+            "html",
+            "tsv",
+            "csv",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "comparative_result_storage_path",
+          "descr": "Filesystem path, object-store key, or URI where the final comparative results are stored. Example: s3://bucket/path/comparative_results.pdf or /data/results/marine_comparative_results.html. Measurement point: repository or archive location after derivation.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

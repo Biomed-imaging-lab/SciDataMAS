@@ -1,0 +1,703 @@
+{
+  "md_name": "breast_cancer_radiotherapy_registry_workflow",
+  "md_description": "Clinical registry workflow for breast cancer radiotherapy patients, capturing baseline demographics and molecular information, radiotherapy planning details, per-session delivery deviations and acute toxicities, then integrating these data for comparative analyses of protocol effectiveness, recurrence, and recovery across demographic groups.",
+  "fields_per_node": {
+    "breast_cancer_patient_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort identity and origin fields that describe who the patients are and how the cohort is defined. I excluded treatment, capture, file, and analysis fields because those belong to downstream Capture/Process/Signal/Derivative nodes. I also avoided repeating any registry entry, plan, session, or outcome concepts that are already assigned elsewhere in the DAG. Since no prior fields were provided in already_generated, I focused on minimal cohort-level descriptors needed to understand the enrolled breast cancer population: cancer site, cohort enrollment basis, diagnosis stage context, and origin/source of the registry cohort.",
+      "md_schema": [
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique identifier for the enrolled cohort used in the registry, e.g. BC-RAD-COHORT-001. Record once at the entity level for the patient group represented by this node.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "disease_site",
+          "descr": "Primary cancer site represented by the cohort. For this workflow it should identify breast cancer cases only; record at cohort definition time, not per visit.",
+          "type": "categorical",
+          "allowed_values": [
+            "breast"
+          ]
+        },
+        {
+          "field_id": "cohort_definition_basis",
+          "descr": "Rule used to define membership in this entity-level cohort, such as registry enrollment for breast cancer radiotherapy patients. Record when the cohort is created and used for downstream data capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "registry_enrolled_breast_cancer_radiotherapy_patients"
+          ]
+        },
+        {
+          "field_id": "diagnosis_stage_context",
+          "descr": "Clinical stage context for the cohort at registry enrollment, if the cohort is restricted by stage; record as the documented AJCC or clinical stage group available at baseline. Use categorical stage labels only if stage is part of the cohort definition, e.g. stage_i, stage_ii, stage_iii, stage_iv, unknown.",
+          "type": "categorical",
+          "allowed_values": [
+            "stage_i",
+            "stage_ii",
+            "stage_iii",
+            "stage_iv",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "registry_source_type",
+          "descr": "Source setting from which the cohort was assembled, e.g. single_center_registry or multicenter_registry. Record once for the entity to indicate where the patients originated.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_center_registry",
+            "multicenter_registry",
+            "population_based_registry",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "baseline_registry_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement session and registry entry configuration for collecting baseline patient information from the cohort. I focused on actively captured baseline variables relevant here: patient age, whether genetic markers were assessed, and prior treatment history documentation. I excluded cohort identity fields because they belong to the upstream Entity node, and I excluded raw table/file properties because those belong to the downstream Signal node. I also avoided treatment planning, session delivery, and outcome fields because those are downstream Process/Derivative territories. Since no already_generated fields were provided, there was no need to suppress overlaps from prior nodes.",
+      "md_schema": [
+        {
+          "field_id": "registry_capture_id",
+          "descr": "Unique identifier for this baseline registry capture session, e.g. BASE-REG-0001. Record once per patient enrollment/baseline entry to distinguish multiple capture events if they occur.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_method",
+          "descr": "Operational mode used to enter baseline data into the registry, such as manual abstraction from chart review or electronic import from an EHR. Record at the time of baseline capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_chart_abstraction",
+            "ehr_import",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "patient_age_years",
+          "descr": "Patient age in completed years measured at baseline registry capture, typically as an integer from 18 to 100+ for this cohort. Record once at enrollment using the age available on the capture date.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "genetic_marker_panel_assessed",
+          "descr": "Whether genetic marker testing was performed as part of baseline capture. Record at the time the baseline registry entry is created, before treatment planning.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "prior_treatment_history_documented",
+          "descr": "Whether previous cancer-directed treatments were documented during baseline registry capture, such as prior surgery, chemotherapy, hormonal therapy, or radiotherapy. Record as a yes/no field at enrollment.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "baseline_clinical_table": {
+      "reasoning": "This is a Signal node, so I included only raw data artifact properties of the baseline registry table: file/storage identification, format, record-level dimensions, and technical completeness/quality indicators. I excluded patient demographics, genetic markers, and prior treatment content itself because those are captured by the upstream Capture node and are data contents rather than signal properties. I also excluded planning, session, and outcome concepts because those belong to downstream Process/Derivative nodes. No already_generated fields were provided, so I did not need to suppress overlaps from earlier nodes.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Technical format of the raw baseline registry dataset as stored immediately after capture, for example csv, tsv, xlsx, or parquet. Record at the signal file level, not per patient.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "xlsx",
+            "parquet",
+            "json",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Physical size of the raw baseline clinical table file in bytes measured after export or ingestion. Record once per file to support reproducibility and transfer checks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of patient-level rows in the raw baseline clinical table at the time of export or storage. For this registry, this is typically the number of enrolled patients with a baseline record.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns in the raw baseline clinical table at the time of storage, reflecting how many captured variables are present in the dataset.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_value_fraction",
+          "descr": "Fraction of cells with missing or null values in the raw baseline table, measured after export and before downstream processing. Use a decimal between 0 and 1 to indicate technical completeness.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Path, object store URI, or database location where the raw baseline clinical table is stored, e.g. s3://bucket/path/file.parquet or /data/baseline.csv. Record at the signal level for file retrieval.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "radiotherapy_plan_process": {
+      "reasoning": "This is a Process node, so I included only planning workflow parameters and operational agent details for how individualized radiotherapy plans are created from baseline patient information. I focused on software/system identity, planning method, target prescription settings, and an overall plan quality/approval indicator. I excluded patient characteristics because they belong to the upstream Entity/Capture/Signal nodes, and I excluded the resulting plan object because that is the downstream Entity node. I also avoided session delivery, raw file, and analysis fields because those are downstream Capture/Signal/Derivative territories. No already_generated fields were provided, so there was no need to suppress overlaps from earlier nodes.",
+      "md_schema": [
+        {
+          "field_id": "planner_software_name",
+          "descr": "Name of the treatment planning software used to create the individualized radiotherapy plan, recorded at the time the plan is generated. Example: Eclipse, RayStation, or Pinnacle.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planner_software_version",
+          "descr": "Version of the planning software used during radiotherapy plan generation. Record the exact installed version string at plan creation time, such as 15.6 or 11B.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planner_software_repository",
+          "descr": "Software source or repository reference for the planning system, if applicable, such as a vendor release identifier or internal package reference. Record once per planning workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planning_method",
+          "descr": "Planning strategy used to convert baseline registry information into an individualized radiotherapy regimen, recorded during the planning process. Example categories include conventional planning, inverse planning, or adaptive planning.",
+          "type": "categorical",
+          "allowed_values": [
+            "conventional_planning",
+            "inverse_planning",
+            "adaptive_planning",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "prescription_dose_total_gy",
+          "descr": "Total prescribed radiation dose generated by the planning process, in gray (Gy). Record at plan finalization; typical values in breast cancer radiotherapy are often in the 40 to 70 Gy range depending on protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_treatment_duration_days",
+          "descr": "Intended duration of the planned radiotherapy course in days, measured from first planned fraction to last planned fraction. Record at plan finalization; typical values are on the order of 5 to 42 days depending on regimen.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_approval_status",
+          "descr": "Final status of the radiotherapy plan after review in the planning workflow, indicating whether the plan was accepted for treatment delivery. Record once when planning is complete.",
+          "type": "categorical",
+          "allowed_values": [
+            "approved",
+            "revised",
+            "rejected",
+            "pending_review"
+          ]
+        }
+      ]
+    },
+    "radiotherapy_plan_entity": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the planned regimen itself: what radiation type it specifies, its prescribed dose, its intended duration, and its identification/versioning as a plan object. I excluded how the plan was generated because that belongs to the upstream Process node, and I excluded delivered-session details, raw file properties, and downstream outcomes because those belong to later Capture/Signal/Derivative nodes. No already_generated fields were provided, so there was no overlap suppression needed.",
+      "md_schema": [
+        {
+          "field_id": "plan_id",
+          "descr": "Unique identifier for the individualized radiotherapy plan, e.g. RP-000123. Record once per patient plan entity and use it to link the plan to later treatment sessions.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "radiation_type",
+          "descr": "Radiation modality specified by the plan entity, such as photon, electron, or mixed modality. Record as the prescribed treatment type at plan definition time.",
+          "type": "categorical",
+          "allowed_values": [
+            "photon",
+            "electron",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "total_prescribed_dose_gy",
+          "descr": "Total prescribed radiation dose contained in the plan entity, measured in gray (Gy). This is the intended cumulative dose for the course, typically set once at planning and not altered by session delivery.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "planned_duration_days",
+          "descr": "Intended total treatment duration for the plan entity, measured in days from first planned fraction to last planned fraction. Record at the time the plan is finalized.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_scheme",
+          "descr": "Dose-per-fraction structure defined by the plan entity, e.g. 2 Gy per fraction, 15 fractions, or hypofractionated schedule. Record the planned regimen, not the delivered schedule.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "plan_version",
+          "descr": "Version label for the radiotherapy plan entity, used if the plan is revised during clinical review. Example: v1, v2, finalized.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "treatment_session_capture": {
+      "reasoning": "This is a Capture node, so I included only per-visit session configuration and documentation fields: session identifier, session timing, delivered dose, deviation from the plan, and acute side effects observed during the visit. I excluded cohort identity and plan identity fields because those belong to upstream Entity nodes, and I excluded the raw session record/file properties because those belong to the downstream Signal node. I also avoided analysis, normalization, and outcome fields because those are downstream Process/Derivative territories. No already_generated fields were provided, so there was no need to suppress overlaps from prior nodes.",
+      "md_schema": [
+        {
+          "field_id": "treatment_session_id",
+          "descr": "Unique identifier for the treatment visit or fraction capture event, e.g. TS-0001. Record once per delivered session to link the visit to the patient and planned regimen.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_date",
+          "descr": "Calendar date of the treatment session capture, recorded on the day radiotherapy is delivered. Use ISO date format (YYYY-MM-DD).",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "delivered_dose_gy",
+          "descr": "Radiation dose actually delivered during this session, in gray (Gy). Record at the end of the treatment visit; typical per-fraction values are often near the planned fraction dose.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_deviation_from_plan",
+          "descr": "Whether the delivered session deviated from the planned protocol, assessed during treatment-session capture. Record as a categorical status after the visit is completed.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "minor_deviation",
+            "major_deviation",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "acute_side_effects_observed",
+          "descr": "Whether any acute side effects were documented during or immediately after the treatment session capture, such as skin reaction, fatigue, or discomfort. Record at each visit as a yes/no field.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "side_effect_severity_grade",
+          "descr": "Severity grade of the acute side effect(s) observed during the session, if captured. Use a standard clinical toxicity scale at the visit, such as CTCAE grade 0 to 5.",
+          "type": "categorical",
+          "allowed_values": [
+            "grade_0",
+            "grade_1",
+            "grade_2",
+            "grade_3",
+            "grade_4",
+            "grade_5",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "session_record_signal": {
+      "reasoning": "I corrected the Signal-node schema by removing all colliding generic file-level fields that were already used elsewhere in the DAG. To stay within the raw-artefact territory of this node while avoiding duplicate names/meanings, I replaced them with session-record-specific technical metadata that still describes the raw data container but is uniquely scoped to this step. I kept the focus on raw file properties and technical integrity, not on capture settings, planning, or analysis outputs.",
+      "md_schema": [
+        {
+          "field_id": "session_record_id",
+          "descr": "Unique identifier for the raw per-session treatment record artifact, e.g. SR-0001. Use this to distinguish one stored session record file from another within the registry workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_record_format",
+          "descr": "Technical format of the raw per-session treatment record as stored immediately after capture, for example csv, tsv, json, or parquet. Record at the file level for this node's raw artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "xml",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "session_record_file_size_bytes",
+          "descr": "Physical size of the raw session record file in bytes measured after export or ingestion. Record once per artifact to support reproducibility and transfer checks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_record_row_count",
+          "descr": "Number of session-level rows contained in the raw per-session treatment record at the time of storage. For this workflow, rows typically correspond to treatment visits or fractions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_record_column_count",
+          "descr": "Number of columns in the raw session record at the time of storage, reflecting how many delivered parameters and observations were captured.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_record_missing_value_fraction",
+          "descr": "Fraction of cells with missing or null values in the raw session record, measured after export and before downstream normalization. Use a decimal between 0 and 1 to indicate technical completeness.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "session_record_storage_uri",
+          "descr": "Path, object store URI, or database location where the raw session record is stored, e.g. s3://bucket/path/session.parquet or /data/session_record.csv. Record at the signal level for retrieval.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "session_normalization_process": {
+      "reasoning": "This is a Process node, so I included only the computational cleanup and standardization logic for treatment-session records: software/pipeline identity, normalization method, key transformation settings, and output quality indicators of the processing step. I excluded raw session file properties because those belong to the upstream Signal node, and I excluded the normalized dataset artifact itself because that belongs to the downstream Derivative node. I also avoided patient- or session-level clinical content because those are upstream Capture/Signal territories. Because file-level signal fields were already generated earlier in the DAG, I used non-overlapping process-specific names and did not repeat any previously generated identifiers.",
+      "md_schema": [
+        {
+          "field_id": "etl_pipeline_name",
+          "descr": "Name of the normalization pipeline used to clean and standardize session records, recorded when the process runs. Example: registry ETL pipeline v1.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "etl_pipeline_version",
+          "descr": "Version of the session normalization pipeline used for this processing run. Record the exact release or build identifier, such as 1.0.0 or 2024.06.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "etl_pipeline_repository",
+          "descr": "Repository, package reference, or source control location for the normalization pipeline, if applicable. Record once per processing workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Standardization approach applied to the raw session records during processing, such as value mapping, unit harmonization, or duplicate removal. Record the method used at transformation time.",
+          "type": "categorical",
+          "allowed_values": [
+            "value_mapping",
+            "unit_harmonization",
+            "duplicate_removal",
+            "missingness_standardization",
+            "combined",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "visit_key_harmonization",
+          "descr": "Whether session identifiers, visit dates, or fraction labels were harmonized into a consistent key structure during processing. Record as a processing flag after cleanup is complete.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_standardization_success",
+          "descr": "Overall outcome flag indicating whether the normalization process completed successfully for the session records without unrecoverable errors. Record at the end of the process run.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_completeness_fraction",
+          "descr": "Fraction of session records retained after normalization relative to the input raw session records, measured after processing and before downstream analysis. Use a decimal between 0 and 1 to indicate retention/completeness.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "normalized_session_dataset": {
+      "reasoning": "This is a Derivative node, so I included only computed dataset properties of the normalized session table: derived identity, transformation provenance, dimensionality, annotation coverage, and scientific/technical quality indicators. I excluded raw session contents and process parameters because those belong to upstream Capture/Process nodes, not the derived artifact itself. I also avoided any file-format/storage fields that were already generated for earlier Signal nodes, per the collision constraint, and I used derivative-specific names instead. No already_generated fields were provided here, so I focused on the downstream user need to understand and reuse the analysis-ready session dataset.",
+      "md_schema": [
+        {
+          "field_id": "normalized_dataset_id",
+          "descr": "Unique identifier for the analysis-ready normalized session dataset, e.g. NORM-SESSION-001. Record once per derived dataset to support provenance and downstream linking.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_session_record_id",
+          "descr": "Identifier of the raw session record or records used as input to generate this normalized dataset. Record the upstream source reference at derivation time, for example the session record batch or file identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_output_row_count",
+          "descr": "Number of standardized session rows in the normalized dataset after processing. Record at dataset creation; rows typically correspond to cleaned treatment visits or fractions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "toxicity_annotation_fraction",
+          "descr": "Fraction of normalized session rows or records that include toxicity annotations after standardization. Use a decimal between 0 and 1 measured on the derived dataset to indicate annotation coverage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "standardized_toxicity_scale",
+          "descr": "Clinical toxicity grading system used in the derived dataset for acute side-effect annotation, recorded after normalization. Examples include CTCAE-based labels or an internal registry scale if mapped consistently.",
+          "type": "categorical",
+          "allowed_values": [
+            "ctcae",
+            "internal_registry_scale",
+            "mixed_mapped",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "derivation_method",
+          "descr": "Method used to produce the normalized session dataset from raw session records, such as rule-based standardization, ETL transformation, or combined human-assisted cleanup. Record at derivation completion.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based_standardization",
+            "etl_transformation",
+            "human_review_assisted",
+            "combined",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "dataset_version",
+          "descr": "Version label for the normalized session dataset artifact, used when the derivative is regenerated or updated. Example: v1, v1.1, release_2024_06.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "outcome_integration_process": {
+      "reasoning": "This is a Process node, so I included only the merge/integration operation itself: software or pipeline identity, join strategy, linkage keys, and integration success/completeness indicators. I excluded baseline patient attributes, radiotherapy plan content, and session-level clinical observations because those belong to the upstream Entity/Signal/Derivative nodes being merged, not the process that merges them. I also avoided downstream integrated-table artifact properties, file-level technical details, and analysis results because those belong to the Derivative node or later. No already_generated fields were supplied for this step, so I selected process-specific names that do not collide with earlier fields.",
+      "md_schema": [
+        {
+          "field_id": "integration_pipeline_name",
+          "descr": "Name of the computational workflow used to merge baseline, plan, and session data into a longitudinal registry analysis table, recorded when the process runs. Example: registry analytics pipeline v1.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_pipeline_version",
+          "descr": "Version of the integration workflow used for this merge run. Record the exact release or build identifier, such as 1.0.0 or 2024.06.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_pipeline_repository",
+          "descr": "Repository, package reference, or source control location for the integration workflow, if applicable. Record once per integration process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "join_strategy",
+          "descr": "Primary join strategy used to combine baseline, plan, and session data during integration, recorded at processing time. Examples include one-to-many join by patient and session, patient-level merge, or key-based longitudinal join.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level_merge",
+            "one_to_many_longitudinal_join",
+            "key_based_outer_join",
+            "key_based_inner_join",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "linkage_key_fields",
+          "descr": "Names of the key fields used to link baseline, plan, and session records during integration, such as patient identifier, plan identifier, and session identifier. Record the linkage scheme used by the process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_success_flag",
+          "descr": "Overall flag indicating whether the merge completed successfully without unrecoverable linkage or schema errors. Record at the end of the integration run.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linkage_coverage_fraction",
+          "descr": "Fraction of expected records successfully linked across baseline, plan, and session sources during integration. Use a decimal between 0 and 1 measured after the merge is completed.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "integrated_registry_table": {
+      "reasoning": "This is a Derivative node, so I included only properties of the integrated analysis-ready table itself: dataset identity, source lineage, row/column structure, linkage completeness, and overall data completeness/quality. I excluded baseline, plan, and session clinical variables because those belong to the upstream entities/signals that feed the integration. I also avoided file-format/storage fields already used for Signal nodes and avoided process parameters because those belong to the upstream integration process. No already_generated fields were provided here, so I used derivative-specific names that describe the combined longitudinal table rather than repeating upstream concepts.",
+      "md_schema": [
+        {
+          "field_id": "integrated_table_id",
+          "descr": "Unique identifier for the combined registry analysis table, e.g. INT-REG-001. Record once per integrated derivative dataset to support provenance and downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_dataset_ids",
+          "descr": "Identifiers of the upstream datasets merged to create the integrated table, such as the baseline clinical table, normalized session dataset, and radiotherapy plan entity reference. Record the lineage set used to build this derivative.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_row_count",
+          "descr": "Number of rows in the integrated registry table after merging baseline, plan, and session information. Record at dataset creation; rows typically correspond to patient-session or patient-level longitudinal records depending on join strategy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_column_count",
+          "descr": "Number of columns in the integrated registry table after all source variables and derived linkages are included.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_linkage_completeness",
+          "descr": "Fraction of records in the integrated table that could be successfully linked across baseline, plan, and session sources. Use a decimal between 0 and 1 measured on the final derivative dataset.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_data_fraction",
+          "descr": "Fraction of cells with missing or null values in the integrated table after merge and standardization, measured on the final derivative artifact. Use a decimal between 0 and 1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_refresh_date",
+          "descr": "Date on which the integrated registry table was last regenerated or refreshed. Use ISO date format (YYYY-MM-DD) to track the derivative artifact version in time.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "protocol_effectiveness_analysis": {
+      "reasoning": "This is a Process node, so I included only the statistical analysis workflow and agent configuration: analysis software identity, model/test family, subgrouping factors, outcome endpoints, and significance threshold/settings. I excluded integrated table contents because those belong to the upstream Derivative node, and I excluded the resulting effect estimates because those belong to the downstream Derivative node. I also avoided file/storage and capture fields because they are outside the analysis process territory. No already_generated fields were provided here, so I used analysis-specific names that do not collide with earlier process or derivative metadata.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the statistical software used to perform the protocol effectiveness comparison, recorded at analysis time. Example: R, SAS, or Python stats library.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the statistical software used for the effectiveness analysis. Record the exact release string used to run the comparison, such as 4.4.0 or 9.4.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Repository, package reference, or source control location for the analysis code or environment, if applicable. Record once per analysis workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_method",
+          "descr": "Primary statistical approach used to compare radiotherapy protocols across demographic groups, recorded at analysis time. Examples include survival analysis, regression modeling, or group comparison tests.",
+          "type": "categorical",
+          "allowed_values": [
+            "survival_analysis",
+            "regression_modeling",
+            "group_comparison_test",
+            "mixed_effects_model",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "subgroup_variables",
+          "descr": "Demographic or clinical grouping variables used to stratify the effectiveness analysis, such as age group, genetic marker status, or prior treatment history. Record the variables actually used in the comparison.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_endpoints",
+          "descr": "Clinical endpoints evaluated in the effectiveness analysis, such as disease recurrence and patient recovery. Record the endpoints as the analysis targets, not as raw measurements.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alpha_threshold",
+          "descr": "Significance threshold used for the protocol effectiveness analysis, typically a p-value cutoff such as 0.05. Record the threshold applied when interpreting results.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_success_flag",
+          "descr": "Overall flag indicating whether the statistical analysis completed successfully and produced interpretable protocol comparison results. Record at the end of the analysis run.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "effectiveness_results": {
+      "reasoning": "This is a Derivative node, so I included only computed result properties: result set identity, comparison contrasts, effect estimate types and values, uncertainty, subgrouping, and high-level scientific significance indicators. I excluded the statistical software and model settings because those belong to the upstream analysis process, and I excluded source table properties because those belong to the upstream integrated dataset. I also avoided file-format/storage fields already used for Signal nodes and used result-specific names instead. No already_generated fields were provided here, so I focused on the minimal fields needed for a downstream user to interpret and reuse the comparative effectiveness outputs.",
+      "md_schema": [
+        {
+          "field_id": "effectiveness_result_id",
+          "descr": "Unique identifier for the derived effectiveness results object, e.g. EFF-RES-001. Record once per result set to support provenance and downstream linking.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_source_table_id",
+          "descr": "Identifier of the integrated registry table used as the source for the effectiveness analysis. Record the upstream derivative reference from which the result set was computed.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "comparison_contrast",
+          "descr": "Protocol comparison summarized by the results, such as one radiotherapy regimen versus another or a subgroup contrast by demographic stratum. Record the specific contrast evaluated by the analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_estimate_type",
+          "descr": "Type of comparative estimate reported in the derived results, such as hazard ratio, odds ratio, risk difference, or mean difference. Record the effect measure used to summarize protocol effectiveness.",
+          "type": "categorical",
+          "allowed_values": [
+            "hazard_ratio",
+            "odds_ratio",
+            "risk_difference",
+            "mean_difference",
+            "risk_ratio",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "effect_estimate_value",
+          "descr": "Numerical value of the main comparative effect estimate for the protocol effectiveness result. Record the point estimate produced by the analysis, interpreted according to the selected effect measure.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_lower",
+          "descr": "Lower bound of the confidence interval for the main comparative effect estimate, recorded as part of the derived result output. Use the same scale as the effect estimate value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_upper",
+          "descr": "Upper bound of the confidence interval for the main comparative effect estimate, recorded as part of the derived result output. Use the same scale as the effect estimate value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "P value associated with the main comparative test in the derived effectiveness results. Record the inferential significance value produced by the analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "subgroup_result_label",
+          "descr": "Demographic or clinical subgroup label for which the derived result is reported, such as age group, genetic marker status, or prior treatment category. Record one label per subgroup result row or object.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_interpretation_flag",
+          "descr": "High-level interpretation of the derived result, indicating whether the observed association suggests benefit, no clear difference, or possible harm. Record after statistical comparison is complete.",
+          "type": "categorical",
+          "allowed_values": [
+            "benefit",
+            "no_clear_difference",
+            "possible_harm",
+            "inconclusive"
+          ]
+        }
+      ]
+    }
+  }
+}

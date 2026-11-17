@@ -1,0 +1,788 @@
+{
+  "md_name": "fluorescent_cell_imaging_workflow",
+  "md_description": "This DAG represents a fluorescence imaging workflow for cultured cell lines stained with fluorescent dyes and secondary antibodies. It covers preparation of the cell culture, staining, microscopy capture of raw image data, and computational analysis to infer protein expression and localization within cells. Reagent source, concentration, and batch details are part of the experimental metadata conceptually associated with the workflow, but no separate metadata-collection node is included.",
+  "fields_per_node": {
+    "cultured_cell_line_sample": {
+      "reasoning": "This Entity node should capture only intrinsic identity and origin of the cultured cell line sample, not the staining procedure, microscope settings, image files, or derived analyses. Because no upstream entity is shown for the cell line source, the fields focus on what a downstream user needs to identify the biological material and its culture provenance: cell line identity, species, derivation, passage state, culture condition basics, and contamination/status. I excluded reagent details because those belong to the staining Process node, and I excluded any imaging/capture parameters, raw file properties, or computed outputs because those belong to downstream nodes. No already_generated fields were provided, so there were no conflicts to avoid.",
+      "md_schema": [
+        {
+          "field_id": "cell_line_name",
+          "descr": "Canonical name of the cultured cell line used as the biological sample, e.g. HeLa, HEK293, A549. Record at the sample identity level before staining or imaging.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "species",
+          "descr": "Organism of origin for the cell line, recorded as the biological source species of the cultured sample, e.g. Homo sapiens, Mus musculus.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cell_line_origin",
+          "descr": "Provenance or derivation of the cell line sample, such as tissue type, donor source, or established line source if known. Record as the biological origin of the culture, not the supplier of reagents.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "passage_number",
+          "descr": "Passage number of the cultured cell line at the time it was prepared for staining, recorded immediately before the fluorescent staining step. Typical values are integers such as 5 to 40 depending on the line.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_confluency_percent",
+          "descr": "Estimated percent confluency of the adherent culture at the time the sample was taken for staining, measured immediately before the staining process. Typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cell_viability_percent",
+          "descr": "Estimated viable-cell fraction for the culture at the time of sample preparation, measured before staining or fixation if applicable. Typical range is 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mycoplasma_status",
+          "descr": "Contamination status of the cultured sample at the time of use, determined by routine screening before staining. Use to document whether the culture was suitable for imaging.",
+          "type": "categorical",
+          "allowed_values": [
+            "not_tested",
+            "negative",
+            "positive"
+          ]
+        },
+        {
+          "field_id": "culture_format",
+          "descr": "Physical culture format of the sample being imaged, recorded as the vessel or growth substrate used for the cell line prior to staining, e.g. adherent_monolayer, suspension_culture, coverslip-grown.",
+          "type": "categorical",
+          "allowed_values": [
+            "adherent_monolayer",
+            "coverslip_grown",
+            "suspension_culture",
+            "mixed",
+            "other"
+          ]
+        },
+        {
+          "field_id": "culture_medium",
+          "descr": "Primary growth medium used to maintain the cell line before staining, recorded as the standard culture medium associated with the sample, e.g. DMEM, RPMI_1640.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "culture_coating",
+          "descr": "Surface coating applied to the culture vessel, if any, to support cell attachment prior to staining, e.g. poly_d_lysine, fibronectin, collagen. Record as a sample property of the cultured cells, not a staining reagent.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "stain_cells_with_fluorescent_reagents": {
+      "reasoning": "This Process node should describe how staining was performed: protocol conditions, reagent classes and handling details, and any process-level quality indicator. I excluded sample identity fields because those belong to the cultured cell line Entity, and I excluded microscope/capture settings and raw image properties because those belong downstream. The workflow description mentions fluorescent dyes and secondary antibodies, so the fields emphasize incubation conditions, stain composition, and reagent provenance details that are operationally part of the staining step. No already_generated fields were provided for this step, so I avoided only territory overlap, not specific name conflicts.",
+      "md_schema": [
+        {
+          "field_id": "staining_protocol_name",
+          "descr": "Name or short identifier of the staining protocol used for this incubation step, recorded at the process level before imaging. Use a stable label such as the lab protocol name or SOP identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_temperature_celsius",
+          "descr": "Temperature during fluorescent reagent incubation for the staining step, measured while cells are exposed to dyes and secondary antibodies. Typical range is 0 to 40 degrees Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "incubation_duration_minutes",
+          "descr": "Total incubation time for fluorescent dyes and secondary antibodies, measured from reagent addition to wash/removal. Typical range is minutes to hours, recorded in minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "wash_steps_count",
+          "descr": "Number of wash cycles performed after fluorescent reagent incubation to remove unbound staining reagents. Record as an integer count for the staining process.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorescent_reagent_names",
+          "descr": "Names of the fluorescent dyes and/or secondary antibodies used in this staining process, recorded as the reagent set applied to the cells. Example values include Alexa Fluor 488 secondary antibody or DAPI; store as a single string if concatenated or a controlled list in the source system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorescent_reagent_source",
+          "descr": "Source or supplier of the staining reagents used in this process, recorded at the time of staining for reproducibility, e.g. manufacturer or catalog source.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorescent_reagent_concentration",
+          "descr": "Working concentration of the fluorescent dyes or secondary antibodies during incubation, measured in the staining mixture. Include units in the stored value or standardize externally; typical ranges depend on reagent and are often in microgram per milliliter or micromolar.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorescent_reagent_batch_id",
+          "descr": "Lot or batch identifier for the fluorescent staining reagents used in this process, recorded from the manufacturer label or laboratory inventory at the time of incubation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "staining_quality_passed",
+          "descr": "Process-level assessment of whether the staining step completed successfully enough for downstream imaging, based on the operator's or SOP's criteria after incubation and washing.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "stained_cell_culture": {
+      "reasoning": "This Entity node represents the post-staining biological preparation, so it should describe the state of the culture after fluorescent labeling but not the staining protocol itself or any microscope/raw-file details. I included intrinsic post-process attributes such as which labels are present, whether fixation/permeabilization occurred, mounting state, and storage conditions because these define what the stained sample is. I excluded reagent source, concentration, and batch information because those belong to the staining Process node already generated, and I excluded capture/image fields because those belong downstream. I also avoided repeating the earlier cultured-cell-line identity fields by focusing on the transformed sample state rather than the original cell line provenance.",
+      "md_schema": [
+        {
+          "field_id": "parent_cell_line_name",
+          "descr": "Name of the original cultured cell line from which this stained sample was prepared, e.g. HeLa or A549. This links the stained preparation back to the starting biological material and should be recorded after staining as sample provenance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "target_protein_names",
+          "descr": "Names of the proteins intended to be labeled or detected in this stained cell culture, recorded as the biological targets associated with the fluorescent labeling. Example: tubulin, actin, EGFR.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fluorescent_label_names",
+          "descr": "Names of the fluorescent labels present on the stained cell culture, such as fluorophore-conjugated secondary antibodies or nuclear dyes. Record the label identities present on the prepared sample, not the reagent batch details.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fixation_status",
+          "descr": "Whether the cell culture was fixed before imaging, recorded as a sample-state attribute after staining preparation. Use to distinguish live-cell from fixed-cell preparations.",
+          "type": "categorical",
+          "allowed_values": [
+            "live",
+            "fixed",
+            "partially_fixed",
+            "not_applicable"
+          ]
+        },
+        {
+          "field_id": "permeabilization_status",
+          "descr": "Whether the stained sample was permeabilized before or during staining, recorded as a sample preparation state that affects intracellular access of antibodies or dyes.",
+          "type": "categorical",
+          "allowed_values": [
+            "permeabilized",
+            "not_permeabilized",
+            "partial",
+            "not_applicable"
+          ]
+        },
+        {
+          "field_id": "mounting_medium",
+          "descr": "Mounting medium or imaging buffer used for the stained preparation before microscopy, recorded as part of the final sample state. Example values include glycerol-based mountant or antifade buffer.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the stained cell culture was held before imaging, recorded after preparation and before capture. Typical values may include 4, -20, or -80 degrees Celsius depending on the preparation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "time_since_staining_hours",
+          "descr": "Elapsed time between completion of staining and the start of microscopy capture, measured in hours for the prepared sample. This helps describe sample state at imaging time.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_ready_for_imaging",
+          "descr": "Indicates whether the stained cell culture met internal criteria and was ready for microscopy capture after staining completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "fluorescence_microscope_capture": {
+      "reasoning": "This Capture node should describe the microscopy session and instrument configuration used to measure the stained cells, not the sample properties, not the image file properties, and not any downstream computed outputs. I therefore included microscope hardware identity and actively controlled acquisition settings such as objective, excitation/emission configuration, channel settings, exposure, and gain, because these are operator-configured parameters that define how the raw images were captured. I excluded raw file format, size, and dimensions because those belong to the Signal node, and I excluded biological sample attributes because those belong to the stained_cell_culture entity. No already_generated fields were provided for this step, so I focused only on capture-domain metadata.",
+      "md_schema": [
+        {
+          "field_id": "microscope_manufacturer",
+          "descr": "Manufacturer of the fluorescence microscope used for capture, recorded for instrument identification at the session level. Example: Zeiss, Nikon, Leica, Olympus.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_model",
+          "descr": "Model name or number of the fluorescence microscope used for capture, recorded for the specific instrument configuration that acquired the raw images.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_serial_number",
+          "descr": "Serial number of the fluorescence microscope used in this capture session, recorded as an instrument identifier in the form assigned by the manufacturer.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objective_magnification",
+          "descr": "Objective magnification used during capture, recorded as the active optical setting for the microscopy session. Typical values include 10x, 20x, 40x, or 60x.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "excitation_wavelength_nm",
+          "descr": "Excitation wavelength used to illuminate the fluorescent labels during capture, measured in nanometers for the active imaging channel. Typical values depend on fluorophore and are often 350 to 700 nm.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "emission_bandpass_nm",
+          "descr": "Emission filter or detection bandpass used during capture, recorded in nanometers as the active detection window for the fluorescence channel. Use a representative center or bandpass value according to local convention.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "camera_exposure_time_ms",
+          "descr": "Exposure time used by the microscope camera for each captured frame, recorded as the operator-configured acquisition setting in milliseconds. Typical range is 1 to several thousand ms.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "camera_gain",
+          "descr": "Detector or camera gain setting used during image acquisition, recorded as the active amplification setting at capture time. Typical values depend on the instrument and should match the microscope software setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "z_stack_acquired",
+          "descr": "Whether a z-stack was acquired during this microscopy session, indicating if multiple focal planes were collected for the stained sample.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "channels_acquired",
+          "descr": "Fluorescence channels acquired in this capture session, recorded as the set of active channels used to image the stained cells. Example: DAPI, FITC, TRITC; store according to site convention.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_fluorescence_images": {
+      "reasoning": "This Signal node should describe the raw digital artefact itself: file format, dimensions, file size, channel/frame structure, storage location, and technical quality flags. I excluded microscope settings and acquisition parameters because those belong to the Capture node, and I excluded preprocessing or analysis metrics because those belong to downstream Process and Derivative nodes. The node is specifically raw images directly produced by fluorescence microscopy, so the fields focus on file-level properties needed for storage, access, and downstream reuse. No already_generated fields were provided for this step, so I only avoided non-signal territory.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw fluorescence image data produced by microscopy, recorded at the point of data export or storage. Example values include TIFF, CZI, OME-TIFF, ND2, or proprietary vendor formats.",
+          "type": "categorical",
+          "allowed_values": [
+            "TIFF",
+            "OME-TIFF",
+            "CZI",
+            "ND2",
+            "PNG",
+            "JPEG",
+            "LIF",
+            "SVS",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw image file on disk, measured in bytes at the time of archival or transfer. Typical values range from kilobytes to many gigabytes depending on image dimensions and channel count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Width of the raw image in pixels as stored in the microscopy output file, measured from the first dimension of the image array. Record at the raw-data level before any preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Height of the raw image in pixels as stored in the microscopy output file, measured from the second dimension of the image array. Record at the raw-data level before any preprocessing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_channels",
+          "descr": "Number of fluorescence channels present in the raw image file, recorded from the image data structure after acquisition. Typical values depend on the number of stains imaged and may be 1 to several channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_z_slices",
+          "descr": "Number of focal planes or z-slices present in the raw image file, recorded if a z-stack was acquired. Use 1 for single-plane images.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bits_per_pixel",
+          "descr": "Bit depth of the raw fluorescence image data, measured from the file encoding. Typical values are 8, 12, 16, or 32 bits per pixel.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Path, URI, or repository location where the raw fluorescence image file is stored, recorded at archival time. Example: file system path, object store URI, or database accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_quality_flag",
+          "descr": "Technical quality indicator for the raw image file, describing whether the file is complete and readable at the raw-data level. Use values such as pass, warn, or fail according to local QC rules.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "image_preprocessing": {
+      "reasoning": "This Process node should describe how raw images were transformed into processed images, including preprocessing operations, software agent details, and process-level output quality. I excluded raw file properties because those belong to the upstream Signal node, and I excluded analysis outputs because those belong to downstream Derivative nodes. Since the agent is image analysis software, I included software name, version, and repository to satisfy the operation-node agent rule. The fields focus on reproducible preprocessing choices such as background correction, registration, normalization, and filtering, which are specific to the transformation step.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the image preprocessing software used to correct and prepare the raw fluorescence images, recorded as the process agent identity. Example: CellProfiler, Fiji, ImageJ, custom_pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the preprocessing software used for this image transformation step, recorded to support exact reproducibility of the correction pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Source repository, package registry, or lab code location for the preprocessing software or pipeline, recorded for reproducibility of the process implementation. Example: GitHub URL, internal repo, or package name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "background_correction_method",
+          "descr": "Method used to correct background signal in the raw fluorescence images during preprocessing, recorded as the specific operation applied before downstream analysis. Example values include rolling_ball, flat_field, subtraction, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "rolling_ball",
+            "flat_field",
+            "subtraction",
+            "adaptive",
+            "other"
+          ]
+        },
+        {
+          "field_id": "noise_reduction_method",
+          "descr": "Method used to reduce image noise during preprocessing, recorded as the operation applied to the raw images before analysis. Example values include gaussian_filter, median_filter, deconvolution, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "gaussian_filter",
+            "median_filter",
+            "deconvolution",
+            "other"
+          ]
+        },
+        {
+          "field_id": "registration_applied",
+          "descr": "Whether image registration or alignment was applied during preprocessing to correct frame-to-frame or channel-to-channel shifts. Record as a process setting for the correction step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Method used to normalize image intensity values during preprocessing, recorded as the scaling or adjustment applied prior to downstream analysis. Example values include percentile, min_max, z_score, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "percentile",
+            "min_max",
+            "z_score",
+            "other"
+          ]
+        },
+        {
+          "field_id": "pixel_size_after_preprocessing_um",
+          "descr": "Effective pixel size of the processed image after any rescaling or transformation, measured in micrometers per pixel at the end of preprocessing. Typical values depend on the microscope and any resampling applied.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processing_quality_passed",
+          "descr": "Process-level indicator of whether preprocessing completed successfully and produced images suitable for downstream analysis, based on software checks or operator review.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "processed_fluorescence_images": {
+      "reasoning": "This Signal node should capture the properties of the processed image artefact itself, not the preprocessing parameters or the biological interpretation. I included file and array-level descriptors that are useful to downstream users: processed file format, dimensions, channel count, bit depth, storage location, and technical quality. I excluded software, algorithms, and correction methods because those belong to the upstream image_preprocessing Process node, and I excluded localization or expression metrics because those belong to downstream Derivative nodes. No already_generated fields were provided for this step, so I focused on the processed signal’s technical description only.",
+      "md_schema": [
+        {
+          "field_id": "processed_file_format",
+          "descr": "Digital file format of the processed fluorescence image data after preprocessing, recorded at the point the corrected image is stored or exported. Example values include TIFF, OME-TIFF, or other processed image formats used by the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "TIFF",
+            "OME-TIFF",
+            "PNG",
+            "JPEG",
+            "other"
+          ]
+        },
+        {
+          "field_id": "processed_file_size_bytes",
+          "descr": "Size of the processed image file on disk, measured in bytes at the time of storage or transfer after preprocessing. Typical values vary from kilobytes to gigabytes depending on image dimensions and channel count.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_width_pixels",
+          "descr": "Width of the processed image in pixels, measured from the stored image array after preprocessing and any rescaling or cropping.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_height_pixels",
+          "descr": "Height of the processed image in pixels, measured from the stored image array after preprocessing and any rescaling or cropping.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_num_channels",
+          "descr": "Number of image channels present after preprocessing, recorded from the processed image data structure. This may differ from the raw image if channels were removed, merged, or split.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_num_z_slices",
+          "descr": "Number of z-slices present in the processed image, recorded after preprocessing. Use 1 for single-plane images or the retained slice count for z-stacks.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_bits_per_pixel",
+          "descr": "Bit depth of the processed fluorescence image data, measured from the stored processed file encoding. Typical values are 8, 12, 16, or 32 bits per pixel.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_storage_location",
+          "descr": "Path, URI, or repository location where the processed fluorescence image file is stored, recorded after preprocessing for retrieval by downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_quality_flag",
+          "descr": "Technical quality indicator for the processed image file, describing whether preprocessing produced a complete and usable image artefact at the signal level. Use according to local QC rules.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "protein_localization_analysis": {
+      "reasoning": "This Process node should describe the computational analysis performed on processed images, including the software/agent used and key algorithmic parameters. I excluded raw and processed signal properties because those belong to the Signal nodes, and I excluded the computed localization outputs themselves because those belong to the downstream Derivative node. Because the agent is image analysis software, I included software name, version, and repository, along with analysis settings such as segmentation and localization thresholds that define how the computation was performed. No already_generated fields were provided, so I avoided only cross-node territory overlap.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software or pipeline used to perform protein localization analysis on the processed images, recorded as the computational agent for this process. Example: CellProfiler, Fiji, ilastik, custom script.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software or pipeline used for localization analysis, recorded to support reproducible computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Source repository, package registry, or code location for the analysis software or pipeline, recorded for computational reproducibility. Example: GitHub URL, internal repository, or package version reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_method",
+          "descr": "Method used to identify cells or cellular regions in the processed images during localization analysis, recorded as the primary computational approach. Example values include thresholding, watershed, machine_learning, or manual_roi.",
+          "type": "categorical",
+          "allowed_values": [
+            "thresholding",
+            "watershed",
+            "machine_learning",
+            "manual_roi",
+            "other"
+          ]
+        },
+        {
+          "field_id": "localization_classification_method",
+          "descr": "Method used to assign protein localization categories or spatial patterns from the segmented images, recorded as the classification approach used by the analysis workflow. Example values include rule_based, supervised_model, unsupervised_clustering, or none.",
+          "type": "categorical",
+          "allowed_values": [
+            "rule_based",
+            "supervised_model",
+            "unsupervised_clustering",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cell_detection_threshold",
+          "descr": "Threshold used to detect cells or cell boundaries in the processed images, recorded as an analysis parameter. Express in the native intensity or normalized units used by the analysis software.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "localization_score_threshold",
+          "descr": "Decision threshold used to classify a protein as localized to a subcellular compartment or pattern, recorded as the cutoff applied by the analysis pipeline. The unit depends on the scoring metric used by the software.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analyzed_channels",
+          "descr": "Image channels used as inputs to the localization analysis, recorded as the subset of processed fluorescence channels considered by the computation. Example: DAPI, GFP, TRITC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_quality_passed",
+          "descr": "Process-level indicator that the localization analysis completed successfully and produced outputs suitable for downstream derivation, based on software checks or operator review.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "localization_results": {
+      "reasoning": "This Derivative node should describe the computed localization outputs themselves, not the analysis software settings, not the processed image properties, and not the upstream staining or capture conditions. I included result-shape and content fields that a downstream user needs to interpret or reuse the computed output: output format, number of cells/objects analyzed, localization classes, per-class counts, and summary quality metrics. I excluded the algorithm and thresholds because those belong to the protein_localization_analysis Process node, and I excluded raw/processed image file properties because those belong to the Signal nodes. No already_generated fields were provided for this step, so I focused on the derivative result layer only.",
+      "md_schema": [
+        {
+          "field_id": "localization_output_format",
+          "descr": "Serialized format of the computed localization results, recorded at the point the derivative artifact is written or exported. Example values include CSV, TSV, JSON, Parquet, or table.",
+          "type": "categorical",
+          "allowed_values": [
+            "CSV",
+            "TSV",
+            "JSON",
+            "Parquet",
+            "table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "num_cells_analyzed",
+          "descr": "Number of individual cells included in the localization result computation, recorded from the analysis output. Typical values range from tens to many thousands depending on the image set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "num_objects_localized",
+          "descr": "Number of cellular objects, compartments, or protein-localization instances identified in the computed results, recorded by the analysis pipeline. This may include puncta, nuclei, membrane regions, or other spatial features.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "localization_classes",
+          "descr": "Localization categories assigned to proteins or cells in the computed results, recorded as the set of spatial classes produced by the analysis. Example values include nuclear, cytoplasmic, membrane, punctate, or diffuse.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "localization_class_counts",
+          "descr": "Counts of observations assigned to each localization class in the computed results, recorded as the summary frequency output from the analysis. Store in the workflow's table or structured text convention.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mean_localization_score",
+          "descr": "Average localization score across analyzed cells or objects, computed from the processed images as a summary metric of spatial enrichment. Typical values depend on the scoring scale used by the analysis method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "localization_confidence_metric",
+          "descr": "Quality or confidence metric associated with the computed localization assignments, recorded from the derivative output as an indicator of result reliability. The exact scale depends on the analysis method and should be documented with the value.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "result_table_path",
+          "descr": "Path, URI, or repository location where the computed localization results are stored, recorded for downstream access to the derivative artifact. Example: file system path, object store URI, or database accession.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derivative_quality_flag",
+          "descr": "Summary quality indicator for the computed localization results, describing whether the derivative output passed downstream usability checks. Use according to local QC rules.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "expression_quantification": {
+      "reasoning": "I corrected the collision by removing the duplicated field normalization_method, which had already been generated for an earlier DAG step. The remaining fields stay within the expression_quantification Process territory: software agent identity, quantification method, background handling, aggregation, quantified channels, and quality flag. I did not add any signal, derivative, or sample identity fields, and I preserved the agent-property requirement for operation nodes with software name, version, and repository.",
+      "md_schema": [
+        {
+          "field_id": "quantification_software_name",
+          "descr": "Name of the software or pipeline used to quantify expression levels from the analyzed images, recorded as the computational agent for this process. Example: CellProfiler, Python workflow, R script, custom pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_software_version",
+          "descr": "Version of the expression quantification software or pipeline used for this process, recorded to support exact reproducibility of the computation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_software_repository",
+          "descr": "Source repository, package registry, or code location for the quantification software or pipeline, recorded for reproducibility of the process implementation. Example: GitHub URL, internal repository, or package reference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expression_measurement_method",
+          "descr": "Method used to extract expression intensity or abundance values from the analyzed images, recorded as the primary quantification approach. Example values include mean_intensity, integrated_intensity, spot_count, compartment_ratio, or classifier_score.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean_intensity",
+            "integrated_intensity",
+            "spot_count",
+            "compartment_ratio",
+            "classifier_score",
+            "other"
+          ]
+        },
+        {
+          "field_id": "background_handling_method",
+          "descr": "Method used to handle background signal during expression quantification, recorded as the correction or subtraction approach applied before summarizing expression values. Example values include local_background, global_background, none, or other.",
+          "type": "categorical",
+          "allowed_values": [
+            "local_background",
+            "global_background",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "aggregation_statistic",
+          "descr": "Statistic used to summarize expression measurements into the derived output, recorded as the aggregation choice applied during quantification. Example values include mean, median, sum, or count.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "sum",
+            "count",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quantified_channels",
+          "descr": "Image channels used as inputs for expression quantification, recorded as the channels from which intensity or abundance summaries were computed. Example: DAPI, GFP, TRITC.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quantification_quality_passed",
+          "descr": "Process-level indicator that the expression quantification completed successfully and produced measurements suitable for downstream tabulation, based on software checks or operator review.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "expression_table": {
+      "reasoning": "This Derivative node should describe the computed expression table itself, not the quantification software settings or the upstream image properties. I included table-level properties that downstream users need: file/tabular format, number of rows and columns, which entities are represented, the expression metric and units, and summary quality. I avoided the field name normalization_method because it was already generated earlier in the DAG, per the collision warning, and I also excluded any process parameters or raw/processed signal properties because those belong to upstream nodes. The result is focused on the derivative artifact and its schema-like content.",
+      "md_schema": [
+        {
+          "field_id": "expression_table_format",
+          "descr": "Format of the derived protein expression table, recorded at the point the table is written or exported. Example values include CSV, TSV, Parquet, Excel, or database table.",
+          "type": "categorical",
+          "allowed_values": [
+            "CSV",
+            "TSV",
+            "Parquet",
+            "Excel",
+            "database_table",
+            "other"
+          ]
+        },
+        {
+          "field_id": "expression_table_rows",
+          "descr": "Number of rows in the derived expression table, measured as the count of records produced from the imaged cells or objects. Typical values range from tens to many thousands.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expression_table_columns",
+          "descr": "Number of columns in the derived expression table, measured as the count of recorded variables in the output table. Include measurement columns and any identifier columns present in the derivative artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "entity_granularity",
+          "descr": "Biological unit represented by each row of the expression table, recorded as the level at which expression was summarized. Example values include cell, nucleus, region_of_interest, or object.",
+          "type": "categorical",
+          "allowed_values": [
+            "cell",
+            "nucleus",
+            "region_of_interest",
+            "object",
+            "other"
+          ]
+        },
+        {
+          "field_id": "expression_metric_name",
+          "descr": "Name of the protein expression metric reported in the derived table, recorded as the quantitative measure produced by the analysis. Example values include mean_intensity, integrated_intensity, normalized_expression, or spot_count.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expression_metric_units",
+          "descr": "Units for the reported expression metric in the derived table, recorded using the same units as the computed output. Example values include arbitrary_units, intensity_units, counts, or fluorescence_units.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_id_field_name",
+          "descr": "Name of the identifier column used to link each row in the expression table back to the analyzed cell, object, or image. Example values include cell_id or roi_id.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expression_summary_statistic",
+          "descr": "Summary statistic used to represent expression in the table when values are aggregated rather than single-observation measurements. Example values include mean, median, sum, or count.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "sum",
+            "count",
+            "other"
+          ]
+        },
+        {
+          "field_id": "expression_table_quality_flag",
+          "descr": "Technical or analytical quality indicator for the derived expression table, describing whether the output passed downstream usability checks. Use according to local QC rules.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warn",
+            "fail"
+          ]
+        }
+      ]
+    }
+  }
+}

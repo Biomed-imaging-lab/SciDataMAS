@@ -1,0 +1,951 @@
+{
+  "md_name": "prostate_radiotherapy_registry_dag",
+  "md_description": "This workflow represents a clinical registry dataset for prostate cancer patients undergoing radiotherapy. It captures patient demographics, treatment plan details, fractionation schedules, session-level events, adverse reactions, and follow-up outcomes from registry sources, then transforms these records into a curated metadata table and analytic derivatives for comparing radiotherapy protocols with survival and quality-of-life outcomes.",
+  "fields_per_node": {
+    "prostate_cancer_radiotherapy_cohort": {
+      "reasoning": "This is an Entity node, so I included only intrinsic cohort-level identity and baseline properties of the enrolled patient group. I excluded treatment-process details, capture/instrument settings, file/dataset properties, and computed outcome/analysis fields because those belong to downstream Process, Capture, Signal, or Derivative nodes. Since this is the root cohort node, it should hold the unique cohort identifiers and the stable clinical descriptors needed to define who is in the registry. I avoided duplicating any likely downstream fields such as treatment plan attributes, session events, adverse reactions, follow-up outcomes, or dataset metadata.",
+      "md_schema": [
+        {
+          "field_id": "cohort_id",
+          "descr": "Unique identifier for the prostate cancer radiotherapy cohort in the registry; string format example: PCRT-COHORT-001. Assigned once at cohort enrollment and used to link all downstream registry records.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "registry_study_id",
+          "descr": "Registry-level study identifier for the source clinical registry project; string format example: REG-PR-2024-001. Use to distinguish this cohort from other registry collections if multiple studies are combined.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diagnosis_code",
+          "descr": "Primary prostate cancer diagnosis code recorded at cohort entry, typically the clinical diagnosis or staging code used by the registry; string format example: C61 or equivalent local code. Measured at enrollment, not updated by treatment events.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "diagnosis_stage",
+          "descr": "Clinical stage of prostate cancer at registry entry, recorded as the baseline disease stage before radiotherapy starts; typical values include localized, locally_advanced, metastatic. Capture the stage used for cohort definition.",
+          "type": "categorical",
+          "allowed_values": [
+            "localized",
+            "locally_advanced",
+            "metastatic",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cohort_entry_date",
+          "descr": "Date the patient is entered into the prostate radiotherapy registry cohort; date format example: 2024-03-15. This is the baseline inclusion date used to anchor subsequent records.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "eligibility_status",
+          "descr": "Whether the patient met cohort inclusion criteria for this registry at entry, based on confirmed prostate cancer and planned or received radiotherapy; record at enrollment.",
+          "type": "categorical",
+          "allowed_values": [
+            "eligible",
+            "ineligible",
+            "pending_review"
+          ]
+        },
+        {
+          "field_id": "baseline_therapy_intent",
+          "descr": "Initial treatment intent assigned at cohort entry for the radiotherapy episode; record before any fractionation or follow-up data are summarized. Use to distinguish curative and palliative registry entries.",
+          "type": "categorical",
+          "allowed_values": [
+            "curative",
+            "palliative",
+            "adjuvant",
+            "salvage",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "cancer_type",
+          "descr": "Cancer type for the enrolled cohort, retained here as a stable identity field because the registry is prostate-cancer-specific; expected value is prostate_cancer. Measured at cohort definition.",
+          "type": "categorical",
+          "allowed_values": [
+            "prostate_cancer"
+          ]
+        }
+      ]
+    },
+    "registry_data_capture": {
+      "reasoning": "This is a Capture node, so I included only the measurement/session configuration and the human/hardware context of the registry abstraction activity. I excluded patient demographics, treatment plan content, adverse reactions, and follow-up outcomes themselves because those are captured data elements that belong to the raw Signal downstream. I also excluded cleaning/standardization details because they belong to the Process node after capture. Per the agent rule, I included the operational staff/team responsible for the capture, but avoided file format, storage, or quality metrics that belong on the Signal node.",
+      "md_schema": [
+        {
+          "field_id": "capture_session_id",
+          "descr": "Unique identifier for the registry abstraction session or batch in which clinical staff extract and enter source records; string format example: CAP-2024-001. Assigned at the time of data entry/capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_start_date",
+          "descr": "Date when the registry abstraction session began; date format example: 2024-03-15. Use the start of the human data-entry/capture period for the source registry records.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_end_date",
+          "descr": "Date when the registry abstraction session ended; date format example: 2024-03-20. Use the end of the capture period for the source registry records.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_method",
+          "descr": "Operational method used by clinical staff to extract and enter registry information from source records during capture. Record the mode used for source transcription.",
+          "type": "categorical",
+          "allowed_values": [
+            "manual_abstraction",
+            "semi_automated_extraction",
+            "manual_entry_from_source",
+            "mixed_mode"
+          ]
+        },
+        {
+          "field_id": "source_registry_type",
+          "descr": "Type of source registry or clinical record system from which data are captured, describing the origin system accessed during this capture step; string format example: oncology_registry_ehr. Use the source system name or standardized local label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capturing_team",
+          "descr": "Clinical registry abstraction team responsible for performing the data capture. If available, record the named team or unit used in this registry workflow; string format example: clinical_registry_abstraction_team.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_setting",
+          "descr": "Operational setting in which the capture occurred, describing where the abstraction and entry were performed; typical values are registry_office, clinic_workspace, remote_abstraction, mixed_setting.",
+          "type": "categorical",
+          "allowed_values": [
+            "registry_office",
+            "clinic_workspace",
+            "remote_abstraction",
+            "mixed_setting"
+          ]
+        },
+        {
+          "field_id": "capture_completion_status",
+          "descr": "Status indicating whether the planned registry capture session finished as intended at the time of closeout; assess at the end of the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "interrupted",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "raw_registry_records": {
+      "reasoning": "This is a Signal node, so I included only raw data artefact properties: file/storage identity, technical structure, size/shape, and raw-data quality flags. I excluded capture-session settings, cohort identity, treatment semantics, and cleaned/derived content because those belong upstream on Capture or Entity, or downstream on Process/Derivative nodes. I also avoided repeating already-generated capture fields such as session IDs, dates, source system, and team details, since those were already assigned to the Capture node and should not be duplicated here.",
+      "md_schema": [
+        {
+          "field_id": "raw_record_file_id",
+          "descr": "Unique identifier for the raw registry record artifact produced directly by the capture step; string format example: RAW-REG-0001. Use to reference the unprocessed data file or record bundle.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw registry records as stored before cleaning; typical values include csv, tsv, json, xml, or database_extract. Record the on-disk or export format, not the clinical content.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "xml",
+            "database_extract",
+            "parquet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw registry record artifact in bytes at the time of storage or handoff from capture to cleaning; typical range in this workflow may span thousands to many millions of bytes depending on cohort size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "row_count",
+          "descr": "Number of raw rows or event records contained in the unprocessed registry output at the time of export; measured on receipt of the raw signal before any deduplication or standardization.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_count",
+          "descr": "Number of columns or fields present in the raw registry export before cleaning; measured on receipt of the raw signal and used to characterize the data structure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "record_encoding",
+          "descr": "Character encoding used by the raw registry file or export, if applicable; examples include utf-8 or latin-1. Record the technical encoding only.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_integrity_flag",
+          "descr": "Indicator of whether the raw registry records passed basic technical integrity checks at ingestion, such as readable file structure and non-corrupted content; assess immediately after capture and before cleaning.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "fail",
+            "warning",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "storage_location_uri",
+          "descr": "Storage location for the raw registry records artifact, such as a file path, object-store URI, or database reference; string format example: s3://bucket/path/raw_registry_records.csv. Record the exact technical location of the unprocessed signal.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "registry_cleaning_process": {
+      "reasoning": "This is a Process node, so I included only how the raw registry records were transformed: cleaning actions, deduplication/standardization settings, workflow software, and a process-level output quality indicator. I excluded input raw-file properties because those belong to the upstream Signal node, and I excluded the cleaned dataset’s file/storage properties because those belong to the downstream Signal node. I also avoided patient, treatment, and outcome semantics because those are the content being processed, not process metadata.",
+      "md_schema": [
+        {
+          "field_id": "cleaning_run_id",
+          "descr": "Unique identifier for this registry cleaning execution; string format example: CLEAN-2024-001. Assigned to the specific cleaning run that transformed raw registry records into a standardized structure.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cleaning_start_date",
+          "descr": "Date when cleaning of the raw registry records began; date format example: 2024-03-16. Use the start of the process execution, not source capture time.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cleaning_end_date",
+          "descr": "Date when cleaning of the raw registry records ended; date format example: 2024-03-18. Use the process completion date for the transformation run.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "deduplication_method",
+          "descr": "Method used to identify and remove duplicate registry records during cleaning; typical values indicate the rule set or algorithm applied at the process stage.",
+          "type": "categorical",
+          "allowed_values": [
+            "exact_match",
+            "fuzzy_match",
+            "rule_based",
+            "manual_review",
+            "combined"
+          ]
+        },
+        {
+          "field_id": "standardization_framework",
+          "descr": "Clinical data standard or normalization framework used to harmonize variables into a consistent structure during cleaning; string format example: local_registry_standard_v1 or OMOP_mapping_subset.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "missing_data_handling",
+          "descr": "Strategy used during cleaning to handle missing or incomplete registry values; record the transformation rule applied at process time.",
+          "type": "categorical",
+          "allowed_values": [
+            "leave_missing",
+            "impute_simple",
+            "impute_model_based",
+            "flag_missing",
+            "exclude_row",
+            "mixed_strategy"
+          ]
+        },
+        {
+          "field_id": "software_name",
+          "descr": "Software used to run the registry cleaning workflow, including the package or pipeline name that executed the transformation; string format example: pandas or clinical_data_curation_workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the software or workflow used for registry cleaning; string format example: 2.2.0 or 1.4.3. Report the exact version used at process time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "repository_url",
+          "descr": "Code repository or workflow repository location for the cleaning process implementation; string format example: https://github.com/org/repo or internal repo URI. Record the implementation source used for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cleaning_quality_status",
+          "descr": "Overall process-level quality outcome after cleaning, summarizing whether the cleaned registry data met expected structure and consistency requirements before downstream use; assess at process completion.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "curated_registry_signal": {
+      "reasoning": "I corrected the curated signal schema by removing fields that collided with previously generated signal metadata elsewhere in the DAG. For this node, I retained only curated-artifact properties that are still specific to the signal but use non-colliding names: the curated dataset identifier, schema version, and completeness flag. I excluded process-level cleaning details, downstream derivative semantics, and any repeated technical file properties to avoid duplication across DAG steps.",
+      "md_schema": [
+        {
+          "field_id": "curated_dataset_id",
+          "descr": "Unique identifier for the curated registry dataset artifact produced by the cleaning process; string format example: CUR-REG-0001. Use for the cleaned but not yet transformed signal.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "schema_version",
+          "descr": "Version label of the curated dataset structure used to represent the standardized clinical data layout; string format example: v1.0 or registry_schema_2024. Record the schema version at the signal stage.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_completeness_flag",
+          "descr": "Artifact-level flag indicating whether the curated registry dataset meets expected completeness for downstream transformation, based on technical validation of required fields; assess after cleaning and before analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "metadata_table_generation": {
+      "reasoning": "This is a Process node, so I kept only transformation-oriented fields for reshaping the curated registry signal into the metadata table: run identity, timing, reshape method, keying, mapping version, imputation approach, and process-level quality. I removed software-related fields because they collide with already_generated fields from earlier process nodes and would duplicate implementation metadata already captured elsewhere in the DAG. I also continued to exclude content fields belonging to the downstream Derivative table and technical artifact fields belonging to the Signal node.",
+      "md_schema": [
+        {
+          "field_id": "metadata_generation_run_id",
+          "descr": "Unique identifier for this metadata table generation execution; string format example: META-2024-001. Assigned to the specific reshaping run applied to the curated registry dataset.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "generation_start_date",
+          "descr": "Date when the metadata table generation process began; date format example: 2024-03-21. Use the start of the transformation run, not the original capture date.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "generation_end_date",
+          "descr": "Date when the metadata table generation process completed; date format example: 2024-03-21. Use the process completion date for the reshaping workflow.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reshape_method",
+          "descr": "Primary method used to reshape the curated registry dataset into a metadata table, such as pivoting, denormalization, or record linkage. Record the transformation strategy used at process time.",
+          "type": "categorical",
+          "allowed_values": [
+            "pivot",
+            "denormalize",
+            "record_linkage",
+            "melt_and_join",
+            "rule_based_mapping"
+          ]
+        },
+        {
+          "field_id": "primary_key_strategy",
+          "descr": "Keying strategy used to construct patient-level rows in the metadata table; string format example: patient_id_plus_episode_id or registry_key. Describe how rows were uniquely identified during generation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "column_mapping_version",
+          "descr": "Version label of the variable mapping specification used to map curated fields into metadata table columns; string format example: map_v1.0 or metadata_map_2024. This refers to the transformation specification.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "imputation_during_generation",
+          "descr": "Whether missing values were filled or left unchanged while generating the metadata table from the curated dataset; assess at the process stage after reshaping.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "simple_fill",
+            "model_based_fill",
+            "leave_as_missing",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "generation_quality_status",
+          "descr": "Overall process-level assessment of whether the generated metadata table met structural and mapping expectations before downstream analysis; determine at the end of generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "metadata_table": {
+      "reasoning": "This is a Derivative node, so I included only properties of the computed metadata table itself: analytical structure, table granularity, linkage completeness, and derived quality indicators. I excluded raw clinical content such as demographics, treatment plan details, session attendance, adverse reactions, and follow-up outcomes because those are the semantic payload of the table, not its meta-properties. I also avoided any fields already generated for upstream Signal or Process nodes, including file/storage fields, run identifiers, and software/repository fields, because those either describe the artifact container or the generation workflow rather than the derivative table content.",
+      "md_schema": [
+        {
+          "field_id": "metadata_table_id",
+          "descr": "Unique identifier for the derived metadata table artifact; string format example: MDT-2024-001. Use this to reference the computed analytical table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_granularity",
+          "descr": "Unit of observation represented by each row in the metadata table, describing the analytical resolution of the derivative; typical values should match the linkage design used in this registry workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "patient_level",
+            "episode_level",
+            "visit_level",
+            "protocol_patient_level"
+          ]
+        },
+        {
+          "field_id": "linked_patient_count",
+          "descr": "Number of unique patients represented in the metadata table after linkage and table construction; measured on the final derivative and used to confirm cohort coverage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linked_protocol_count",
+          "descr": "Number of distinct radiotherapy protocols represented in the metadata table after derivation; measured on the final table to characterize protocol diversity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "covariate_count",
+          "descr": "Number of covariate fields included in the metadata table for analysis, excluding identifier columns and pure outcome columns; measured on the final derivative structure.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_field_count",
+          "descr": "Number of outcome-related columns in the metadata table, such as survival or quality-of-life variables, after derivation; measured on the final analytical table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "linkage_completeness_flag",
+          "descr": "Indicator of whether the final metadata table successfully linked the intended patient records, treatment protocols, and outcomes without major linkage loss; assess on the completed derivative.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "analysis_readiness_flag",
+          "descr": "Indicator that the derivative table is structurally ready for downstream statistical analysis after construction, based on completeness of required analytical fields and consistent row structure.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "needs_review",
+            "not_ready",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "protocol_feature_engineering": {
+      "reasoning": "This is a Derivative node, so I included only properties of the computed protocol-variable artifact itself: the derived feature set’s identity, dimensionality, and analytical readiness. I excluded process implementation fields such as software_name, software_version, and repository_url because those already exist on upstream Process nodes and must not be repeated. I also excluded the original radiotherapy plan values because those belong to the input signal or to the feature-engineering process, not to the derivative output.",
+      "md_schema": [
+        {
+          "field_id": "protocol_variables_id",
+          "descr": "Unique identifier for the derived protocol-variable artifact; string format example: PROT-2024-001. Use to reference the engineered protocol features table or object.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_count",
+          "descr": "Number of engineered protocol variables present in the derived artifact after feature construction; measured on the final protocol-variables output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binary_feature_count",
+          "descr": "Number of binary or one-hot protocol features contained in the derived artifact; measured on the final engineered output for analysis reference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "continuous_feature_count",
+          "descr": "Number of continuous protocol features retained in the derived artifact after encoding and scaling; measured on the final derivative.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "encoding_completeness_flag",
+          "descr": "Indicator of whether all intended treatment-plan descriptors were successfully encoded into the protocol-variable artifact without major loss; assess on the completed derivative.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "feature_reuse_flag",
+          "descr": "Indicator of whether engineered protocol variables follow a reusable and consistent specification for downstream comparative analysis; assess after derivative construction.",
+          "type": "categorical",
+          "allowed_values": [
+            "reusable",
+            "needs_review",
+            "not_reusable",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "artifact_ready_for_analysis",
+          "descr": "Overall readiness status of the derived protocol-variable artifact for use in comparative radiotherapy analyses; evaluate the completed derivative table or object.",
+          "type": "categorical",
+          "allowed_values": [
+            "ready",
+            "needs_review",
+            "not_ready",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "protocol_variables": {
+      "reasoning": "This is a Derivative node, so I included only computed protocol-feature properties of the artifact itself: feature set versioning, named derived fields, encoding/scaling choices, and quality/completeness indicators. I excluded upstream process parameters, raw treatment values, and any file/storage or software metadata. I also removed the colliding identifier field previously used on an earlier DAG step, since the DAG already has a generated protocol_variables artifact identity and this node must not repeat it.",
+      "md_schema": [
+        {
+          "field_id": "feature_set_version",
+          "descr": "Version label of the derived protocol-variable set used in the cohort comparison analysis; string format example: pv_v1.0 or protocol_vars_2024. Record the exact feature-set version at derivation time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "encoded_dose_field",
+          "descr": "Name of the derived feature representing treatment dose in the protocol variable set; string format example: total_dose_gy or biologically_effective_dose_gy. This describes the computed variable, not the original plan value.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "encoded_target_volume_field",
+          "descr": "Name of the derived feature representing target volume in the protocol variable set; string format example: target_volume_cc or target_volume_category. Record the analysis-ready variable name produced by feature engineering.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "encoded_fractionation_field",
+          "descr": "Name of the derived feature representing fractionation schedule in the protocol variable set; string format example: fractions_count or dose_per_fraction_gy. Record the computed variable name used in analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variable_encoding_type",
+          "descr": "Encoding type used for the derived protocol variables, describing how the original treatment descriptors were represented in the final feature set; typical values indicate numeric, categorical, or composite encodings.",
+          "type": "categorical",
+          "allowed_values": [
+            "numeric",
+            "categorical",
+            "binary",
+            "composite",
+            "ordinal"
+          ]
+        },
+        {
+          "field_id": "feature_scaling_method",
+          "descr": "Scaling or normalization applied to the derived protocol variables, if any, at the time of derivation; record how features were prepared for comparison across the cohort.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "z_score",
+            "min_max",
+            "log_scaled",
+            "standardized",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "unit_of_measure",
+          "descr": "Measurement unit used for the derived protocol variable when applicable, such as Gy or cc; string format example: Gy. Use the unit attached to the analysis-ready feature.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_completeness_flag",
+          "descr": "Indicator of whether the derived protocol-variable set contains the expected core features needed for radiotherapy regimen comparison; assess the completed derivative artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "insufficient",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "derivation_quality_status",
+          "descr": "Overall quality status of the derived protocol-variable artifact after feature construction and validation; use this to summarize whether the variables are suitable for downstream comparative analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "outcome_aggregation_process": {
+      "reasoning": "This is a Process node, so I included only the aggregation logic that converts longitudinal treatment and outcome observations into patient-level summaries: aggregation run identity, summary windowing, survival/QoL aggregation methods, and a process-level quality indicator. I excluded the actual attendance counts, adverse reaction burden, survival estimates, and quality-of-life scores because those are the outputs of the process and belong to the downstream Derivative node. I also avoided file/storage properties and any repeated software/repository fields already used in other process nodes to prevent collisions across the DAG.",
+      "md_schema": [
+        {
+          "field_id": "outcome_aggregation_run_id",
+          "descr": "Unique identifier for this outcome aggregation execution; string format example: OUT-AGG-2024-001. Assigned to the specific run that summarizes attendance, adverse reactions, survival, and quality-of-life measurements.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_start_date",
+          "descr": "Date when outcome aggregation began; date format example: 2024-03-25. Use the process start date for the longitudinal summarization step.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_end_date",
+          "descr": "Date when outcome aggregation completed; date format example: 2024-03-26. Use the process completion date for the summarization workflow.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_window_months",
+          "descr": "Length of the follow-up window used to aggregate treatment attendance, adverse reactions, survival, and quality-of-life data; measured in months at the process stage.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "attendance_aggregation_method",
+          "descr": "Method used to summarize treatment attendance into patient-level outcomes, such as counts or proportions across the follow-up period.",
+          "type": "categorical",
+          "allowed_values": [
+            "count",
+            "proportion",
+            "binary_any",
+            "time_to_event",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "adverse_event_aggregation_method",
+          "descr": "Method used to summarize adverse reactions into patient-level burden metrics during the aggregation process.",
+          "type": "categorical",
+          "allowed_values": [
+            "count",
+            "grade_max",
+            "binary_any",
+            "severity_weighted",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "survival_summary_method",
+          "descr": "Method used to summarize survival information during outcome aggregation, such as time-to-event or censored status summaries.",
+          "type": "categorical",
+          "allowed_values": [
+            "time_to_event",
+            "censored_indicator",
+            "median_survival",
+            "hazard_summary",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "qol_aggregation_method",
+          "descr": "Method used to summarize quality-of-life measurements into a patient-level outcome summary during the aggregation process.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean_score",
+            "change_from_baseline",
+            "area_under_curve",
+            "last_observation",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "outcome_definition_version",
+          "descr": "Version label of the outcome definitions and aggregation rules used in this process; string format example: outcome_def_v1.0. Record the rule set applied to create comparable summaries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "aggregation_quality_status",
+          "descr": "Overall process-level quality assessment indicating whether the outcome summaries were generated successfully and meet expected longitudinal summarization standards; assess at process completion.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "outcome_summary": {
+      "reasoning": "This is a Derivative node, so I included only the computed outcome-summary properties themselves: summary identifiers, follow-up window, aggregated survival and QoL metrics, adverse event burden measures, and a derivative-level quality flag. I excluded the underlying events and measurement details because those belong to the upstream Process node that aggregated them. I also avoided repeating any already-generated process identifiers, software/repository fields, or file/storage properties, and I kept the fields focused on the derived longitudinal outcome artifact needed for downstream joint analysis.",
+      "md_schema": [
+        {
+          "field_id": "outcome_summary_id",
+          "descr": "Unique identifier for the derived outcome-summary artifact; string format example: OUTSUM-2024-001. Use to reference the final longitudinal outcome summary table or object.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_version",
+          "descr": "Version label of the outcome summary artifact used for downstream analysis; string format example: outsum_v1.0 or outcomes_2024. Record the exact derivation version.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "follow_up_duration_months",
+          "descr": "Length of follow-up summarized in the outcome summary, measured in months at the derivative stage; typical values reflect the registry’s observation window.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adverse_event_burden",
+          "descr": "Derived measure summarizing the overall burden of adverse reactions within the follow-up period; this is the computed outcome metric, not the raw event list.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "low",
+            "moderate",
+            "high",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "survival_metric_value",
+          "descr": "Computed survival summary value reported in the outcome summary, such as a survival time or survival probability depending on the registry definition; record the derived metric, not the raw event dates.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "survival_metric_type",
+          "descr": "Type of survival summary represented by the survival_metric_value field; use this to distinguish time-based versus probability-based summaries in the derivative artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "overall_survival_time",
+            "progression_free_survival_time",
+            "survival_probability",
+            "median_survival",
+            "censored_status"
+          ]
+        },
+        {
+          "field_id": "qol_summary_value",
+          "descr": "Computed quality-of-life summary value derived from follow-up assessments; record the aggregate score or change score produced by the outcome summary process.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "qol_summary_scale",
+          "descr": "Scale or instrument reference for the derived quality-of-life summary value, such as a questionnaire score scale; string format example: 0_100 or EPIC_26. Report the scale used for the derivative metric.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "follow_up_status",
+          "descr": "Derived status describing whether follow-up information was sufficient and complete enough to support the summary metrics; assess the final outcome summary artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "lost_to_follow_up",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "summary_quality_flag",
+          "descr": "Overall quality indicator for the derived outcome summary, reflecting whether the longitudinal metrics are suitable for downstream comparative analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "joint_analysis_process": {
+      "reasoning": "This is a Process node, so I included only the integration and modeling setup used to combine protocol variables, metadata, and outcome summaries for comparative analysis: analysis run identity, model family, covariate adjustment strategy, comparison design, and process-level fit/quality. I excluded the actual association estimates, p-values, effect sizes, or interpretation because those belong to the downstream Derivative node. I also avoided file/storage properties and any software/repository fields already used by earlier process nodes to prevent cross-step collisions.",
+      "md_schema": [
+        {
+          "field_id": "analysis_run_id",
+          "descr": "Unique identifier for this joint cohort analysis execution; string format example: ANA-2024-001. Assigned to the analysis run that integrates protocol variables, metadata, and outcome summaries.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_start_date",
+          "descr": "Date when the joint analysis process began; date format example: 2024-03-27. Use the analysis run start date, not the underlying data generation dates.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_end_date",
+          "descr": "Date when the joint analysis process completed; date format example: 2024-03-28. Use the completion date for the comparative modeling workflow.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_type",
+          "descr": "Primary statistical analysis type used to compare radiotherapy protocols and outcomes; record the model family or comparison framework applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "cox_regression",
+            "linear_model",
+            "logistic_regression",
+            "mixed_effects",
+            "survival_comparison",
+            "descriptive_comparison"
+          ]
+        },
+        {
+          "field_id": "covariate_adjustment_strategy",
+          "descr": "Strategy used to adjust for protocol, metadata, and outcome covariates in the joint analysis; record how confounding or baseline differences were handled at the process stage.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "minimal",
+            "multivariable",
+            "propensity_based",
+            "stratified",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "comparison_group_definition",
+          "descr": "Definition of the protocol comparison groups used in the joint analysis, such as treatment regimen categories or dose groups; record the grouping logic used for comparative modeling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "outcome_model_family",
+          "descr": "Model family used for outcome association estimation in the joint analysis, describing the mathematical form of the comparison workflow; record the family used at process time.",
+          "type": "categorical",
+          "allowed_values": [
+            "cox",
+            "linear",
+            "logistic",
+            "ordinal",
+            "poisson",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "analysis_quality_status",
+          "descr": "Overall process-level quality assessment indicating whether the integrated analysis completed successfully and produced stable comparative results; evaluate at process completion.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "fit_metric_name",
+          "descr": "Name of the primary model fit or diagnostic metric reported by the analysis process, if applicable; string format example: auc, c_index, or r_squared. Report the metric used to judge analysis performance.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fit_metric_value",
+          "descr": "Numeric value of the primary model fit or diagnostic metric from the joint analysis process; typical range depends on the selected metric, such as 0 to 1 for discrimination measures.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "survival_qol_analysis": {
+      "reasoning": "This is a Derivative node, so I included only the final analytic outputs: effect estimates, uncertainty, statistical significance, direction of association, and overall model quality for the protocol-survival/QoL comparison. I excluded the analysis setup, covariate strategy, and model family because those belong to the upstream Process node. I also avoided any file/storage, run identifiers, or software fields already used elsewhere, and I kept the schema focused on the reusable scientific results needed by downstream consumers.",
+      "md_schema": [
+        {
+          "field_id": "survival_qol_analysis_id",
+          "descr": "Unique identifier for the final analytic output artifact; string format example: ANALYSIS-2024-001. Use to reference the completed survival and quality-of-life association result.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_version",
+          "descr": "Version label of the final survival and quality-of-life analysis artifact; string format example: sqo_analysis_v1.0 or analysis_2024. Record the exact derivation version of the result set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "primary_effect_estimate",
+          "descr": "Primary estimated association between radiotherapy protocols and the target outcome in the final analysis, such as a hazard ratio, regression coefficient, or odds ratio depending on the model used; typical range depends on the statistic and is recorded at the derivative stage.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_estimate_type",
+          "descr": "Type of primary effect estimate reported by the final analysis; use to distinguish hazard ratios, regression coefficients, odds ratios, or other association measures.",
+          "type": "categorical",
+          "allowed_values": [
+            "hazard_ratio",
+            "regression_coefficient",
+            "odds_ratio",
+            "risk_ratio",
+            "difference_in_means",
+            "other"
+          ]
+        },
+        {
+          "field_id": "confidence_interval_lower",
+          "descr": "Lower bound of the confidence interval for the primary effect estimate in the final analytic output; measured at the derivative stage and reported with the same units or scale as the effect estimate type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "confidence_interval_upper",
+          "descr": "Upper bound of the confidence interval for the primary effect estimate in the final analytic output; measured at the derivative stage and reported with the same units or scale as the effect estimate type.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "p_value",
+          "descr": "P-value for the primary association tested in the final survival and quality-of-life analysis; typical range is 0 to 1 and is assessed on the completed derivative result.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_direction",
+          "descr": "Direction of the observed association between radiotherapy protocol and the analyzed outcome in the final result, indicating whether the protocol was associated with improvement or worsening relative to the reference group.",
+          "type": "categorical",
+          "allowed_values": [
+            "positive",
+            "negative",
+            "null",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "model_diagnostics_flag",
+          "descr": "Overall quality indicator for the final analytic model, reflecting whether the survival/QoL analysis passed basic diagnostic checks and is suitable for reporting or reuse.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "pass_with_warnings",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

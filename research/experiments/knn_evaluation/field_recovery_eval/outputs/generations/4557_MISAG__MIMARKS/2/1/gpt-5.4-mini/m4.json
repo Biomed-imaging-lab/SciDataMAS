@@ -1,0 +1,1085 @@
+{
+  "md_name": "Freshwater Lake 18S Community Sequencing Workflow",
+  "md_description": "This DAG describes a freshwater lake microbial ecology workflow centered on 18S rRNA marker-gene sequencing of eukaryotic microbial communities. It tracks water samples collected across lakes, depths, zones, regions, and seasons through filtration, DNA extraction, library preparation, sequencing, and bioinformatic processing into community profiles. In parallel, environmental measurements such as temperature, dissolved oxygen, and nutrient concentrations are captured to build a metadata table that supports downstream analyses of ecological gradients and seasonal dynamics.",
+  "fields_per_node": {
+    "lake_water_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic sample identity and origin/context fields for the collected lake water sample. I excluded filtration, DNA extraction, sequencing, and environmental measurements because those belong to downstream Process/Capture/Derivative nodes. I also avoided duplicating any likely root-level identifiers from other nodes by keeping this node focused on sample-specific collection context: where, when, and from what part of the lake the sample was taken. The fields support distinguishing samples across lakes, depths, zones, regions, and dates, which are the minimum descriptors needed for downstream reuse and integration.",
+      "md_schema": [
+        {
+          "field_id": "lake_name",
+          "descr": "Name of the freshwater lake where the water sample was collected; use the site name used in field records (for example, 'Lake Mendota'). Captures sample origin and is recorded at collection time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_date",
+          "descr": "Date when the water sample was collected in the field; record in ISO 8601 date format (YYYY-MM-DD, for example, 2026-05-14). Used to track seasonal sampling context.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_region",
+          "descr": "Geographic region or watershed designation for the collection site, as recorded in the study design (for example, 'north basin', 'eastern lakes district', or a named watershed). Records sample origin context at collection.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lake_zone",
+          "descr": "Within-lake zone from which the sample was collected, reflecting the ecological or morphometric zone used in the field campaign (for example, littoral, pelagic, benthic, inlet, outlet). Record the zone assigned at sampling.",
+          "type": "categorical",
+          "allowed_values": [
+            "littoral",
+            "pelagic",
+            "benthic",
+            "inlet",
+            "outlet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sampling_depth_meters",
+          "descr": "Water-column depth at which the sample was collected, measured in meters at the time of sampling (for example, 0.5 m, 5 m, 20 m). Use the actual collection depth for the water sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_collection_method",
+          "descr": "How the lake water sample was obtained at collection, such as grab sample, integrated depth sample, or bottle sampler. Record the field collection approach used for this specific sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "grab_sample",
+            "integrated_depth_sample",
+            "bottle_sampler",
+            "other"
+          ]
+        }
+      ]
+    },
+    "sample_concentration_filtration": {
+      "reasoning": "This is a Process node, so I included only fields describing how filtration was performed and the quality of the filtering step. I excluded sample-origin fields, downstream biomass/DNA properties, and any signal/capture outputs because those belong to the upstream lake_water_sample or downstream filtered_biomass/community_dna nodes. I also avoided repeating already generated sample context fields. The chosen fields focus on filtration protocol parameters a user would need to reproduce biomass concentration: device setup, pore size, filtered volume, and whether filtration completed successfully without clogging.",
+      "md_schema": [
+        {
+          "field_id": "filter_device_type",
+          "descr": "Type of filtration setup used to concentrate microbial biomass from the lake water sample at the filtration step (for example, vacuum manifold, syringe filter, inline capsule filter). Record the device category used in the protocol.",
+          "type": "categorical",
+          "allowed_values": [
+            "vacuum_manifold",
+            "syringe_filter",
+            "inline_capsule_filter",
+            "gravity_filter",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filter_pore_size_micrometers",
+          "descr": "Nominal pore size of the filter membrane used during water concentration, measured in micrometers at filtration time (for example, 0.22 µm, 0.45 µm). This is the key retention setting for microbial biomass capture.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_volume_liters",
+          "descr": "Volume of lake water passed through the filter for this sample, measured in liters during the filtration step (for example, 0.5 L to 10 L depending on turbidity and biomass). Recorded at completion of filtration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtration_success",
+          "descr": "Whether the filtration step completed as intended for the sample without a fatal failure. Record at the end of filtration; use true if the target volume was filtered successfully, false if the sample was lost or filtration failed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_clogging_observed",
+          "descr": "Whether filter clogging or excessive backpressure was observed during filtration, as noted by the field team during the concentration step. Useful as a quality indicator because clogging can limit effective filtered volume and biomass recovery.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "filtered_biomass": {
+      "reasoning": "This is an Entity node, so I included only intrinsic properties of the retained biomass/filter product, not the filtration process settings, downstream DNA extraction details, or raw signal/file properties. Since the upstream process already captures how filtration was done, this node should describe what the recovered biomass is like as a physical intermediate: filter substrate, storage condition, and material amount/recovery status. I avoided duplicating sample provenance fields already assigned to the root lake_water_sample node.",
+      "md_schema": [
+        {
+          "field_id": "filter_membrane_material",
+          "descr": "Material of the filter membrane on which biomass was retained (for example, polyethersulfone, cellulose nitrate, polycarbonate). Record the membrane material associated with the biomass-containing filter.",
+          "type": "categorical",
+          "allowed_values": [
+            "polyethersulfone",
+            "cellulose_nitrate",
+            "polycarbonate",
+            "nylon",
+            "glass_fiber",
+            "other"
+          ]
+        },
+        {
+          "field_id": "biomass_storage_temperature_celsius",
+          "descr": "Temperature at which the filtered biomass/filter was held after collection and before DNA extraction, in degrees Celsius (for example, 4.0 for short-term cold storage or -20.0 for frozen storage). Record the storage temperature used for this sample intermediate.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "biomass_storage_duration_hours",
+          "descr": "Time between filtration and DNA extraction for the filtered biomass, measured in hours (for example, 2 h to 168 h depending on study logistics). Record the elapsed storage duration for this intermediate sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retained_biomass_visible",
+          "descr": "Whether visible particulate biomass was observed on the filter after filtration. Record at the biomass intermediate stage; this is a simple physical indicator of capture success and sample load.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filter_intact_after_filtration",
+          "descr": "Whether the filter remained intact and usable after the filtration step, as checked before transfer to DNA extraction. Use true when the filter did not tear or rupture.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dna_extraction": {
+      "reasoning": "This is a Process node, so I included only DNA extraction protocol details and extraction quality indicators. I excluded the upstream filtered_biomass physical properties and downstream community_dna properties because those belong to adjacent Entity nodes. I also avoided repeat sample identifiers already defined at the root. The selected fields are the minimum reproducibility set for the extraction step: kit/method, elution conditions, and a yield/quality outcome that describes how well the process recovered amplifiable community DNA.",
+      "md_schema": [
+        {
+          "field_id": "dna_extraction_kit",
+          "descr": "Commercial kit or in-house method used to extract nucleic acids from the filtered biomass at this step (for example, DNeasy PowerWater, phenol-chloroform, bead-beating protocol). Record the extraction chemistry/method used for this sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final DNA elution volume used when recovering community DNA from the extraction column or bead slurry, measured in microliters (for example, 50 µL or 100 µL). Record the volume at the completion of extraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_ng_per_microliter",
+          "descr": "Concentration of extracted community DNA measured after purification, in ng/µL (for example, 2.5 ng/µL to 50 ng/µL). Record the post-extraction quantification value for this sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_purity_ratio",
+          "descr": "Spectrophotometric purity ratio for the extracted DNA, typically A260/A280 or the laboratory-defined equivalent, measured after extraction to assess contamination. Record the ratio reported for this sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_extraction_passed_qc",
+          "descr": "Whether the extracted DNA met the laboratory quality-control threshold for downstream 18S amplicon PCR. Record at the end of extraction/QC review; use true if the extract was accepted for amplification.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_dna": {
+      "reasoning": "This is an Entity node, so I included intrinsic properties of the extracted community DNA itself rather than extraction protocol settings or downstream PCR/library details. The upstream dna_extraction process already owns kit, elution, and QC procedure fields, so here I focused on what the DNA object is and its measurable characteristics at the point it enters amplification: concentration, total yield, purity, storage, and integrity. I avoided repeating sample provenance identifiers already assigned at the root lake_water_sample node.",
+      "md_schema": [
+        {
+          "field_id": "community_dna_concentration_ng_per_microliter",
+          "descr": "Measured concentration of the extracted community DNA, in ng/µL, assessed after extraction and prior to 18S amplicon PCR (for example, 1.0 ng/µL to 50.0 ng/µL). Use the concentration value recorded for this DNA aliquot.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_dna_total_yield_ng",
+          "descr": "Total amount of DNA recovered from the extraction, in ng, calculated from concentration and elution volume or reported directly after extraction. Record the yield for this DNA sample before downstream amplification.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_dna_purity_ratio",
+          "descr": "DNA purity ratio measured for the community DNA aliquot after extraction and before PCR, typically A260/A280 (for example, 1.7 to 2.0 for clean DNA). Record the laboratory-reported ratio for this DNA sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_dna_storage_temperature_celsius",
+          "descr": "Temperature at which the community DNA aliquot was stored before use in downstream amplification, in degrees Celsius (for example, 4.0 for short-term storage or -20.0 to -80.0 for longer-term storage). Record the actual storage temperature for this DNA sample.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_dna_integrity_status",
+          "descr": "Qualitative assessment of DNA integrity at the time the extract was prepared for downstream use (for example, intact, partially degraded, degraded). Record the lab assessment for this aliquot.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_degraded",
+            "degraded",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "marker_gene_amplicon_pcr": {
+      "reasoning": "This is a Process node, so I included only PCR protocol parameters, primer information, cycling settings, and an amplification outcome/quality indicator. I excluded community DNA properties because those belong to the upstream Entity node, and I excluded library properties because the amplicon_library node owns the output object. I also avoided repeating any sample identifiers already generated elsewhere. The fields are chosen to make the 18S amplicon amplification step reproducible and interpretable for downstream library construction.",
+      "md_schema": [
+        {
+          "field_id": "amplicon_target_region",
+          "descr": "Marker-gene region amplified from the community DNA during PCR; for this workflow it should identify the 18S rRNA target region used for eukaryotic community profiling (for example, 18S V4 or 18S V9). Record the exact region amplified in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "forward_primer_sequence",
+          "descr": "Forward primer sequence used in the 18S amplicon PCR, written in 5' to 3' orientation (for example, GTGYCAGCMGCCGCGGTAA). Record the exact oligonucleotide sequence used at amplification time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reverse_primer_sequence",
+          "descr": "Reverse primer sequence used in the 18S amplicon PCR, written in 5' to 3' orientation. Record the exact oligonucleotide sequence used at amplification time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_number",
+          "descr": "Number of PCR cycles used to amplify the 18S marker region from community DNA (for example, 25 to 35 cycles). Record the thermal cycling count used for this sample.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "annealing_temperature_celsius",
+          "descr": "Primer annealing temperature used during the PCR thermal cycling program, in degrees Celsius (for example, 52.0 to 65.0 C depending on primer set). Record the run-specific annealing temperature.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "amplicon_pcr_success",
+          "descr": "Whether the 18S amplification produced an expected amplicon suitable for downstream library construction. Record at the end of the PCR step; use true if a product of the expected size was obtained.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "amplicon_library": {
+      "reasoning": "This is an Entity node, so I included properties of the prepared library itself rather than PCR protocol details or sequencing instrument settings. The upstream marker_gene_amplicon_pcr node already owns amplification parameters, and the downstream sequencing_capture node will own run configuration. Here I focused on library identity/format, indexing, size distribution, and concentration—attributes needed to understand whether the 18S amplicon library is ready and appropriate for sequencing.",
+      "md_schema": [
+        {
+          "field_id": "library_preparation_method",
+          "descr": "Library preparation strategy used to convert the 18S amplicon into a sequencing-ready library (for example, direct amplicon cleanup, dual-index adapter addition, one-step indexed PCR). Record the library construction approach for this sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "direct_amplicon_cleanup",
+            "dual_index_adapter_addition",
+            "one_step_indexed_pcr",
+            "other"
+          ]
+        },
+        {
+          "field_id": "index_adapter_type",
+          "descr": "Indexing or adapter system attached to the amplicon library before sequencing (for example, dual index, single index, inline barcode). Record the adapter/index design used to multiplex samples.",
+          "type": "categorical",
+          "allowed_values": [
+            "dual_index",
+            "single_index",
+            "inline_barcode",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_size_bp",
+          "descr": "Approximate insert-plus-adapter fragment size of the prepared 18S amplicon library, measured in base pairs after cleanup and indexing (for example, 250 bp to 500 bp depending on target region and adapters). Record the library size observed before sequencing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_microliter",
+          "descr": "Concentration of the prepared amplicon library prior to loading on the sequencer, in ng/µL (for example, 1.0 ng/µL to 20.0 ng/µL). Record the quantification value used for sequencing normalization.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_pooling_status",
+          "descr": "Whether the library was successfully normalized and pooled for sequencing with other samples. Record at library completion; use true if the sample was included in a sequencing pool.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_capture": {
+      "reasoning": "This is a Capture node, so I included the sequencing session and instrument configuration only: hardware identity, run chemistry, read structure, and active settings that govern how the sequencer produced raw reads. I excluded library properties because those belong to amplicon_library, and I excluded file-format or quality metrics because those belong to the raw_fastq_reads Signal node. The agent is the instrument itself, so manufacturer/model/serial are appropriate here per the rules, along with the minimum run parameters needed to interpret the raw data generation.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Hardware manufacturer of the sequencing instrument used for this capture session (for example, Illumina). Record the instrument vendor for the run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Sequencing instrument model used to read the 18S amplicon library (for example, MiSeq, NextSeq 2000). Record the exact model configured for this sequencing session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Instrument serial number for the sequencing device used in this capture session, recorded from the machine label or run log (for example, SN1234567). Use the lab-entered serial identifier for traceability.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or kit version used during the run (for example, v2, v3, 2x300 paired-end). Record the chemistry active at capture time because it defines read generation conditions.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length per end for the sequencing run, in base pairs (for example, 150 bp, 250 bp, 300 bp). Record the run setting used to acquire raw reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_success",
+          "descr": "Whether the sequencing capture session completed successfully and produced raw reads usable for downstream processing. Record at run completion; use true if the instrument run finished and reads were generated.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_fastq_reads": {
+      "reasoning": "This is a Signal node, so I included only properties of the raw FASTQ artefact itself: file format, size, read layout, technical quality, and storage location. I excluded sequencing instrument settings because those belong to the upstream sequencing_capture node, and I excluded any interpretation or demultiplexing/trimming details because those belong to downstream process nodes. The fields are the minimal file-level descriptors needed to locate, validate, and reuse the raw sequencing data.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Technical file format of the raw sequencing reads produced by the instrument, expected to be FASTQ or a compressed FASTQ variant. Record the on-disk format for this raw data artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw read file or file set for this sample/runs, measured in bytes at storage time (for example, 1.2e9 bytes). Record the raw data payload size for the FASTQ artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Number of raw reads contained in the FASTQ file set for this sample, counted after the sequencing run and before any demultiplexing or trimming. Record the total sequence record count for the raw signal.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_length_bp",
+          "descr": "Observed read length in base pairs for the raw reads as delivered by the sequencer, before trimming or filtering (for example, 150 bp or 300 bp). Record the technical read length encoded in the raw file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_data_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the raw FASTQ data are stored (for example, /data/run123/sampleA_R1.fastq.gz or s3://bucket/run123/). Record the access location for the raw signal file.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_basecall_quality_passed",
+          "descr": "Whether the raw FASTQ file met the minimal technical integrity check for downstream analysis, such as successful file generation and readable encoding. Record the file-level QC status for the raw signal artefact.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_demultiplexing": {
+      "reasoning": "This is a Process node, so I included only demultiplexing parameters and a process outcome indicator. I excluded raw file properties because those belong to the upstream raw_fastq_reads Signal node, and I excluded the resulting per-sample read properties because those belong to the downstream demultiplexed_reads Signal node. The fields focus on how reads were assigned to samples: index strategy, mismatch tolerance, software identity, and whether the separation succeeded.",
+      "md_schema": [
+        {
+          "field_id": "demultiplexing_software_name",
+          "descr": "Software used to separate raw reads by sample index during demultiplexing (for example, bcl2fastq, qiime2 demux). Record the tool that performed the index-based assignment.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexing_software_version",
+          "descr": "Version of the demultiplexing software used for the read separation step. Record the exact version number from the pipeline or run log to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "index_mismatch_tolerance",
+          "descr": "Maximum number of index mismatches allowed when assigning reads to samples during demultiplexing (for example, 0 or 1). Record the run setting controlling barcode matching stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dual_indexing_used",
+          "descr": "Whether the run used dual indexing for sample assignment during demultiplexing. Record the indexing design used in this process step; use true when both i5 and i7 indices were applied.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexing_success",
+          "descr": "Whether demultiplexing completed successfully and produced per-sample read sets suitable for downstream trimming. Record at process completion; use true if sample assignment finished without fatal errors.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "demultiplexed_reads": {
+      "reasoning": "This is a Signal node, so I included only properties of the per-sample read artefact after demultiplexing: file organization, read counts, file size, and storage location. I excluded demultiplexing software and parameters because those belong to the upstream process node, and I excluded trimming or analysis results because those belong downstream. The chosen fields are the minimum file-level descriptors needed to identify and reuse the sample-specific read set.",
+      "md_schema": [
+        {
+          "field_id": "demultiplexed_file_format",
+          "descr": "File format of the per-sample read artefact after demultiplexing (for example, FASTQ or compressed FASTQ). Record the on-disk format of the separated reads.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "demultiplexed_read_count",
+          "descr": "Number of reads assigned to this sample after demultiplexing and before trimming or filtering, counted at the completion of the separation step. Record the per-sample read total for this signal artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_file_size_bytes",
+          "descr": "Total file size of the demultiplexed per-sample read set, measured in bytes at storage time (for example, 1.0e8 bytes to 1.0e9 bytes). Record the size of the separated read file or file set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_data_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the demultiplexed per-sample reads are stored (for example, /data/demux/sampleA.fastq.gz or s3://bucket/demux/). Record the access location for this signal artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "demultiplexed_quality_flag",
+          "descr": "Whether the demultiplexed read set passed basic technical checks for downstream trimming, such as successful sample assignment and readable file encoding. Record the file-level status for the separated reads.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_trimming": {
+      "reasoning": "This is a Process node, so I included only trimming parameters and a process outcome indicator. I excluded demultiplexed read file properties because those belong to the upstream Signal node, and I excluded trimmed read file properties because those belong to the downstream Signal node. The fields capture the key settings needed to reproduce the trimming step: software identity, version, quality cutoff, minimum length, and whether adapter/primer removal succeeded as intended.",
+      "md_schema": [
+        {
+          "field_id": "trimming_software_name",
+          "descr": "Software used to trim adapters, primers, and low-quality bases from demultiplexed reads (for example, cutadapt, Trimmomatic, fastp). Record the exact tool used in this processing step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimming_software_version",
+          "descr": "Version of the trimming software used for this step. Record the exact version number from the workflow or run log to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Phred quality threshold used to trim low-quality bases from reads (for example, Q20 or Q30). Record the cutoff applied during this trimming step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_post_trim_length_bp",
+          "descr": "Minimum read length in base pairs retained after adapter, primer, and quality trimming (for example, 50 bp or 100 bp). Record the length filter applied at the end of trimming.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_adapter_primer_removed",
+          "descr": "Whether adapters and primers were successfully removed during the trimming step. Record the process outcome after trimming completion; use true if removal was performed as intended.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "trimmed_reads": {
+      "reasoning": "This is a Signal node, so I included only file-level properties of the trimmed read artefact: format, size, read count, read length, storage location, and a technical QC flag. I excluded trimming software and thresholds because those belong to the upstream read_trimming process, and I excluded denoising/feature-inference results because those belong downstream. The selected fields are the minimum descriptors needed to locate and validate the read set that will be used for ASV inference.",
+      "md_schema": [
+        {
+          "field_id": "trimmed_file_format",
+          "descr": "File format of the quality-filtered reads after trimming (for example, FASTQ or compressed FASTQ). Record the on-disk format of the trimmed read artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "other"
+          ]
+        },
+        {
+          "field_id": "trimmed_read_count",
+          "descr": "Number of reads remaining after trimming and before denoising, counted at the completion of the trimming step. Record the total read count retained in this signal artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_file_size_bytes",
+          "descr": "Total file size of the trimmed read set, measured in bytes at storage time (for example, 1.0e7 bytes to 1.0e9 bytes). Record the size of the trimmed reads file or file set.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_read_length_bp",
+          "descr": "Observed read length in base pairs after trimming and before denoising (for example, 75 bp, 150 bp). Record the length of reads that remain in this artefact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_data_storage_path",
+          "descr": "Filesystem path, object-store URI, or archive location where the trimmed reads are stored (for example, /data/trimmed/sampleA.fastq.gz or s3://bucket/trimmed/). Record the access location for this signal artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trimmed_quality_flag",
+          "descr": "Whether the trimmed reads passed the expected technical checks for downstream denoising, such as having acceptable length and readable encoding. Record the file-level status for the trimmed signal artefact.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "denoise_asv_inference": {
+      "reasoning": "This is a Process node, so I included only denoising/ASV inference method parameters and a process outcome indicator. I excluded trimmed-read file properties because those belong to the upstream Signal node, and I excluded the resulting ASV table properties because those belong to the downstream Derivative node. The fields chosen are the minimum reproducibility set for exact-sequence inference: software identity, key denoising mode/thresholds, and whether the inference step completed successfully.",
+      "md_schema": [
+        {
+          "field_id": "asv_inference_software_name",
+          "descr": "Software used to denoise trimmed reads and infer exact amplicon sequence variants from the 18S data (for example, DADA2, Deblur). Record the exact tool used for ASV inference.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_inference_software_version",
+          "descr": "Version of the ASV inference software used for this denoising step. Record the exact version number from the workflow or run log to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "denoising_method",
+          "descr": "Denoising strategy used to infer exact sequence variants from trimmed reads (for example, error-model-based inference, fixed-length denoising, chimera removal enabled). Record the method category used in this step.",
+          "type": "categorical",
+          "allowed_values": [
+            "error_model_based",
+            "fixed_length",
+            "chimera_filtered",
+            "other"
+          ]
+        },
+        {
+          "field_id": "min_abundance_threshold",
+          "descr": "Minimum abundance threshold used to retain inferred sequence variants during denoising, if applicable, counted as the minimum number of reads supporting a variant. Record the filter cutoff used in this run.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_inference_success",
+          "descr": "Whether ASV inference completed successfully and produced an ASV table suitable for downstream taxonomic assignment. Record at process completion; use true if denoising ran to completion.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "asv_table": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the ASV table itself: table shape, sparsity/content summaries, and scientific quality indicators. I excluded denoising software and thresholds because those belong to the upstream process node, and I excluded raw/trimmed signal properties because those belong to upstream Signal nodes. The fields are the minimum derived-table descriptors needed to understand what the ASV matrix contains and how usable it is for downstream ecological analysis.",
+      "md_schema": [
+        {
+          "field_id": "asv_table_sample_count",
+          "descr": "Number of samples represented as rows in the ASV count table after denoising and table construction. Record the matrix row count for this derived result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_table_variant_count",
+          "descr": "Number of unique ASVs represented as columns in the table after denoising. Record the matrix column count for this derived result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_table_total_counts",
+          "descr": "Sum of all read counts across the ASV table, measured as total sequence observations retained after denoising and table construction. Record the aggregate count for this derived result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_table_sparsity_fraction",
+          "descr": "Fraction of zero entries in the ASV count matrix, calculated from the final sample-by-variant table (for example, 0.80 means 80% zeros). Record this derived structural metric for the table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_filtered_fraction",
+          "descr": "Fraction of inferred variants or reads removed as chimeric during ASV table construction, if reported by the denoising workflow. Record this derived quality metric for the table output.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "taxonomic_assignment": {
+      "reasoning": "This is a Process node, so I included only taxonomic assignment procedure fields: database identity/version, classifier method, confidence cutoff, and a success indicator. I excluded ASV table properties because those belong to the upstream Derivative node, and I excluded the resulting taxonomy labels because those belong to the downstream community_profile Derivative node. The selected fields are the minimum details needed to reproduce how eukaryotic taxonomy was assigned to the representative ASVs.",
+      "md_schema": [
+        {
+          "field_id": "taxonomy_assignment_software_name",
+          "descr": "Software or classifier used to assign taxonomy to representative ASV sequences (for example, BLAST, naive Bayes classifier, QIIME 2 feature-classifier). Record the exact tool used in this step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_assignment_software_version",
+          "descr": "Version of the taxonomy assignment software or classifier used for this process step. Record the exact version number from the workflow or run log to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Reference database used for eukaryotic taxonomic assignment (for example, SILVA, PR2, Greengenes-style custom 18S database). Record the database name applied in this comparison step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release identifier of the reference database used for taxonomic assignment. Record the exact version or release date used in this run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_confidence_threshold",
+          "descr": "Minimum confidence score or bootstrap threshold required to accept a taxonomic assignment, recorded as the cutoff used in this workflow (for example, 0.8 or 70). Record the classifier acceptance threshold for this step.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomy_assignment_success",
+          "descr": "Whether the taxonomic assignment step completed successfully and produced taxon labels for downstream community profiling. Record at process completion; use true if the comparison against the reference database finished without fatal errors.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "community_profile": {
+      "reasoning": "This is a Derivative node, so I included only computed properties of the taxon-resolved abundance table itself: table dimensions, abundance transformation state, taxonomic resolution, and summary quality indicators. I excluded taxonomy software and database details because those belong to the upstream process node, and I excluded raw ASV table properties because those belong to the upstream derivative. The fields are the minimum descriptors needed to understand and reuse the community profile as a derived ecological data product.",
+      "md_schema": [
+        {
+          "field_id": "community_profile_sample_count",
+          "descr": "Number of samples represented as rows in the final taxon-resolved abundance table. Record the matrix row count for this derived community profile.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "community_profile_taxon_count",
+          "descr": "Number of taxa represented as columns in the community profile after taxonomic aggregation. Record the matrix column count for this derived result.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "abundance_units",
+          "descr": "Unit or normalization basis used for abundance values in the community profile (for example, read counts, relative abundance, percentage). Record the scale of the derived table entries.",
+          "type": "categorical",
+          "allowed_values": [
+            "read_counts",
+            "relative_abundance",
+            "percentage",
+            "other"
+          ]
+        },
+        {
+          "field_id": "taxonomic_rank_reported",
+          "descr": "Lowest taxonomic rank reported in the community profile table (for example, phylum, class, order, family, genus, species). Record the resolution level used in the derived abundance matrix.",
+          "type": "categorical",
+          "allowed_values": [
+            "phylum",
+            "class",
+            "order",
+            "family",
+            "genus",
+            "species",
+            "other"
+          ]
+        },
+        {
+          "field_id": "community_profile_zero_fraction",
+          "descr": "Fraction of zero entries in the final taxon-resolved abundance matrix, calculated from the derived profile (for example, 0.75 means 75% zeros). Record this structural metric for the output table.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "temperature_measurement": {
+      "reasoning": "This is a Capture node, so I included only the measurement session and instrument configuration for the temperature reading. I excluded the water_temperature value itself because that belongs to the downstream Derivative node, and I excluded sample provenance because that belongs to the root lake_water_sample entity. Per the rules, instrument manufacturer/model/serial belong here, along with the measurement units, probe calibration state, and whether the on-site temperature capture succeeded.",
+      "md_schema": [
+        {
+          "field_id": "temperature_probe_manufacturer",
+          "descr": "Manufacturer of the temperature probe or meter used for the on-site water temperature measurement (for example, Thermo Fisher, YSI, Hanna). Record the hardware vendor for the capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_probe_model",
+          "descr": "Model of the temperature probe or meter used to measure water temperature at collection (for example, ProDSS, EcoSense, handheld digital probe). Record the exact device model configured for this capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_probe_serial_number",
+          "descr": "Serial number of the temperature probe or meter used for the measurement, recorded from the instrument label or field log (for example, SN12345). Use the instrument traceability identifier for this capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_measurement_unit",
+          "descr": "Unit used to record water temperature during the field measurement, expected to be degrees Celsius in this workflow. Record the unit attached to the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "celsius"
+          ]
+        },
+        {
+          "field_id": "temperature_probe_calibrated",
+          "descr": "Whether the temperature probe was calibrated or verified according to field protocol before the measurement session. Record the instrument readiness status at the time of capture; use true if calibration/verification was completed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_capture_success",
+          "descr": "Whether the temperature measurement was successfully obtained from the lake water sample at collection or on-site. Record at the end of the capture session; use true if a valid temperature reading was recorded.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "water_temperature": {
+      "reasoning": "This is a Derivative node, so I included only the computed/measured output value and its derived quality context, not the probe settings or sampling context from upstream nodes. The upstream temperature_measurement Capture node already owns instrument identity and calibration, while lake_water_sample owns where/when the sample came from. Here I focus on the actual temperature datum that will be used in the metadata table, plus how it was summarized and whether it passed QC.",
+      "md_schema": [
+        {
+          "field_id": "water_temperature_celsius",
+          "descr": "Recorded water temperature value for the sample, expressed in degrees Celsius and taken from the upstream temperature measurement at collection or on-site. Typical freshwater lake values are about 0.0 to 35.0 C, depending on season and depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_value_qc_flag",
+          "descr": "Whether the recorded water temperature value passed the project's validation checks before inclusion in the environmental metadata table. Record the post-measurement quality status; use true if the value was accepted.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_summary_method",
+          "descr": "Method used to represent temperature in the derivative record if multiple readings were available (for example, single reading, mean of replicate readings, depth-integrated average). Record how the final temperature value was derived from the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reading",
+            "mean_replicate",
+            "depth_integrated_average",
+            "other"
+          ]
+        }
+      ]
+    },
+    "do_measurement": {
+      "reasoning": "This is a Capture node, so I included only the dissolved oxygen measurement session and instrument configuration. I excluded the dissolved oxygen value itself because that belongs to the downstream Derivative node, and I excluded sample provenance because that belongs to the root lake_water_sample entity. Per the rules, the capture node should describe the meter manufacturer/model/serial, the measurement units, calibration state, and whether a valid field reading was obtained.",
+      "md_schema": [
+        {
+          "field_id": "do_meter_manufacturer",
+          "descr": "Manufacturer of the dissolved oxygen meter or probe used for the on-site measurement (for example, YSI, Hanna, Thermo Fisher). Record the hardware vendor for the capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "do_meter_model",
+          "descr": "Model of the dissolved oxygen meter or probe used to measure oxygen conditions at collection (for example, ProODO, handheld DO probe, multiparameter sonde). Record the exact device model configured for this capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "do_meter_serial_number",
+          "descr": "Serial number of the dissolved oxygen meter or probe, recorded from the instrument label or field log (for example, SN54321). Use the traceability identifier for this capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "do_measurement_unit",
+          "descr": "Unit used to record dissolved oxygen during the field measurement, expected to be milligrams per liter or percent saturation depending on the study protocol. Record the unit attached to the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "mg_per_l",
+            "percent_saturation"
+          ]
+        },
+        {
+          "field_id": "do_probe_calibrated",
+          "descr": "Whether the dissolved oxygen probe was calibrated or verified according to field protocol before measurement. Record the instrument readiness status at the time of capture; use true if calibration/verification was completed.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "do_capture_success",
+          "descr": "Whether a valid dissolved oxygen reading was successfully obtained from the lake water sample at collection or on-site. Record at the end of the capture session; use true if a usable reading was recorded.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dissolved_oxygen": {
+      "reasoning": "This is a Derivative node, so I included only the measured oxygen value and simple derivation/QC context, not the probe settings or sample provenance from upstream nodes. The do_measurement Capture node already owns instrument identity and calibration, while lake_water_sample owns location/date context. Here I focus on the actual dissolved oxygen datum that will be used in the metadata table, plus the basis on which it was summarized and whether it passed validation.",
+      "md_schema": [
+        {
+          "field_id": "dissolved_oxygen_value",
+          "descr": "Recorded dissolved oxygen value for the sample, taken from the upstream oxygen measurement and expressed in the unit chosen by the capture session (typically mg/L or percent saturation). Record the final oxygen concentration or saturation value used as metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_value_qc_flag",
+          "descr": "Whether the dissolved oxygen value passed the project's validation checks before inclusion in the environmental metadata table. Record the post-measurement quality status; use true if the value was accepted.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_summary_method",
+          "descr": "Method used to represent dissolved oxygen in the derivative record if multiple readings were available (for example, single reading, mean replicate, depth-integrated average). Record how the final oxygen value was derived from the capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_reading",
+            "mean_replicate",
+            "depth_integrated_average",
+            "other"
+          ]
+        }
+      ]
+    },
+    "nutrient_measurement": {
+      "reasoning": "This is a Capture node, so I included only the nutrient assay session and instrument/reagent configuration. I excluded the resulting nutrient values because those belong to the downstream Derivative node, and I excluded sample provenance because that belongs to the root lake_water_sample entity. Per the rules, the capture node should describe the assay platform, calibration/standardization state, measurement units, and whether the run produced valid concentration readings.",
+      "md_schema": [
+        {
+          "field_id": "nutrient_assay_platform",
+          "descr": "Analytical platform used to measure nutrient concentrations from the lake water sample (for example, spectrophotometric assay, autoanalyzer, ion chromatography, colorimetric kit). Record the measurement platform used for this capture session.",
+          "type": "categorical",
+          "allowed_values": [
+            "spectrophotometric_assay",
+            "autoanalyzer",
+            "ion_chromatography",
+            "colorimetric_kit",
+            "other"
+          ]
+        },
+        {
+          "field_id": "nutrient_assay_manufacturer",
+          "descr": "Manufacturer of the analytical instrument or assay system used for nutrient concentration measurement (for example, Hach, Seal Analytical, Thermo Fisher). Record the hardware or assay vendor for the capture setup.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_assay_model",
+          "descr": "Model of the analytical instrument or assay system used to measure nutrient concentrations. Record the exact device or system model configured for this capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_assay_serial_number",
+          "descr": "Serial number of the analytical instrument or assay system used for the nutrient measurement, recorded from the instrument label or field/lab log (for example, SN24680). Use the traceability identifier for this capture instrument.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_measurement_unit",
+          "descr": "Unit used to report nutrient concentration measurements in this workflow, such as mg/L, µM, or µg/L depending on analyte and protocol. Record the unit attached to the capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_assay_success",
+          "descr": "Whether the nutrient measurement assay completed successfully and yielded valid concentration readings for downstream use. Record at the end of the capture session; use true if the assay produced usable results.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nutrient_concentrations": {
+      "reasoning": "This is a Derivative node, so I included only the computed nutrient values and minimal derivation/QC context. I excluded assay platform and instrument details because those belong to the upstream nutrient_measurement Capture node, and I excluded sample provenance because that belongs to the root lake_water_sample entity. Since the workflow mentions nutrient concentrations in general, I used a flexible set of common nutrient analyte fields with unit-aware names so the metadata table can store the actual environmental concentrations used downstream.",
+      "md_schema": [
+        {
+          "field_id": "nitrogen_concentration",
+          "descr": "Recorded nitrogen concentration for the sample, taken from the upstream nutrient assay and expressed in the unit chosen by the capture session (for example, mg/L or µM). Use this field for the project-reported nitrogen metric used as environmental metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "phosphorus_concentration",
+          "descr": "Recorded phosphorus concentration for the sample, taken from the upstream nutrient assay and expressed in the unit chosen by the capture session (for example, mg/L or µM). Use this field for the project-reported phosphorus metric used as environmental metadata.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nitrate_concentration",
+          "descr": "Recorded nitrate concentration for the sample, if measured as part of the nutrient panel, expressed in the unit chosen by the capture session (for example, mg/L or µM). Include the final value used in the metadata table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ammonium_concentration",
+          "descr": "Recorded ammonium concentration for the sample, if measured as part of the nutrient panel, expressed in the unit chosen by the capture session (for example, mg/L or µM). Include the final value used in the metadata table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_value_qc_flag",
+          "descr": "Whether the nutrient value set passed project validation checks before inclusion in the environmental metadata table. Record the post-assay quality status; use true if the nutrient concentrations were accepted.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metadata_table_building": {
+      "reasoning": "This is a Process node, so I included only table-building/curation settings and an outcome indicator. I excluded the actual sample descriptors and environmental measurements because those belong to the upstream Entity/Capture/Derivative nodes, and I excluded the final table content because that belongs to the downstream environmental_metadata_table Derivative node. The fields capture how the metadata table was assembled: source fields used, join key, software/pipeline identity, and whether the assembly completed successfully.",
+      "md_schema": [
+        {
+          "field_id": "metadata_curation_software_name",
+          "descr": "Software or pipeline used to assemble the environmental metadata table from sample descriptors and environmental measurements (for example, Python script, R pipeline, curation workflow). Record the exact tool used for table construction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_curation_software_version",
+          "descr": "Version of the curation software or pipeline used for metadata table assembly. Record the exact version or commit identifier from the workflow log.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_join_key",
+          "descr": "Primary key used to merge environmental measurements with sample descriptors during metadata table assembly (for example, sample_id). Record the field name used to join records across sources.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_field_count",
+          "descr": "Number of source fields included in the final metadata table assembly, counted at the time the table was built. Record the number of columns selected from upstream sample and environmental records.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_table_build_success",
+          "descr": "Whether metadata table assembly completed successfully and produced a structured table ready for downstream analysis. Record at process completion; use true if the table was built without fatal errors.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_metadata_table": {
+      "reasoning": "This is a Derivative node, so I included only properties of the assembled metadata table itself: its shape, column composition, completeness, and use context. I excluded the underlying sample descriptors and environmental values because those were already captured in upstream entity/capture/derivative nodes, and I excluded table-building software details because those belong to the upstream process node. The fields here describe the final integrated table as a reusable data product for downstream ecological analysis.",
+      "md_schema": [
+        {
+          "field_id": "environmental_metadata_row_count",
+          "descr": "Number of samples (rows) present in the final environmental metadata table after integration. Record the row count of the assembled table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_metadata_column_count",
+          "descr": "Number of columns present in the final environmental metadata table, including sample descriptors and environmental variables. Record the total width of the assembled table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_metadata_missing_fraction",
+          "descr": "Fraction of missing values across the final environmental metadata table, calculated from all cells after integration (for example, 0.05 means 5% missing). Record this completeness metric for the derived table.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_includes_seasonality",
+          "descr": "Whether the integrated environmental table includes seasonal sampling information as a usable field for downstream analysis of temporal dynamics. Use true when season or seasonal period is represented in the table.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metadata_includes_spatial_gradient",
+          "descr": "Whether the integrated environmental table includes spatial descriptors such as lake, region, depth, or zone for downstream analysis of spatial gradients. Use true when spatial context is represented in the table.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "integrative_analysis": {
+      "reasoning": "This is a Process node, so I included only the integration/analysis procedure and a success indicator. I excluded the community profile and environmental metadata contents because those belong to upstream derivative nodes, and I excluded the final interpreted results because those belong to the downstream joint_analysis_result derivative. The fields capture the software/workflow used to join the tables, the matching key, and whether the integration completed successfully.",
+      "md_schema": [
+        {
+          "field_id": "integration_software_name",
+          "descr": "Software or analysis pipeline used to join the community profile with the environmental metadata table for ecological analysis (for example, R script, Python workflow, statistical analysis pipeline). Record the exact tool used for this integration step.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the integration or analysis software used for this process step. Record the exact version or commit identifier from the workflow log to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_join_key",
+          "descr": "Primary key used to join the community profile with the environmental metadata table (for example, sample_id). Record the field name used to align records across the two derived tables.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_goal",
+          "descr": "Primary ecological objective of the integration step, describing the intended downstream analysis focus (for example, seasonal patterns, spatial gradients, environment-community relationships). Record the analysis category planned for this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "seasonal_patterns",
+            "spatial_gradients",
+            "environment_community_relationships",
+            "other"
+          ]
+        },
+        {
+          "field_id": "integration_success",
+          "descr": "Whether the community profile and environmental metadata were successfully joined into a combined analysis-ready dataset. Record at process completion; use true if the integration ran without fatal errors.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "joint_analysis_result": {
+      "reasoning": "This is a Derivative node, so I included only properties of the final computed analysis output: the analysis type, method family, result dimensions, and summary quality/significance indicators. I excluded the upstream community and environmental tables because they belong to prior derivative nodes, and I excluded process/software settings because those belong to the integrative_analysis node. The fields describe the reusable final result object that supports interpretation of environmental gradients and seasonality effects on community structure.",
+      "md_schema": [
+        {
+          "field_id": "analysis_result_type",
+          "descr": "Type of combined ecological result produced from the joined community and environmental data (for example, ordination, association model, clustering output, significance summary). Record the primary result category for this output.",
+          "type": "categorical",
+          "allowed_values": [
+            "ordination",
+            "association_model",
+            "clustering",
+            "differential_abundance",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_method_name",
+          "descr": "Statistical or ecological method used to generate the final integrated result (for example, RDA, CCA, PERMANOVA, mixed-effects model, correlation analysis). Record the method family applied to the joined dataset.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_output_dimension_count",
+          "descr": "Number of dimensions, axes, model terms, or summary components in the final analysis output, depending on the method used. Record the size of the result object at completion.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_significance_threshold",
+          "descr": "Threshold used to determine statistical significance or inclusion in the final ecological result (for example, alpha = 0.05 or adjusted p-value cutoff). Record the cutoff applied to the integrated analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_result_success",
+          "descr": "Whether the final integrative ecological analysis completed successfully and produced an interpretable output. Record at process completion; use true if the analysis ran without fatal errors.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

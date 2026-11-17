@@ -1,0 +1,1150 @@
+{
+  "md_name": "Urban airborne 18S microbiome workflow",
+  "md_description": "This workflow represents collection of airborne microbial samples from multiple urban environments across seasons, sequencing of 18S rRNA amplicons, and concurrent acquisition of air-quality measurements. It produces processed sequencing-derived community profiles and environmental metrics that can be integrated to study how urban setting and seasonal variation shape airborne microbial communities and their potential public-health implications.",
+  "fields_per_node": {
+    "urban_air_sample": {
+      "reasoning": "For the urban_air_sample Entity, I included only intrinsic sample identity and origin metadata: what the air sample is, where it was collected, when/under what seasonal context, and the urban setting category. I excluded all process details (collection protocol, concentration, extraction), all capture/instrument settings, and all downstream signal/derivative properties because those belong to later nodes. I also avoided repeating any experiment-wide identifiers that would normally be generated once at the root, and I did not duplicate fields already implied elsewhere in the DAG such as air-quality measurements, sequencing, or processed community outputs. The fields are designed to let downstream users interpret the sample’s provenance, urban context, and temporal sampling frame without stepping into operation or data-file territory.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for this airborne sample instance, assigned at collection time and used to link all downstream processing and measurements for the same sample; example format: UAS-0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_id",
+          "descr": "Identifier for the specific urban sampling location where the air sample was collected; use a stable site code or name, for example: IND-03, PARK-02, RES-01.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "urban_environment_category",
+          "descr": "Categorical description of the surrounding urban land-use setting at the sampling location, assigned at collection from site metadata; indicates the sample’s origin context, not a measured environmental variable.",
+          "type": "categorical",
+          "allowed_values": [
+            "industrial_area",
+            "park",
+            "residential_neighborhood",
+            "mixed_use",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Calendar date when the airborne sample was collected at the site; record in ISO 8601 date format (YYYY-MM-DD), for example 2025-03-17.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "season",
+          "descr": "Seasonal period associated with the sampling event, used to capture within-city temporal variation; assign based on the collection date and local climate context.",
+          "type": "categorical",
+          "allowed_values": [
+            "winter",
+            "spring",
+            "summer",
+            "autumn"
+          ]
+        },
+        {
+          "field_id": "sampling_locality_name",
+          "descr": "Human-readable name of the city or metropolitan area where the sample was collected; example: 'Barcelona', 'Chicago', or 'Seoul'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_material_type",
+          "descr": "Categorical description of the collected material represented by this Entity; indicates whether the sample is primarily airborne particulate matter, bioaerosol, or a mixed air particulate capture.",
+          "type": "categorical",
+          "allowed_values": [
+            "airborne_particulate",
+            "bioaerosol",
+            "mixed_air_particulate"
+          ]
+        }
+      ]
+    },
+    "air_sample_concentration": {
+      "reasoning": "For the air_sample_concentration Process, I included only process-level collection-concentration parameters: the capture medium used, duration and flow conditions, operational settings, and a process outcome quality indicator. I excluded intrinsic sample provenance fields (site, season, date) because those belong to the upstream Entity, and I excluded downstream product properties such as filter file paths or molecular yield because those belong to the resulting Entity/Signal. I also avoided duplicating sample identifiers already generated for the upstream node and kept software/hardware fields out because this node is a manual/field processing step rather than an instrument capture or software-driven analysis step.",
+      "md_schema": [
+        {
+          "field_id": "capture_medium_type",
+          "descr": "Type of medium used to concentrate airborne material during this processing step, recorded at the end of concentration; examples include filter membrane, impinger liquid, or sorbent medium.",
+          "type": "categorical",
+          "allowed_values": [
+            "filter_membrane",
+            "impinger_liquid",
+            "sorbent_medium",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filter_pore_size_micrometer",
+          "descr": "Nominal pore size of the filter used to concentrate airborne particles, measured or selected for the concentration step; typical values are 0.2-10 micrometer depending on capture design.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "air_sample_volume_liters",
+          "descr": "Total volume of air processed through the concentration device for this sample, measured during the concentration step; typical range is 10-1000 liters depending on sampler capacity and site conditions.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flow_rate_liters_per_minute",
+          "descr": "Air flow rate maintained during concentration, measured or set during the process; typical range is 1-100 liters per minute depending on sampler configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "concentration_duration_minutes",
+          "descr": "Total duration of the concentration step for the sample, recorded from start to stop of collection onto the medium; typical range is 5-1440 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "capture_efficiency_indicator",
+          "descr": "Qualitative indicator of whether the concentration step recovered expected visible particulate or biomass on the medium, assessed immediately after processing; use this as a simple process quality flag.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "moderate",
+            "poor",
+            "failed"
+          ]
+        }
+      ]
+    },
+    "concentrated_air_sample": {
+      "reasoning": "For the concentrated_air_sample Entity, I included only intrinsic properties of the post-concentration material itself: the identifier, the material state after concentration, the capture medium retained with the sample, and basic physical/storage provenance that downstream extraction needs to interpret the material. I excluded concentration protocol parameters, air-flow and duration settings, because those belong to the upstream process, and I excluded extraction/library/sequencing details because those belong downstream. I also avoided repeating any sample IDs or collection-site fields already established at the root Entity, and kept the schema focused on what this material is, not what was done to it.",
+      "md_schema": [
+        {
+          "field_id": "concentrated_sample_id",
+          "descr": "Unique identifier for the concentrated material derived from the corresponding air sample; example format: C-AS-0001. This is the entity-level ID used after concentration processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_concentration_material_state",
+          "descr": "General physical state of the material after concentration and before extraction, describing whether biomass is retained as a dry filter, wet capture slurry, or other concentrated form.",
+          "type": "categorical",
+          "allowed_values": [
+            "dry_filter",
+            "wet_slurry",
+            "pellet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "retained_capture_medium",
+          "descr": "Description of the medium or device that physically retains the concentrated airborne material at the entity stage, such as a filter membrane or collection cartridge.",
+          "type": "categorical",
+          "allowed_values": [
+            "filter_membrane",
+            "collection_cartridge",
+            "impinger_liquid",
+            "sorbent_medium",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_temperature_celsius",
+          "descr": "Temperature at which the concentrated sample was stored after concentration and before nucleic acid extraction; typically reported in degrees Celsius, for example 4 or -80.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_duration_hours",
+          "descr": "Elapsed time between concentration completion and downstream extraction, measured in hours; typical range is 0-168 hours depending on processing logistics.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_integrity_status",
+          "descr": "Qualitative assessment of whether the concentrated sample was intact and suitable for extraction at the time of handoff to the next step.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "partially_compromised",
+            "compromised",
+            "unsuitable"
+          ]
+        }
+      ]
+    },
+    "nucleic_acid_extraction": {
+      "reasoning": "For the nucleic_acid_extraction Process, I included only extraction-protocol details and process quality outcomes: extraction kit/method, lysis conditions, elution conditions, input amount, and a basic yield/quality flag. I excluded sample origin and storage metadata because those belong to upstream entities, and I excluded DNA identity properties such as concentration or fragment size because those belong on the airborne_dna Entity. I also avoided software/hardware fields because this is a wet-lab bench process rather than an analysis process, and I did not repeat any identifiers already generated for the sample entities.",
+      "md_schema": [
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Name of the DNA extraction kit or in-house extraction method used for the concentrated airborne material; record at the time of extraction, for example 'Qiagen DNeasy PowerSoil' or 'phenol-chloroform'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used to release DNA from microbial biomass during extraction; record the method applied to the sample, such as bead beating or enzymatic lysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "enzymatic_lysis",
+            "chemical_lysis",
+            "combined_lysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "input_material_amount",
+          "descr": "Amount of concentrated material loaded into the extraction, measured at the start of the process; report the relevant unit used by the protocol, typically filter fraction, mass, or volume.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final DNA elution volume produced by the extraction process, measured at the end of extraction; typical range is 20-200 microliters.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Total time spent performing the extraction workflow for this sample, measured from start of lysis to elution completion; typical range is 15-240 minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_yield_quality_flag",
+          "descr": "Qualitative assessment of whether the extraction produced sufficient DNA for downstream amplicon library preparation, recorded immediately after extraction.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "airborne_dna": {
+      "reasoning": "For the airborne_dna Entity, I included intrinsic properties of the extracted DNA itself: concentration, purity, total yield, fragment integrity/size, and storage conditions. These describe what the DNA is after extraction and before library preparation, which is the correct semantic territory for an Entity. I excluded extraction kit, lysis, and duration because those belong to the upstream process, and I excluded library/sequencing settings because those are downstream. I also avoided reusing sample identifiers or collection provenance fields already established upstream.",
+      "md_schema": [
+        {
+          "field_id": "dna_extract_id",
+          "descr": "Unique identifier for this purified DNA extract, linked one-to-one with the upstream concentrated air sample; example format: DNA-0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_concentration_nanograms_per_microliter",
+          "descr": "Measured concentration of the purified DNA extract at the point it is released for library preparation; report in nanograms per microliter, typically 0-100 ng/µL for low-biomass air samples.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_total_yield_nanograms",
+          "descr": "Total DNA recovered in the extract, measured after purification and before library preparation; report in nanograms, typically from sub-ng to several hundred ng for airborne microbial samples.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_purity_ratio_260_280",
+          "descr": "Spectrophotometric purity ratio A260/A280 measured on the purified extract prior to library prep; typical values for DNA are approximately 1.7-2.0.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dna_integrity_status",
+          "descr": "Qualitative assessment of DNA fragment integrity or degradation state observed after extraction and before library preparation.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_integrity",
+            "moderate_integrity",
+            "degraded",
+            "insufficient"
+          ]
+        },
+        {
+          "field_id": "dna_storage_temperature_celsius",
+          "descr": "Temperature at which the purified DNA was stored after extraction and before library preparation; commonly 4 or -20 degrees Celsius, or -80 for longer storage.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "amplicon_library_prep": {
+      "reasoning": "For the amplicon_library_prep Process, I included only library-construction parameters and process QC: primer set, target region, PCR cycling conditions, indexing strategy, cleanup size selection, and a library-prep success indicator. I excluded DNA input properties because those belong to the airborne_dna Entity, and I excluded sequencing instrument settings and raw read/file properties because those belong downstream to sequencing_capture and raw_reads. I also avoided repeating software fields unless the step is explicitly software-mediated, which this wet-lab process is not in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "amplicon_target_region",
+          "descr": "18S rRNA gene region amplified for the library, recorded at library preparation time; examples include V4, V9, or another designated hypervariable region.",
+          "type": "categorical",
+          "allowed_values": [
+            "v4",
+            "v9",
+            "other"
+          ]
+        },
+        {
+          "field_id": "primer_pair_name",
+          "descr": "Name or identifier of the primer pair used to amplify the 18S target during library preparation; record the exact primer set used for this sample, for example 'TAReuk454FWD1/REV3'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_cycle_count",
+          "descr": "Number of PCR amplification cycles used to generate the amplicon library; typical range is 20-40 cycles depending on DNA input and protocol.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pcr_annealing_temperature_celsius",
+          "descr": "Annealing temperature used during amplicon PCR, measured in degrees Celsius for the library-prep amplification step; typical range is 50-70 degrees Celsius.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_indexing_strategy",
+          "descr": "Indexing scheme used to barcode libraries for multiplex sequencing, assigned during library preparation; describes whether single or dual indexing was used.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_index",
+            "dual_index",
+            "inline_barcode",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_cleanup_method",
+          "descr": "Cleanup and size-selection approach applied after PCR amplification to remove primers, dimers, and short artifacts; record the method used immediately after amplification.",
+          "type": "categorical",
+          "allowed_values": [
+            "ampure_beads",
+            "gel_extraction",
+            "column_cleanup",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_preparation_success_flag",
+          "descr": "Qualitative indicator of whether the prepared amplicon library met basic QC criteria for sequencing, assessed after final cleanup and before sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "borderline",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "eighteen_s_library": {
+      "reasoning": "For the eighteen_s_library Entity, I included the intrinsic properties of the prepared amplicon library itself: library identifier, indexed barcode composition, insert size, concentration, size-distribution quality, and storage conditions. I excluded PCR and cleanup protocol parameters because those belong to the upstream library preparation process, and I excluded sequencing platform/run configuration and read outputs because those belong downstream to sequencing_capture and raw_reads. I also avoided repeating DNA input or sample provenance fields already established earlier in the workflow, keeping this node focused on the final material state before sequencing.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the prepared 18S amplicon library entity; example format: LIB-18S-0001. This is the sample-level library record used for sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "index_sequence_i7",
+          "descr": "Sequencing index sequence assigned to this library on the i7 adapter, recorded after library construction and before sequencing; example is an 8- to 10-base barcode string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "index_sequence_i5",
+          "descr": "Sequencing index sequence assigned to this library on the i5 adapter when dual indexing is used, recorded after library construction and before sequencing; example is an 8- to 10-base barcode string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_nanograms_per_microliter",
+          "descr": "Measured concentration of the final prepared library at the time it is submitted for sequencing; report in nanograms per microliter, typically 0.1-50 ng/µL for amplicon libraries.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "expected_insert_size_bp",
+          "descr": "Expected amplicon insert length in base pairs for the prepared 18S library, estimated from assay design or fragment analysis before sequencing; typical range is 100-600 bp depending on target region.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_size_distribution_qc_flag",
+          "descr": "Qualitative assessment of whether the prepared library shows an acceptable size distribution and minimal primer-dimer contamination before sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "moderate",
+            "poor",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "library_storage_temperature_celsius",
+          "descr": "Temperature at which the finished library was stored prior to sequencing; commonly 4, -20, or -80 degrees Celsius.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "air_quality_capture": {
+      "reasoning": "For the air_quality_capture Capture node, I included only the instrument session and configuration details for the environmental sensor suite: manufacturer/model/serial identity, measurement channels, sampling interval, calibration status, and operating mode. These fields describe how the air-quality measurements were actively acquired at the sampling event, which is the correct territory for Capture. I excluded the actual particulate matter and humidity results because those belong on the downstream air_quality_raw_signal Signal node, and I excluded sample provenance such as location and season because those belong to the upstream air sample Entity. I also did not include software-analysis fields since this node is hardware acquisition rather than processing.",
+      "md_schema": [
+        {
+          "field_id": "sensor_manufacturer",
+          "descr": "Manufacturer of the environmental sensor suite used to measure particulate matter and humidity during the sampling event; record the hardware vendor active at capture time.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_model",
+          "descr": "Instrument model name or number for the air-quality measurement device used during capture; example format: 'Model X' or vendor-specific model code.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_serial_number",
+          "descr": "Unique serial number of the air-quality sensor or sensor suite used for this capture session; use the manufacturer-assigned hardware serial identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measured_channels",
+          "descr": "Environmental variables actively configured for acquisition during the capture session; identifies which channels were collected by the sensor suite at the sampling event.",
+          "type": "categorical",
+          "allowed_values": [
+            "pm1",
+            "pm2_5",
+            "pm10",
+            "humidity",
+            "pm_and_humidity"
+          ]
+        },
+        {
+          "field_id": "sampling_interval_seconds",
+          "descr": "Time interval between consecutive sensor readings during the air-quality capture session, measured in seconds; typical range is 1-300 seconds depending on logger configuration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sensor_calibration_status",
+          "descr": "Qualitative status indicating whether the sensor was calibrated or verified before the capture session began.",
+          "type": "categorical",
+          "allowed_values": [
+            "calibrated",
+            "field_verified",
+            "uncalibrated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "capture_mode",
+          "descr": "Operational mode of the environmental sensor during measurement, indicating whether readings were taken continuously or as discrete spot measurements at the sampling event.",
+          "type": "categorical",
+          "allowed_values": [
+            "continuous",
+            "spot_measurement",
+            "logger",
+            "other"
+          ]
+        }
+      ]
+    },
+    "air_quality_raw_signal": {
+      "reasoning": "For the air_quality_raw_signal Signal node, I included only raw data-artefact properties: file identity/location, format, size, dimensionality, channel count, and basic technical quality indicators. These fields describe the instrument output itself, not the sensor configuration or the measured environmental values as scientific conclusions. I excluded capture settings such as sensor model and sampling interval because those belong to the upstream Capture node, and I excluded summarized or cleaned environmental metrics because those belong to the downstream air_quality_summary process and environmental_metrics derivative. I also avoided repeating any sample provenance or collection-site information already owned by the upstream air sample Entity.",
+      "md_schema": [
+        {
+          "field_id": "raw_signal_file_name",
+          "descr": "Name of the raw air-quality data file produced by the sensor suite at the sampling event; example format: 'site01_2025-03-17_airquality.csv'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_file_path",
+          "descr": "Storage path or URI where the raw air-quality instrument output is archived; record the exact location accessible to the dataset curator, for example an object-store URI or filesystem path.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_file_format",
+          "descr": "File format of the raw instrument output containing particulate matter and humidity readings; record the format used at capture, such as CSV, TXT, or proprietary export.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "txt",
+            "json",
+            "xlsx",
+            "proprietary"
+          ]
+        },
+        {
+          "field_id": "raw_signal_file_size_bytes",
+          "descr": "Size of the raw air-quality file on disk at the time of archival, measured in bytes; useful for integrity checks and reproducibility.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_channel_count",
+          "descr": "Number of distinct measurement channels present in the raw output file from the sensor session; typically includes particulate matter and humidity channels.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_duration_minutes",
+          "descr": "Total duration covered by the raw signal recording for the sampling event, measured from the first to the last timestamp in minutes; typical range depends on the capture mode and sampling interval.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_signal_quality_flag",
+          "descr": "Basic technical quality flag for the raw instrument output, assigned after file inspection and before any summarization or cleaning.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "warn",
+            "bad",
+            "missing"
+          ]
+        }
+      ]
+    },
+    "sequencing_capture": {
+      "reasoning": "For the sequencing_capture Capture node, I included only instrument/session configuration and run parameters: sequencer manufacturer/model/serial, chemistry, read length, lane/run identifiers, loading concentration, and a run success indicator. These describe how the sequencing session was configured and executed, which is the correct Capture territory. I excluded library identity and insert-size properties because those belong to the upstream eighteen_s_library Entity, and I excluded read file characteristics because those belong to the downstream raw_reads Signal. I also avoided software-analysis fields because this is an instrument capture step, not a processing step.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the 18S sequencing run; record the hardware vendor operating at the time of capture.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Instrument model name or number for the sequencer used to generate the raw reads; example format: an Illumina platform model name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Unique serial number of the sequencing instrument used for this run; use the manufacturer-assigned hardware serial identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Reagent chemistry or kit version configured for the sequencing run, recorded at instrument setup; examples include paired-end chemistry or a specific vendor chemistry revision.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured read length in base pairs for each sequencing read in the run, measured as the instrument setting before sequencing; typical amplicon runs use 150-300 bp reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_lane_id",
+          "descr": "Lane, flow-cell, or equivalent run partition identifier used to place this library on the sequencer; example formats depend on the platform and run structure.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_loading_concentration_nanolar",
+          "descr": "Final library loading concentration used for the sequencing run, measured at instrument loading time; typical range is approximately 1-20 nM for amplicon libraries.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_success_flag",
+          "descr": "Qualitative indicator of whether the sequencing run completed and passed basic instrument-level QC for downstream demultiplexing and read generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "raw_reads": {
+      "reasoning": "For the raw_reads Signal node, I included only properties of the raw sequencing artefact itself: file identity, format, size, read layout, read counts, base composition, and technical quality metrics. These fields let downstream users locate, validate, and reuse the raw data without mixing in sequencing instrument settings or biological interpretation. I excluded capture configuration such as sequencer model, read length, and loading concentration because those belong to the upstream sequencing_capture node, and I excluded filtered/denoised outputs because those belong to downstream process and derivative nodes. I also avoided repeating sample or library identifiers already established earlier unless needed as the file-level artefact identifier.",
+      "md_schema": [
+        {
+          "field_id": "raw_reads_file_name",
+          "descr": "Name of the raw sequencing file produced by the run; example format: 'sample01_R1.fastq.gz' or a multiplexed run archive name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_file_path",
+          "descr": "Storage path or URI for the raw sequencing data file, recorded at archival time so the raw reads can be accessed or retrieved.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_reads_file_format",
+          "descr": "Format of the raw sequencing output file; record the actual on-disk format used for the raw reads, such as FASTQ or a platform-specific archive.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bam",
+            "bcl",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_reads_file_size_bytes",
+          "descr": "Size of the raw sequencing file in bytes at the time of archival; useful for integrity checks and transfer verification.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "paired_end_status",
+          "descr": "Indicates whether the raw reads are paired-end or single-end sequencing output, determined from the raw sequencing artefact structure.",
+          "type": "categorical",
+          "allowed_values": [
+            "paired_end",
+            "single_end"
+          ]
+        },
+        {
+          "field_id": "read_count",
+          "descr": "Total number of reads represented in the raw sequencing file after run completion and before any filtering or trimming; typical values range from thousands to millions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "base_quality_q30_fraction",
+          "descr": "Fraction of bases in the raw reads with Phred quality score of at least Q30, computed from the raw sequencing artefact as a technical quality metric.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "gc_content_fraction",
+          "descr": "Proportion of G and C bases across the raw sequencing reads, computed from the raw artefact as a basic composition metric; typical fraction is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_filtering": {
+      "reasoning": "For the read_filtering Process node, I included only trimming/filtering protocol parameters and process QC outcomes: software name/version, trimming lengths, quality cutoff, minimum length, adapter handling, and read retention rate. These describe how the raw_reads were transformed into filtered_reads, which is the correct process territory. I excluded raw read file properties because those belong to the upstream Signal node, and I excluded the filtered-read file characteristics because those belong to the downstream Signal node. I also avoided duplicating sample or library provenance fields already defined earlier in the workflow.",
+      "md_schema": [
+        {
+          "field_id": "filtering_software_name",
+          "descr": "Name of the software or pipeline used to trim and filter sequencing reads, recorded at the start of read filtering; example: QIIME 2 or cutadapt.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_software_version",
+          "descr": "Version of the filtering software or pipeline used for this step, recorded to support reproducibility; example format: '2024.10' or '1.18'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_left_bases",
+          "descr": "Number of bases removed from the 5' end of each read during trimming, applied during the filtering step; typical values are 0-50 bases depending on primer removal strategy.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "trim_right_bases",
+          "descr": "Number of bases removed from the 3' end of each read during trimming, applied during the filtering step; typical values are 0-100 bases depending on quality decay.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_cutoff_phred",
+          "descr": "Minimum acceptable Phred quality score used to filter low-quality bases or reads during read filtering; typical values are 20-30.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_bp",
+          "descr": "Minimum read length retained after trimming and filtering, measured in base pairs at the end of the read-filtering step; commonly 50-150 bp for amplicon workflows.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_removal_enabled",
+          "descr": "Indicates whether adapter or primer sequence removal was enabled during the filtering process.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_retention_fraction",
+          "descr": "Fraction of raw reads retained after filtering, calculated as kept reads divided by input reads at the end of the process; typical range is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "filtered_reads": {
+      "reasoning": "For the filtered_reads Signal node, I included only artefact-level properties of the quality-filtered read file: file name/path, file format, size, read count, post-filter length distribution, and a technical quality metric. These fields describe the retained sequencing data after filtering, not how it was generated. I excluded trimming and quality-cutoff parameters because those belong to the upstream read_filtering process, and I excluded denoising settings and ASV outputs because those belong downstream to the denoising process and derivative table. I also avoided repeating any raw-read file metadata unless needed specifically to identify the filtered artefact.",
+      "md_schema": [
+        {
+          "field_id": "filtered_reads_file_name",
+          "descr": "Name of the quality-filtered sequencing file produced after read filtering; example format: 'sample01_filtered.fastq.gz'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_reads_file_path",
+          "descr": "Storage path or URI for the quality-filtered reads file, recorded at archival time so downstream denoising can access the artefact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_reads_file_format",
+          "descr": "Format of the filtered sequencing output file; record the actual on-disk format used after read filtering, such as FASTQ or a compressed FASTQ archive.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fastq_gz",
+            "bam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filtered_reads_file_size_bytes",
+          "descr": "Size of the filtered reads file on disk in bytes at the time of archival; useful for integrity checks and transfer verification.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_count",
+          "descr": "Total number of sequencing reads retained after filtering and before denoising; recorded as the count of reads available for downstream ASV inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_length_mean_bp",
+          "descr": "Mean read length of the filtered reads in base pairs, measured on the retained file after trimming and quality filtering; typical amplicon lengths depend on target region and trimming settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_reads_quality_flag",
+          "descr": "Basic technical quality flag assigned to the filtered read file based on retention and read quality after filtering.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "warning",
+            "poor",
+            "missing"
+          ]
+        }
+      ]
+    },
+    "denoising_asv_inference": {
+      "reasoning": "For the denoising_asv_inference Process node, I included only algorithmic denoising parameters and process QC: denoising software, version, error model settings, truncation/trim parameters relevant to inference, chimera handling, and a success/retention indicator. These describe how filtered reads were transformed into ASVs, which is the correct territory for a Process node. I excluded filtered-read file properties because those belong to the upstream Signal node, and I excluded ASV table dimensions and abundances because those belong to the downstream Derivative node. I also avoided repeating sample or library provenance fields already defined earlier in the workflow.",
+      "md_schema": [
+        {
+          "field_id": "denoising_software_name",
+          "descr": "Name of the denoising software or algorithm used to infer ASVs from filtered reads, recorded at the start of the denoising step; example: DADA2 or UNOISE.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "denoising_software_version",
+          "descr": "Version of the denoising software used for ASV inference, recorded for reproducibility; example format: '1.30' or '2024.1'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "error_model_learning_enabled",
+          "descr": "Indicates whether the algorithm learned an empirical sequencing error model from the filtered reads during ASV inference.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "truncation_length_forward_bp",
+          "descr": "Forward-read truncation length used during denoising, measured in base pairs; set as the retained forward read length entering ASV inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "truncation_length_reverse_bp",
+          "descr": "Reverse-read truncation length used during denoising, measured in base pairs when paired-end reads are used; set as the retained reverse read length entering ASV inference.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "chimera_removal_method",
+          "descr": "Method used to identify and remove chimeric sequences during denoising; record the algorithmic approach applied at this step.",
+          "type": "categorical",
+          "allowed_values": [
+            "consensus",
+            "pooled",
+            "none",
+            "other"
+          ]
+        },
+        {
+          "field_id": "asv_inference_success_flag",
+          "descr": "Qualitative indicator of whether denoising completed successfully and produced a usable ASV set for the sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "asv_retention_fraction",
+          "descr": "Fraction of filtered reads retained as non-chimeric, denoised sequence variants after ASV inference; calculated at the end of the process as output reads divided by input filtered reads.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "asv_table": {
+      "reasoning": "For the asv_table Derivative node, I included only computed-result properties: the table identifier, file location, matrix dimensions, sparsity, taxonomic assignment status, and abundance normalization basis. These fields describe the derived ASV abundance table itself and its scientific/technical qualities after denoising. I excluded denoising algorithm parameters because those belong to the upstream process, and I excluded raw/filtered read file characteristics because those belong to upstream Signal nodes. I also avoided repeating sample provenance or sequencing capture details already defined elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "asv_table_id",
+          "descr": "Unique identifier for the derived ASV abundance table produced from denoised reads; example format: ASV-TBL-0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_table_file_path",
+          "descr": "Storage path or URI for the derived ASV table file, recorded after table construction so the matrix can be accessed for downstream analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "asv_table_format",
+          "descr": "File or matrix format used to store the ASV abundance table; record the actual derived-table format, such as TSV, BIOM, or CSV.",
+          "type": "categorical",
+          "allowed_values": [
+            "tsv",
+            "biom",
+            "csv",
+            "parquet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "asv_count",
+          "descr": "Number of unique amplicon sequence variants represented in the table, computed from the denoised reads; reported as the row count of unique ASVs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_count",
+          "descr": "Number of samples represented in the ASV table, computed as the column count or sample dimension of the table.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "table_sparsity_fraction",
+          "descr": "Fraction of matrix entries that are zero in the ASV table, calculated after table construction as a technical property of the derived abundance matrix; typical values are 0-1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_assignment_status",
+          "descr": "Qualitative indicator of whether the ASV table has been taxonomically annotated at the time this derivative is recorded.",
+          "type": "categorical",
+          "allowed_values": [
+            "unassigned",
+            "partially_assigned",
+            "assigned"
+          ]
+        },
+        {
+          "field_id": "abundance_normalization_basis",
+          "descr": "Basis used for abundance values in the derived ASV table, describing whether counts are raw reads or transformed values.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw_counts",
+            "relative_abundance",
+            "normalized_counts",
+            "other"
+          ]
+        }
+      ]
+    },
+    "air_quality_summary": {
+      "reasoning": "For the air_quality_summary Process node, I included only summarization and transformation parameters plus a process QC indicator: aggregation window, summary statistics computed, handling of missing values, outlier treatment, and a successful-computation flag. These fields describe how raw air-quality readings were converted into analysis-ready environmental metrics, which is the correct process territory. I excluded sensor configuration and raw signal file properties because those belong to the upstream Capture and Signal nodes, and I excluded the resulting environmental metric values because those belong to the downstream environmental_metrics Derivative. I also avoided repeating sample provenance or capture-session fields already established elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "summary_aggregation_window_minutes",
+          "descr": "Time window over which raw air-quality readings were aggregated into a summary for the sampling event, measured in minutes; typical values match the capture period or a defined sub-window.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_statistics_computed",
+          "descr": "Set of summary statistics calculated from the raw air-quality signal at this process step; indicates which metrics were derived during summarization.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean_only",
+            "mean_and_sd",
+            "median_iqr",
+            "min_max",
+            "other"
+          ]
+        },
+        {
+          "field_id": "missing_value_handling_method",
+          "descr": "Method used to handle missing or invalid raw air-quality readings during summarization; record the approach applied before producing analysis-ready metrics.",
+          "type": "categorical",
+          "allowed_values": [
+            "omit",
+            "interpolate",
+            "carry_forward",
+            "model_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "outlier_handling_method",
+          "descr": "Method used to detect and treat outlier readings during air-quality summarization; record the rule applied in the process before metric derivation.",
+          "type": "categorical",
+          "allowed_values": [
+            "none",
+            "winsorize",
+            "remove",
+            "flag_only",
+            "other"
+          ]
+        },
+        {
+          "field_id": "summary_success_flag",
+          "descr": "Qualitative indicator of whether the summarization process completed successfully and produced valid environmental metrics for the sampling event.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        },
+        {
+          "field_id": "signal_to_summary_reduction_fraction",
+          "descr": "Fraction of raw air-quality records retained after summarization to the analysis-ready interval or event-level metric set; calculated at the end of the process as retained records divided by input records.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_metrics": {
+      "reasoning": "For the environmental_metrics Derivative node, I included only computed environmental outputs and derived-quality descriptors: the metric table identifier, file path, format, the actual particulate matter and humidity summary values, the statistic type used, the time basis for the summary, and a quality/completeness indicator. These fields represent the analysis-ready environmental result aligned to each sampling event. I excluded raw sensor settings and summarization parameters because those belong to the upstream Capture and Process nodes, and I excluded raw signal properties because those belong to the upstream Signal node. I also avoided repeating collection-site or sample provenance fields already defined for the air sample Entity.",
+      "md_schema": [
+        {
+          "field_id": "environmental_metrics_id",
+          "descr": "Unique identifier for the derived environmental metrics record or table aligned to a sampling event; example format: ENV-MET-0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_metrics_file_path",
+          "descr": "Storage path or URI for the derived environmental metrics file or table, recorded after summarization so it can be joined with other analysis outputs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_metrics_format",
+          "descr": "File or table format used to store the derived environmental metrics; record the actual output format, such as CSV, TSV, or BIOM-like tabular form.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "json",
+            "parquet",
+            "other"
+          ]
+        },
+        {
+          "field_id": "pm_concentration_micrograms_per_cubic_meter",
+          "descr": "Derived particulate matter concentration associated with the sampling event, reported in micrograms per cubic meter; include the specific PM class used by the study if stored in a separate field or column.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "relative_humidity_percent",
+          "descr": "Derived humidity metric aligned to the sampling event, reported as relative humidity in percent; typical range is 0-100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_statistic_type",
+          "descr": "Type of summary statistic represented by the environmental metric values; indicates whether the numbers are event-level means, medians, or another aggregation.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "instantaneous",
+            "time_weighted_mean",
+            "other"
+          ]
+        },
+        {
+          "field_id": "metric_time_basis",
+          "descr": "Temporal basis over which the environmental metrics were calculated, such as event-level, hourly, or capture-window average; this indicates how the derived values align to the air-sampling event.",
+          "type": "categorical",
+          "allowed_values": [
+            "event_level",
+            "hourly",
+            "daily",
+            "capture_window",
+            "other"
+          ]
+        },
+        {
+          "field_id": "environmental_metric_quality_flag",
+          "descr": "Qualitative indicator of the completeness and reliability of the derived environmental metrics after summarization and alignment to the sampling event.",
+          "type": "categorical",
+          "allowed_values": [
+            "good",
+            "warning",
+            "poor",
+            "missing"
+          ]
+        }
+      ]
+    },
+    "community_environment_integration": {
+      "reasoning": "For the community_environment_integration Process node, I included only analysis parameters and output-quality descriptors for the joint modeling step: analysis software, version, statistical framework, covariates included, correction for spatial/seasonal structure, significance threshold, and a success flag. These fields describe how ASV abundances and environmental metrics were combined to perform the integrated analysis, which is the correct process territory. I excluded ASV table and environmental metric file properties because those belong to the upstream Derivative inputs, and I excluded the integrated result file and effect sizes because those belong to the downstream derivative node. I also avoided repeating any sequencing, capture, or sample provenance metadata already established elsewhere in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "integration_software_name",
+          "descr": "Name of the analysis software or framework used to jointly model ASV abundances with environmental metrics; record the tool used at the start of the integration step, for example R, Python, or a named package.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_software_version",
+          "descr": "Version of the software or environment used for the integration analysis, recorded to support reproducibility; example format: '4.3', '2.1.0', or a package-specific version string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "statistical_framework",
+          "descr": "Primary statistical or multivariate framework used to integrate microbial and environmental data, specified at analysis time; indicates the modeling approach applied in this process.",
+          "type": "categorical",
+          "allowed_values": [
+            "linear_model",
+            "mixed_effects_model",
+            "ordination",
+            "permanova",
+            "correlation_analysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "covariates_included",
+          "descr": "List or code of covariates included in the integration model, such as spatial location, season, and air-quality variables; capture the model terms used for joint analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "seasonal_adjustment_applied",
+          "descr": "Indicates whether the analysis explicitly adjusted for seasonal structure when relating ASV abundances to environmental metrics.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spatial_structure_adjustment_applied",
+          "descr": "Indicates whether the analysis explicitly adjusted for spatial variation among urban sites when modeling microbial-environment associations.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold_alpha",
+          "descr": "Nominal significance threshold used for hypothesis testing in the integration analysis, if applicable; typical values are 0.05 or 0.1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_success_flag",
+          "descr": "Qualitative indicator of whether the joint analysis completed successfully and produced interpretable results.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        }
+      ]
+    },
+    "urban_air_microbiome_analysis": {
+      "reasoning": "For the urban_air_microbiome_analysis Derivative node, I included only computed-result properties of the integrated multivariate output: result identifier, file path, output format, analysis method, ordination/model dimensions, key fit statistics, variance explained, and a scientific interpretation flag. These fields describe the derived analysis product itself and its core scientific quality. I excluded the integration procedure settings because those belong to the upstream process, and I excluded the ASV table and environmental metric inputs because those are upstream derivatives. I also avoided repeating sample provenance, sequencing, or capture metadata already established earlier in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "integrated_analysis_id",
+          "descr": "Unique identifier for the integrated multivariate analysis result; example format: INT-ANAL-0001.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_analysis_file_path",
+          "descr": "Storage path or URI for the derived integrated analysis output, recorded after model fitting so the result can be retrieved or reused.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_analysis_format",
+          "descr": "File or object format used to store the integrated result, such as RDS, CSV, TSV, or JSON.",
+          "type": "categorical",
+          "allowed_values": [
+            "rds",
+            "csv",
+            "tsv",
+            "json",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_method",
+          "descr": "Primary multivariate or comparative method used to generate the integrated result linking microbial composition with environmental context and seasonality.",
+          "type": "categorical",
+          "allowed_values": [
+            "ordination",
+            "mixed_effects_model",
+            "canonical_correlation",
+            "permanova",
+            "network_analysis",
+            "other"
+          ]
+        },
+        {
+          "field_id": "ordination_axis_count",
+          "descr": "Number of ordination axes or modeled latent dimensions retained in the derived analysis output, measured after model fitting; use this only when the result is dimension-reduced.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "model_fit_r2",
+          "descr": "Explained variance or model fit statistic reported for the integrated analysis, computed from the derived result; typical values range from 0 to 1 when applicable.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "feature_environment_association_count",
+          "descr": "Number of microbial features found to be associated with environmental context or season in the derived analysis, counted after statistical evaluation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variance_explained_fraction",
+          "descr": "Fraction of total variation in the integrated result explained by the main axes, predictors, or fitted components, depending on the analysis method; typical range is 0-1.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrated_result_interpretation_status",
+          "descr": "Qualitative flag indicating whether the derived multivariate output supports an interpretable relationship between airborne microbial composition, urban air quality, and seasonality.",
+          "type": "categorical",
+          "allowed_values": [
+            "interpretable",
+            "partial",
+            "unclear",
+            "failed"
+          ]
+        }
+      ]
+    }
+  }
+}

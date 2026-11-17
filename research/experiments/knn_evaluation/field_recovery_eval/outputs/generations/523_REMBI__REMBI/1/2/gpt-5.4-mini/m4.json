@@ -1,0 +1,615 @@
+{
+  "md_name": "X-ray Phase-Contrast Microscopy of Irradiated Epithelial Cells",
+  "md_description": "This workflow describes cultured human epithelial cells exposed to ionizing radiation, followed by X-ray phase-contrast microscopy to record high-resolution structural images of organelles and cytoskeletal elements. The pipeline includes radiation treatment and sample preparation, image capture with X-ray source and microscope parameters recorded in the acquisition node, and computational image correction, correlation, and segmentation to generate quantitative structural outputs for studying radiation-induced damage and repair.",
+  "fields_per_node": {
+    "cultured_human_epithelial_cells": {
+      "reasoning": "This Entity node should describe the cultured human epithelial cells themselves: their biological identity, origin, culture background, and intrinsic starting state before any radiation or imaging. I excluded radiation dose, exposure conditions, microscope settings, file/image properties, and computed metrics because those belong to the downstream Process, Capture, Signal, and Derivative nodes. I also avoided sample identifiers and experiment identifiers because those are generally root-level and should not be duplicated elsewhere. The fields below are limited to reusable identity and culture-origin metadata needed to interpret the starting material.",
+      "md_schema": [
+        {
+          "field_id": "cell_line_name",
+          "descr": "Name of the human epithelial cell line or primary epithelial population used as the starting material before radiation exposure; use the exact vendor or laboratory designation when available, e.g. 'HeLa', 'HaCaT', or a primary epithelial isolate name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "species",
+          "descr": "Biological species of the cultured cells at the time of experiment; record the organism from which the epithelial cells were derived, typically 'Homo sapiens'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tissue_of_origin",
+          "descr": "Anatomical tissue source from which the epithelial cells were derived before culture, if known; e.g. skin, lung, colon, or cervix.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cellular_state",
+          "descr": "Intrinsic culture state of the cells immediately before radiation exposure, describing whether they are immortalized, primary, differentiated, or stem-like; use the category that best matches the starting population.",
+          "type": "categorical",
+          "allowed_values": [
+            "primary",
+            "immortalized",
+            "differentiated",
+            "stem_like",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "culture_adherence_properties",
+          "descr": "Basic intrinsic growth phenotype of the cultured epithelial cells prior to perturbation, indicating whether the cells are adherent or suspension-growing; this reflects the cell model rather than any procedure performed during the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "adherent",
+            "suspension",
+            "mixed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "ionizing_radiation_exposure": {
+      "reasoning": "This Process node should capture how the radiation perturbation was performed: the radiation modality, dose, rate, exposure geometry, duration, and the source system used. I excluded cell identity/origin fields because those belong to the upstream Entity node, and I excluded imaging or file-output details because those belong downstream to Capture and Signal nodes. I also avoided derived biological outcomes, since this node describes the experimental treatment operation, not its consequences. No previously generated fields were repeated.",
+      "md_schema": [
+        {
+          "field_id": "radiation_type",
+          "descr": "Type of ionizing radiation applied to the cells during the exposure process; record the modality used in this experiment, for example X-ray, gamma, or electron beam.",
+          "type": "categorical",
+          "allowed_values": [
+            "x_ray",
+            "gamma",
+            "electron_beam",
+            "proton",
+            "other"
+          ]
+        },
+        {
+          "field_id": "absorbed_dose_gray",
+          "descr": "Delivered ionizing radiation dose to the cell culture during exposure, measured in gray (Gy) at the time of treatment; report the nominal or calibrated dose per sample, typically within a range of 0 to 20 Gy for cellular irradiation experiments.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dose_rate_gy_per_minute",
+          "descr": "Radiation dose rate during exposure, expressed in gray per minute (Gy/min); record the calibrated delivery rate used for the sample at the time of treatment, typically spanning low-dose-rate to high-dose-rate exposures.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_duration_minutes",
+          "descr": "Total duration of the radiation exposure step in minutes, measured from the start to the end of irradiation for the cell sample; use the actual treatment interval, typically from seconds to several minutes depending on dose rate.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_to_sample_distance_mm",
+          "descr": "Distance between the radiation source or beam exit and the cell sample during exposure, in millimeters (mm); record the geometry used for dose delivery and field uniformity, if applicable.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "irradiation_geometry",
+          "descr": "Configuration of the sample relative to the radiation beam during exposure, describing how the culture was positioned for treatment.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_layer",
+            "multiwell_plate",
+            "dish",
+            "flask",
+            "other"
+          ]
+        },
+        {
+          "field_id": "radiation_source_system",
+          "descr": "Hardware system used to deliver the ionizing radiation exposure, including manufacturer, model, and serial number when available; this is the active agent for the Process node and should identify the source used for dose delivery.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "treatment_temperature_celsius",
+          "descr": "Temperature of the cell sample during radiation exposure, measured at the treatment point in degrees Celsius; record the controlled temperature if the exposure was performed outside standard incubator conditions, typically around 20 to 37 C.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "irradiated_cell_culture": {
+      "reasoning": "This Entity node should describe the irradiated cell culture as the post-treatment biological sample: its status after radiation exposure, any recovered or fixed preparation state, and the dose history carried forward from the upstream process. I excluded microscope settings, image file properties, and downstream analysis outputs because those belong to Capture, Signal, and Derivative nodes. I also avoided repeating the upstream radiation process parameters except where they are needed as intrinsic sample provenance for the treated culture. No already_generated fields were repeated or paraphrased as new fields.",
+      "md_schema": [
+        {
+          "field_id": "post_irradiation_state",
+          "descr": "Biological state of the epithelial culture after completion of the ionizing radiation exposure and before X-ray microscopy; use this to indicate whether the sample was immediately imaged, recovered, fixed, or otherwise prepared after treatment.",
+          "type": "categorical",
+          "allowed_values": [
+            "immediate_post_exposure",
+            "recovered",
+            "fixed",
+            "other",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "time_since_irradiation_minutes",
+          "descr": "Elapsed time in minutes between the end of radiation exposure and the start of the X-ray microscopy preparation or imaging step; record the actual interval for this treated culture, typically from 0 minutes for immediate imaging to longer recovery periods.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "irradiated_dose_gray",
+          "descr": "Cumulative ionizing radiation dose carried by this treated cell culture, expressed in gray (Gy); report the delivered dose associated with the sample after exposure, typically within the range used in the experiment.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "radiation_exposure_replicate_id",
+          "descr": "Identifier for the repeated exposure instance of this culture within the irradiation experiment, for example a replicate label such as 'rep1' or 'dose_5gy_a'; use a string that uniquely distinguishes treated cultures at the sample level.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_exposure_confluence_percent",
+          "descr": "Estimated cell culture confluence after irradiation and before microscopy, expressed as a percentage (%) of the available surface area covered by cells; record the observed culture density at the sample stage, typically 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "xray_phase_contrast_microscopy": {
+      "reasoning": "This Capture node should capture the measurement session and instrument configuration: microscope identity, X-ray source settings, optics/detector configuration, sample mounting conditions, and exposure/acquisition settings that were actively controlled during imaging. I excluded sample provenance and radiation treatment details because those belong to upstream Entity/Process nodes, and I excluded file format, path, and image quality metrics because those belong to the downstream Signal node. I also avoided analysis outputs such as segmentation or correlation results, since those are downstream Derivative/Process territory. No already_generated fields were repeated.",
+      "md_schema": [
+        {
+          "field_id": "microscope_manufacturer",
+          "descr": "Manufacturer of the X-ray phase-contrast microscope used for image acquisition; record the hardware vendor responsible for the instrument in this imaging session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_model",
+          "descr": "Model name or number of the X-ray phase-contrast microscope used for acquisition; record the specific instrument configuration that produced the raw images.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "microscope_serial_number",
+          "descr": "Instrument serial number for the X-ray phase-contrast microscope, when available; use the exact hardware identifier assigned to the acquisition system.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "xray_source_type",
+          "descr": "Type of X-ray source used during phase-contrast microscopy, describing the active illumination system configured for the acquisition session.",
+          "type": "categorical",
+          "allowed_values": [
+            "synchrotron",
+            "laboratory_source",
+            "microfocus_source",
+            "other"
+          ]
+        },
+        {
+          "field_id": "xray_photon_energy_kev",
+          "descr": "Incident X-ray photon energy used for image acquisition, measured in kiloelectronvolts (keV) at the microscope during the capture session; report the configured energy, typically in the soft to hard X-ray range used for phase-contrast imaging.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "exposure_time_milliseconds",
+          "descr": "Per-frame X-ray exposure time in milliseconds during the microscopy acquisition session; record the actual camera integration time used for each image or projection.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detector_model",
+          "descr": "Detector or camera model used to record the X-ray phase-contrast images; include the specific sensor system attached to the microscope during acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "pixel_size_micrometers",
+          "descr": "Effective pixel size at the sample plane in micrometers (µm) for the acquired images; record the calibrated sampling resolution used during imaging, typically in the submicron to few-micron range.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_of_view_width_micrometers",
+          "descr": "Width of the imaged field of view in micrometers (µm) at the sample plane during acquisition; record the spatial coverage of each frame or stack slice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "field_of_view_height_micrometers",
+          "descr": "Height of the imaged field of view in micrometers (µm) at the sample plane during acquisition; record the spatial coverage of each frame or stack slice.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_mounting_condition",
+          "descr": "Mounting configuration of the irradiated cell culture during X-ray imaging, such as on a slide, membrane, capillary, or chamber; record how the sample was physically positioned in the microscope.",
+          "type": "categorical",
+          "allowed_values": [
+            "slide",
+            "membrane",
+            "capillary",
+            "chamber",
+            "other"
+          ]
+        },
+        {
+          "field_id": "objective_or_optic_configuration",
+          "descr": "Optical or phase-contrast configuration used during acquisition, including any objective, condenser, or phase optics settings relevant to the imaging session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reconstruction_or_projection_mode",
+          "descr": "Acquisition mode used for X-ray phase-contrast imaging, indicating whether the session collected projection images, tomography, or another capture mode configured on the instrument.",
+          "type": "categorical",
+          "allowed_values": [
+            "projection",
+            "tomography",
+            "other"
+          ]
+        },
+        {
+          "field_id": "ambient_temperature_celsius",
+          "descr": "Ambient or stage temperature during image acquisition in degrees Celsius, measured at the microscope during the capture session when temperature was actively controlled or monitored.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_xray_image_stack": {
+      "reasoning": "This Signal node should describe the raw data artifact itself: file format, dimensions, size, frame count, storage location, and basic technical quality flags. I excluded microscope configuration, exposure settings, and sample mounting details because those belong to the upstream Capture node. I also excluded correction, alignment, segmentation, and quantitative outputs because those are downstream Process and Derivative nodes. No already_generated fields were repeated or semantically duplicated.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw phase-contrast image stack as stored after acquisition; record the actual format used for the unprocessed microscopy data, for example TIFF, CZI, HDF5, or DICOM.",
+          "type": "categorical",
+          "allowed_values": [
+            "tiff",
+            "czi",
+            "hdf5",
+            "dcm",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Total size of the raw image stack file in bytes at the time of storage; record the archived size of the acquisition output, typically ranging from megabytes to gigabytes depending on image count and resolution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_width_pixels",
+          "descr": "Width of each raw image frame in pixels, measured from the stored image data; report the pixel dimension of the acquisition output at the time it was written.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "image_height_pixels",
+          "descr": "Height of each raw image frame in pixels, measured from the stored image data; report the pixel dimension of the acquisition output at the time it was written.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "frame_count",
+          "descr": "Number of frames, slices, or projections contained in the raw X-ray image stack; record the total count present in the stored data object.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "bit_depth",
+          "descr": "Per-pixel intensity precision of the raw image data, expressed as bits per pixel; record the native acquisition bit depth such as 8, 12, 16, or 32.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "compression_used",
+          "descr": "Whether the stored raw image stack was compressed at the file level when saved; use this to indicate the technical storage condition of the raw artifact.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "storage_uri",
+          "descr": "Storage location or URI of the raw image stack file, for example a filesystem path, object-store URI, or database reference used to retrieve the raw data artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_image_quality_flag",
+          "descr": "Basic technical quality flag describing whether the raw image stack is usable, partially corrupted, or corrupted before any computational correction; assess this on the stored artifact, not from biological interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "image_correction_and_correlation": {
+      "reasoning": "This Process node should describe the computational transformation applied to the raw images: software identity, version, repository, correction steps, registration/correlation method, and key algorithm parameters. I excluded raw file properties because those belong to the input Signal node, and I excluded corrected-image file attributes because those belong to the downstream Signal node. I also avoided segmentation and scientific interpretation outputs, since those are downstream Derivative territory. No already_generated fields were repeated or semantically duplicated.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the software used to perform detector correction, alignment, and image correlation for this processing step; record the exact application used in the workflow.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the image processing software used for correction and correlation; record the installed release or build that generated the processed images.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository, package source, or distribution location for the processing software; record the source used to identify or reproduce the software environment, such as a Git URL, package registry, or vendor site.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "detector_artifact_correction_method",
+          "descr": "Method used to correct detector artifacts in the raw phase-contrast images during processing, such as flat-field correction, dark-current subtraction, bad-pixel replacement, or combined correction.",
+          "type": "categorical",
+          "allowed_values": [
+            "flat_field",
+            "dark_current_subtraction",
+            "bad_pixel_correction",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "image_correlation_method",
+          "descr": "Registration or correlation method used to align phase-contrast images during processing, for example cross-correlation, feature-based registration, rigid alignment, or non-rigid alignment.",
+          "type": "categorical",
+          "allowed_values": [
+            "cross_correlation",
+            "feature_based",
+            "rigid",
+            "non_rigid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reference_frame_index",
+          "descr": "Index of the frame used as the reference for image alignment and correlation in this processing step; record the frame number or slice selected as the alignment anchor.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_iterations",
+          "descr": "Number of optimization or refinement iterations performed during image alignment and correlation, measured for the processing run on the input stack.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "correlation_threshold",
+          "descr": "Numeric threshold used to accept or terminate image correlation or registration during processing; record the value applied by the software, with the exact scale defined by the method implementation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_channel_count",
+          "descr": "Number of channels or image channels retained after correction and correlation, if the processing step preserves multi-channel data; record the output channel count at the end of this process.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "corrected_aligned_images": {
+      "reasoning": "This Signal node should describe the processed image artifact after correction and alignment: the stored file format, dimensions, size, frame count, and technical integrity/quality of the corrected output. I excluded software, algorithms, and registration parameters because those belong to the upstream Process node, and I excluded segmentation or quantitative structural measurements because those belong downstream to the Derivative node. I also avoided repeating any fields already generated for the raw image signal, unless the meaning here is specifically about the corrected output artifact.",
+      "md_schema": [
+        {
+          "field_id": "processed_file_format",
+          "descr": "Digital file format of the corrected and aligned image data as stored after processing; record the actual format used for the derived image artifact, for example TIFF, HDF5, or OME-TIFF.",
+          "type": "categorical",
+          "allowed_values": [
+            "tiff",
+            "ome_tiff",
+            "hdf5",
+            "czi",
+            "other"
+          ]
+        },
+        {
+          "field_id": "processed_file_size_bytes",
+          "descr": "Total size of the corrected and aligned image file in bytes at the time of storage; record the archived size of the processed artifact, typically dependent on frame count and resolution.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_width_pixels",
+          "descr": "Width of each corrected image frame in pixels, measured from the stored processed data; record the output pixel dimension after correction and registration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_height_pixels",
+          "descr": "Height of each corrected image frame in pixels, measured from the stored processed data; record the output pixel dimension after correction and registration.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_frame_count",
+          "descr": "Number of frames, slices, or projections retained in the corrected and aligned image stack after processing; record the total count in the stored output data object.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "alignment_applied",
+          "descr": "Indicates whether registration/alignment was successfully applied to the raw image stack to generate this processed signal artifact.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "processed_image_quality_flag",
+          "descr": "Basic technical quality flag for the corrected and aligned image output, indicating whether the processed artifact is usable, partially affected by residual artifacts, or failed processing before downstream analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "processed_storage_uri",
+          "descr": "Storage location or URI of the corrected and aligned image file, for example a filesystem path, object-store URI, or database reference used to retrieve the processed data artifact.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "structural_segmentation": {
+      "reasoning": "This Process node should describe how the structural features were computed from the corrected images: software identity, version, repository, segmentation algorithm, key parameters, and any processing run controls relevant to reproducing the computation. I excluded properties of the corrected input images because those belong to the upstream Signal node, and I excluded the output measurement table itself because those belong to the downstream Derivative node. I also avoided microscope or radiation details because those are outside the semantic territory of this computational process. No already_generated fields were repeated or semantically duplicated.",
+      "md_schema": [
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software used to perform segmentation and quantification of organelles and cytoskeletal features from the corrected images; record the exact analysis application used in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the analysis software used for structural segmentation; record the installed release or build that generated the feature quantification results.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_repository",
+          "descr": "Repository, package source, or distribution location for the segmentation software; record the source used to identify or reproduce the analysis environment, such as a Git URL, package registry, or vendor site.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_algorithm",
+          "descr": "Algorithm or model used to identify organelles and cytoskeletal features from the corrected images, such as thresholding, watershed, classical machine learning, or deep learning segmentation.",
+          "type": "categorical",
+          "allowed_values": [
+            "thresholding",
+            "watershed",
+            "classical_ml",
+            "deep_learning",
+            "other"
+          ]
+        },
+        {
+          "field_id": "segmentation_model_name",
+          "descr": "Name or identifier of the segmentation model used, when a pretrained or custom model was applied; use a string such as a model label or checkpoint name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_preprocessing_method",
+          "descr": "Any preprocessing applied immediately before segmentation on the corrected images, such as denoising, normalization, or background subtraction, when performed as part of this computational process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "segmentation_threshold",
+          "descr": "Numeric threshold or decision cutoff used by the segmentation method, if applicable; record the value used by the algorithm, with units or scale defined by the software implementation.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_feature_size_pixels",
+          "descr": "Minimum connected component or object size retained during segmentation, measured in pixels; record the filter size used to exclude small artifacts from quantified structures.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_label_set",
+          "descr": "Set of structural classes or labels produced by the segmentation step, describing which organelle or cytoskeletal categories were quantified in this process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "batch_processing_flag",
+          "descr": "Indicates whether the segmentation was run on single images or in batch mode across multiple corrected image files.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "cellular_structure_metrics": {
+      "reasoning": "This Derivative node should describe the computed result of the segmentation workflow: what quantitative metrics were produced, how many objects or cells were analyzed, and the basic quality of the derived measurement table. I excluded raw and processed image file properties because those belong to the upstream Signal nodes, and I excluded segmentation software and algorithm settings because those belong to the upstream Process node. I also avoided radiation treatment, sample identity, and microscope configuration because those are already represented elsewhere in the DAG. No already_generated fields were repeated or semantically duplicated.",
+      "md_schema": [
+        {
+          "field_id": "metric_table_format",
+          "descr": "File or table format of the derived structural metrics output, such as CSV, TSV, Parquet, or HDF5, as stored after computation; record the actual format used for the derivative artifact.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "tsv",
+            "parquet",
+            "hdf5",
+            "other"
+          ]
+        },
+        {
+          "field_id": "derived_file_size_bytes",
+          "descr": "Total size of the structural metrics output file in bytes at the time of storage; record the archived size of the derived table or measurement file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "objects_analyzed_count",
+          "descr": "Number of segmented cells, organelles, or structural objects included in the quantitative analysis that generated this derivative table; count the objects used to compute the reported metrics.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cells_analyzed_count",
+          "descr": "Number of cells contributing to the derived structural measurements, if cell-level quantification was performed; record the sample size used for the aggregated metrics.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_names",
+          "descr": "Names of the quantitative structural metrics contained in the output table, such as organelle area, perimeter, shape index, cytoskeletal density, or colocalization scores; provide the metric set produced by this analysis.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "metric_units",
+          "descr": "Units associated with the derived structural metrics, such as pixels, micrometers, counts, percent, or arbitrary units; specify the unit system used in the output table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "summary_statistic_type",
+          "descr": "Type of summary statistic represented in the derivative output, if the table aggregates across objects or cells; for example mean, median, standard deviation, or coefficient of variation.",
+          "type": "categorical",
+          "allowed_values": [
+            "mean",
+            "median",
+            "std_dev",
+            "cv",
+            "count",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_quality_flag",
+          "descr": "Overall technical quality flag for the derived structural metrics table, indicating whether the computation completed successfully and whether the output is usable for downstream interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "warning",
+            "fail",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "derived_storage_uri",
+          "descr": "Storage location or URI of the derived structural metrics file, for example a filesystem path, object-store URI, or database reference used to retrieve the quantified results.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

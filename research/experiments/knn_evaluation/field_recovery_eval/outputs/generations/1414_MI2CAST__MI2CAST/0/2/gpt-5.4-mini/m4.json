@@ -1,0 +1,676 @@
+{
+  "md_name": "crispr_mass_spec_protein_interaction_screen",
+  "md_description": "This DAG represents a high-throughput protein-interaction screening workflow in cultured human cancer cell lines using CRISPR-Cas9 knockout perturbations followed by mass spectrometry. The pipeline generates raw spectra and derived interaction/casual-analysis tables that summarize how regulatory protein knockouts alter protein-protein interactions and signaling pathways. The resulting dataset supports metadata-backed interpretation of interacting proteins, observed causal relationships, experimental conditions, and literature-linked evidence for cancer-target discovery.",
+  "fields_per_node": {
+    "human_cancer_cell_line": {
+      "reasoning": "The target node is an Entity, so I limited fields to the intrinsic identity and origin of the starting biological material: cell line identity, species, tissue/disease context, growth state, and provenance. I excluded CRISPR editing parameters, MS instrument settings, raw file properties, and derived interaction/cause labels because those belong to downstream Process, Capture, Signal, and Derivative nodes. I also avoided any sample/experiment identifiers that would likely be generated at the root or already elsewhere in the DAG. No already_generated fields were provided, so no overlap constraints further restricted the schema.",
+      "md_schema": [
+        {
+          "field_id": "cell_line_name",
+          "descr": "Canonical name of the cultured human cancer cell line used as the starting material for CRISPR perturbation and proteomic screening; record the established line name exactly as used in the study, for example 'HeLa', 'MCF-7', or 'A549'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "species",
+          "descr": "Organism of origin for the cell line at the point of sample definition; for this workflow it should identify the human source of the cancer cells (for example 'Homo sapiens').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "cancer_type",
+          "descr": "Cancer lineage or disease context of the cell line, describing the biological origin of the cultured cells rather than any treatment applied to them; examples include breast carcinoma, lung adenocarcinoma, or colorectal carcinoma.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "tissue_of_origin",
+          "descr": "Primary tissue or anatomical site from which the cancer cell line was originally derived, recorded as the source tissue for the cultured cells (for example 'breast', 'lung', 'colon').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "growth_format",
+          "descr": "Cell culture format at the time the starting biological material is defined for this screen; use this to indicate whether the cells were maintained as an adherent monolayer, suspension culture, or another standard growth state.",
+          "type": "categorical",
+          "allowed_values": [
+            "adherent",
+            "suspension",
+            "organoid",
+            "co_culture",
+            "other"
+          ]
+        },
+        {
+          "field_id": "provenance_source",
+          "descr": "Source of the cell line or culture stock used to begin the workflow, such as an authenticated cell bank, laboratory stock, or collaborator-provided line; record the provenance at the time of material acquisition.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "authentication_status",
+          "descr": "Whether the starting cell line had been authenticated before use in the screen, typically by STR profiling or an equivalent identity check performed prior to perturbation; use this to capture the identity-verification state of the entity.",
+          "type": "categorical",
+          "allowed_values": [
+            "authenticated",
+            "not_authenticated",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "mycoplasma_status",
+          "descr": "Contamination status of the starting culture at the time it was accepted for use in the workflow, usually assessed before CRISPR perturbation; this describes culture quality of the entity itself, not a process parameter.",
+          "type": "categorical",
+          "allowed_values": [
+            "negative",
+            "positive",
+            "not_tested",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "crispr_cas9_knockout": {
+      "reasoning": "The target node is a Process, so I included only how the CRISPR-Cas9 knockout was performed: perturbation design, delivery/editing modality, guide RNA and knockout target details, delivery and selection conditions, and an outcome-quality indicator for editing success. I excluded starting cell identity and downstream edited-cell properties because those belong to the upstream Entity and downstream Entity nodes. I also excluded mass spectrometry and analysis fields because those are outside this process. No already_generated field list was provided here, so I did not need to prune against prior names, but I still avoided overlap with the entity fields from the preceding step.",
+      "md_schema": [
+        {
+          "field_id": "target_regulatory_protein",
+          "descr": "Name of the regulatory protein gene intentionally knocked out by the CRISPR-Cas9 perturbation in this screen; record the intended target at the time the editing process is planned, for example 'TP53', 'BRD4', or 'EGFR'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "guide_rna_sequence",
+          "descr": "Single-guide RNA sequence used to direct Cas9 to the knockout target; provide the 20 nt protospacer sequence if available, recorded at the point of editing design or execution.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "crispr_delivery_method",
+          "descr": "Method used to introduce the CRISPR-Cas9 editing components into the cancer cell culture at the time of knockout, describing the editing delivery modality rather than the cell state.",
+          "type": "categorical",
+          "allowed_values": [
+            "plasmid_transfection",
+            "lentiviral_transduction",
+            "ribonucleoprotein_delivery",
+            "electroporation",
+            "microinjection",
+            "other"
+          ]
+        },
+        {
+          "field_id": "cas9_variant",
+          "descr": "Cas9 nuclease configuration used during the knockout process, recorded as the enzyme variant supplied to the cells or delivery system; examples include wild-type SpCas9 or a high-fidelity variant.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selection_antibiotic",
+          "descr": "Antibiotic or selectable marker used after CRISPR delivery to enrich edited cells, if selection was applied during the knockout process; for example 'puromycin' or 'blasticidin'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "selection_duration_hours",
+          "descr": "Duration of post-editing selection used to enrich knockout-bearing cells, measured from the start of selection to the end of selection in hours; typical range is 0-240 h.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "editing_efficiency_percent",
+          "descr": "Estimated fraction of cells achieving successful knockout at the end of the CRISPR editing process, measured after editing/selection and before downstream measurement; report as a percentage from 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "knockout_screen_condition",
+          "descr": "High-level screening condition under which the CRISPR knockout was executed, capturing the perturbation mode used in the screen rather than sample identity or downstream assay settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_gene_knockout",
+            "pooled_knockout_screen",
+            "arrayed_knockout_screen",
+            "dual_knockout",
+            "other"
+          ]
+        }
+      ]
+    },
+    "edited_cancer_cells": {
+      "reasoning": "The target node is an Entity, so I restricted the schema to intrinsic properties of the edited cell population after CRISPR perturbation and before measurement. I included edit identity, whether the population is clonal or pooled, enrichment/selection state, genotype verification, and the intended knockout status because these describe what the edited cells are. I excluded CRISPR delivery details and guide-level parameters because those belong to the upstream Process node, and I excluded mass spectrometry configuration and raw file properties because those belong downstream. No already_generated list was provided in this turn, so I avoided only semantic overlap with the prior Entity and Process nodes.",
+      "md_schema": [
+        {
+          "field_id": "edited_gene_name",
+          "descr": "Name of the gene disrupted by the CRISPR-induced knockout in this cancer cell population; record the biological target as it exists in the edited entity, for example 'TP53' or 'BRD4'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "edit_status",
+          "descr": "Observed knockout state of the edited cell population at the time it is used for downstream measurement; indicates whether the intended target appears knocked out, partially edited, or unresolved after screening/verification.",
+          "type": "categorical",
+          "allowed_values": [
+            "confirmed_knockout",
+            "partial_editing",
+            "mixed_population",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "clonality",
+          "descr": "Population structure of the edited cells after CRISPR editing and any enrichment steps, describing whether the entity is derived from a single clone or contains multiple edited clones.",
+          "type": "categorical",
+          "allowed_values": [
+            "clonal",
+            "polyclonal",
+            "mixed_population",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "selection_status",
+          "descr": "Whether the edited cancer cell population underwent selectable enrichment after CRISPR editing before downstream measurement, recorded as the entity's post-editing selection state.",
+          "type": "categorical",
+          "allowed_values": [
+            "selected",
+            "unselected",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "genotype_verification_method",
+          "descr": "Method used to verify the knockout genotype of the edited cells before measurement, such as sequencing or amplicon analysis; record the verification approach applied to the entity.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "passage_number",
+          "descr": "Approximate culture passage number of the edited cell population at the time it was prepared for downstream capture, as an indicator of culture age and stability; typical range is 1-100.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "viability_percent",
+          "descr": "Estimated live-cell fraction of the edited population immediately before downstream measurement or capture, reported as a percentage from 0 to 100.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "mass_spectrometry_capture": {
+      "reasoning": "The target node is a Capture node, so I included only the instrument configuration and measurement-session settings used to acquire the mass spectrometry readout from the edited cells. That means hardware identity, ionization/analyzer setup, acquisition mode, and key scan settings that an operator actively controls. I excluded sample identity and knockout details because those belong to upstream Entity/Process nodes, and I excluded file format, raw file size, and quality flags because those belong to the downstream Signal node. I also avoided downstream biological interpretations such as identified proteins or pathway changes, which belong to Derivative nodes. No already_generated list was provided in this turn, so I only pruned by semantic territory.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the mass spectrometer used for acquisition, recorded for the instrument that performed the measurement session (for example 'Thermo Fisher Scientific', 'Bruker', or 'SCIEX').",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the mass spectrometer used to measure the edited cancer cells, recorded at the time of acquisition; examples include Orbitrap, Q Exactive, timsTOF, or TripleTOF model names.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Instrument serial number of the mass spectrometer that acquired the data; use the physical device identifier attached to the instrument configuration used in this session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ionization_mode",
+          "descr": "Ionization mode configured for the mass spectrometry run, describing how analytes were introduced into the gas phase during acquisition; commonly measured at setup time.",
+          "type": "categorical",
+          "allowed_values": [
+            "electrospray_positive",
+            "electrospray_negative",
+            "maldi",
+            "apci",
+            "esi",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mass_analyzer_type",
+          "descr": "Primary mass analyzer used during data acquisition, describing the configured analyzer hardware in the measurement session; record the analyzer actually used for the run.",
+          "type": "categorical",
+          "allowed_values": [
+            "orbitrap",
+            "tof",
+            "quadrupole",
+            "ion_trap",
+            "ft_icr",
+            "sector",
+            "other"
+          ]
+        },
+        {
+          "field_id": "acquisition_mode",
+          "descr": "Data acquisition strategy selected for the mass spectrometry session, such as data-dependent or data-independent acquisition; record the mode set on the instrument for this run.",
+          "type": "categorical",
+          "allowed_values": [
+            "dda",
+            "dia",
+            "targeted",
+            "srm_mrm",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "ms1_resolution",
+          "descr": "Configured MS1 resolution for the acquisition run, measured as instrument resolving power or the vendor-reported equivalent at the time of capture; typical range depends on platform and is often 10000-240000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ms2_resolution",
+          "descr": "Configured MS2 resolution for fragment acquisition in the mass spectrometry session, measured as the vendor-reported setting at the time of capture; typical range depends on platform and is often 7500-120000.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "scan_range_mz",
+          "descr": "Mass-to-charge range surveyed during the capture session, recorded in m/z and representing the actively configured acquisition window; example ranges are 350-1600 m/z or 100-2000 m/z.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collision_energy_ev",
+          "descr": "Collision energy setting used during tandem mass spectrometry acquisition, recorded as the instrument-configured fragmentation energy in electronvolts or vendor-equivalent units at capture time; typical range is platform-dependent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "injection_time_ms",
+          "descr": "Ion injection or accumulation time configured for the run, measured in milliseconds at acquisition time and used to control ion population before measurement; typical range is 1-500 ms.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_mass_spectra": {
+      "reasoning": "The target node is a Signal, so I included only technical properties of the raw mass spectrometry artefact itself: file format, storage location, size, dimensionality, and basic acquisition-linked quality indicators that describe the signal as data. I excluded instrument settings because those belong to the Capture node, and I excluded identified proteins or pathway interpretations because those belong to downstream Derivative nodes. I also avoided repeating sample identity or editing details from upstream Entity/Process nodes. No already_generated list was provided here, so I pruned only by semantic territory.",
+      "md_schema": [
+        {
+          "field_id": "file_format",
+          "descr": "Digital file format of the raw mass spectrometry spectra at the point the signal is stored or exported; record the vendor or open format used, for example 'raw', 'mzML', or 'mzXML'.",
+          "type": "categorical",
+          "allowed_values": [
+            "raw",
+            "mzml",
+            "mzxml",
+            "mgf",
+            "txt",
+            "other"
+          ]
+        },
+        {
+          "field_id": "file_size_bytes",
+          "descr": "Size of the raw spectra file as stored in the dataset, measured in bytes for the exact artefact produced by the capture session; useful for assessing completeness and transfer integrity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spectra_count",
+          "descr": "Total number of spectra contained in the raw signal file at the time of export or ingestion, representing the count of primary instrument scans in the artefact; typical values range from hundreds to millions depending on run length.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "retention_time_span_minutes",
+          "descr": "Observed chromatographic retention-time span covered by the raw signal, measured in minutes from the first to last scan in the file; typical values depend on the LC-MS run and may span 5-180 minutes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mz_lower_bound",
+          "descr": "Lowest mass-to-charge value present in the raw spectra signal, expressed in m/z at file-level inspection of the artefact; typical ranges depend on the acquisition window.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mz_upper_bound",
+          "descr": "Highest mass-to-charge value present in the raw spectra signal, expressed in m/z at file-level inspection of the artefact; typical ranges depend on the acquisition window.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "data_dimensions",
+          "descr": "Dimensionality of the raw spectra artefact, describing whether the stored signal is one-dimensional spectra, two-dimensional chromatogram-plus-spectrum data, or another raw representation.",
+          "type": "categorical",
+          "allowed_values": [
+            "1d_spectra",
+            "2d_chromatogram_spectra",
+            "vendor_hybrid",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_location",
+          "descr": "Path, URI, or repository accession where the raw spectra file is stored or can be retrieved, recorded for the exact signal artefact produced by this run; example formats include local file paths, object-store URIs, or repository identifiers.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_integrity_status",
+          "descr": "Basic integrity check result for the raw spectra file at ingestion or storage time, indicating whether the artefact is readable and appears complete; this is a technical quality flag for the raw signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "complete",
+            "partial",
+            "corrupted",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "spectral_id_processing": {
+      "reasoning": "The target node is a Process node, so I included only the computational interpretation settings used to transform raw spectra into identifications: software identity, version, repository, search/identification database, matching parameters, FDR threshold, and a process-level outcome indicator. I excluded raw file properties because those belong to the upstream Signal node, and I excluded identified proteins, interaction evidence tables, and pathway summaries because those belong to the downstream Derivative node. I also avoided repeating CRISPR or capture settings from earlier nodes. No already_generated list was provided in this turn, so I relied on semantic separation only.",
+      "md_schema": [
+        {
+          "field_id": "software_name",
+          "descr": "Name of the proteomics software used to interpret the raw spectra during this processing step, recorded as the computational agent applied to the signal; for example 'MaxQuant', 'Proteome Discoverer', or 'MSFragger'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the proteomics software used for spectral identification, recorded exactly as executed for this processing run to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_repository",
+          "descr": "Repository, package source, or distribution location for the proteomics software used in this processing step, such as a GitHub URL, vendor distribution, or package registry entry.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_database_name",
+          "descr": "Reference protein sequence database used to match spectra during identification, recorded at the time of processing; examples include UniProt human proteome or a custom FASTA database.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "search_database_version",
+          "descr": "Version, release date, or build identifier of the search database used for spectral interpretation, captured for reproducibility of the processing run.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "precursor_mass_tolerance_ppm",
+          "descr": "Allowed precursor mass tolerance used in the spectral search, measured in parts per million and configured for the processing step; typical range is 1-50 ppm depending on the platform.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fragment_mass_tolerance_da",
+          "descr": "Allowed fragment-ion mass tolerance used in the spectral search, measured in daltons and configured for the processing step; typical range is 0.01-1.0 Da depending on the analyzer and software settings.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fdr_threshold_percent",
+          "descr": "False discovery rate cutoff applied during spectral identification, expressed as a percentage and used to accept or reject peptide/protein matches in this processing step; common values are 1 or 5 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fixed_modifications",
+          "descr": "Fixed post-translational or chemical modifications specified in the spectral search settings, recorded as the constant modifications assumed during identification; examples include carbamidomethylation of cysteine.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variable_modifications",
+          "descr": "Variable post-translational or chemical modifications allowed in the spectral search settings, recorded as a list or description of optional modifications considered during interpretation; examples include oxidation of methionine or acetylation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identification_quality_status",
+          "descr": "Overall success or quality classification of the spectral identification run after processing the raw spectra, indicating whether the run produced usable protein identifications under the configured criteria.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partially_successful",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "identified_proteins": {
+      "reasoning": "The target node is a Derivative, so I included only computed result fields that summarize what was inferred from the processed spectra: protein identifiers, interaction-linked evidence, abundance or confidence scores, and output dimensions/quality. I excluded software parameters because those belong to the upstream Process node, and I excluded raw signal properties because those belong to the upstream Signal node. I also avoided downstream integration and final dataset fields. No already_generated list was provided in this turn, so I used only semantic separation and avoided repeating fields from earlier nodes.",
+      "md_schema": [
+        {
+          "field_id": "protein_identifier",
+          "descr": "Canonical identifier of each protein detected in the processed spectra-derived result, recorded as the protein entity returned by the identification step; examples include UniProt accession or gene-centric protein ID.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_gene_symbol",
+          "descr": "Gene symbol corresponding to the identified protein, reported as the human-readable symbol used in the derived protein evidence table; for example 'TP53', 'BRD4', or 'EGFR'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "peptide_count",
+          "descr": "Number of unique peptides supporting the identified protein in the derived result set, counted after spectral processing and reported per protein; typical values are 1 or greater.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "spectral_count",
+          "descr": "Number of spectra contributing evidence to the identified protein in the derived result, measured after spectral interpretation and used as a support metric for the protein call; typical values are 1 or greater.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "identification_score",
+          "descr": "Primary confidence or score assigned to the protein identification by the processing algorithm, reported on the scale used by the software at the derivation stage; exact ranges depend on the scoring method.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "protein_fdr_percent",
+          "descr": "Estimated false discovery rate associated with the protein-level identifications in the derived output, expressed as a percentage and used to qualify accepted proteins; common thresholds are around 1 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interaction_evidence_status",
+          "descr": "Whether the derived protein call is accompanied by evidence supporting a protein-protein interaction signal in the processed result, indicating the presence or absence of interaction-linked support from the spectra.",
+          "type": "categorical",
+          "allowed_values": [
+            "supported",
+            "not_supported",
+            "ambiguous",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "abundance_change_log2fc",
+          "descr": "Estimated log2 fold-change in protein abundance or interaction-associated signal between the edited and reference conditions, computed from the processed spectra-derived result; positive values indicate increase and negative values indicate decrease.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "output_table_rows",
+          "descr": "Number of rows in the derived protein evidence table produced by this node, measured at the point the output is generated to characterize output size; typical values depend on the depth of identification.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "derived_result_quality",
+          "descr": "Overall quality classification of the protein-identification output after derivation, summarizing whether the result set is sufficiently confident for downstream screening integration.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_confidence",
+            "moderate_confidence",
+            "low_confidence",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "interaction_screen_matrix": {
+      "reasoning": "I corrected the schema by removing the colliding software metadata fields that were already generated earlier in the DAG. I kept only process-specific fields that describe the matrix-integration operation itself: integration method, normalization, reference condition, filtering threshold, output dimensions, and QC status. I excluded raw/protein-level and final dataset annotation fields to stay within the Process node's semantic territory.",
+      "md_schema": [
+        {
+          "field_id": "integration_method",
+          "descr": "Computational approach used to aggregate identified proteins across perturbations and conditions into the screening matrix, recorded as the method chosen at this processing step; for example normalization-based summarization, clustering, or model-based integration.",
+          "type": "categorical",
+          "allowed_values": [
+            "normalization_summary",
+            "clustering",
+            "statistical_modeling",
+            "network_integration",
+            "other"
+          ]
+        },
+        {
+          "field_id": "normalization_strategy",
+          "descr": "Normalization approach applied before or during matrix construction to make interaction changes comparable across samples or perturbations; record the method used for the integration step, such as median normalization or intensity scaling.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_condition",
+          "descr": "Control or baseline condition used as the reference for computing interaction changes in the screening matrix, specified at the point of integration; for example 'non_targeting_control' or 'wild_type'.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_threshold",
+          "descr": "Threshold applied during matrix construction to retain protein interactions or features, expressed in the scale used by the pipeline; typical examples include adjusted p-value cutoffs, fold-change cutoffs, or confidence-score thresholds.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_dimensions_rows",
+          "descr": "Number of rows in the screening matrix produced by this process step, measured at output generation and typically corresponding to proteins, interactions, or perturbation features.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "matrix_dimensions_columns",
+          "descr": "Number of columns in the screening matrix produced by this process step, measured at output generation and typically corresponding to perturbations, conditions, or samples.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_qc_status",
+          "descr": "Overall quality classification of the matrix-construction step after computational integration, indicating whether the output is complete and suitable for downstream causal and literature-backed annotation.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partially_successful",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    },
+    "protein_interaction_dataset": {
+      "reasoning": "The target node is a Derivative, so I included only fields that describe the computed final dataset: interaction entities, causal labels, experimental-condition annotations, literature support, and dataset-level output characteristics. I removed any process/software fields that collided with already_generated names from earlier DAG steps, specifically avoiding software_name, software_version, and software_repository. I also excluded upstream capture, raw signal, and intermediate identification fields because those belong to earlier nodes, not this final dataset. The schema is focused on the minimum reusable metadata needed to interpret, filter, and cite the interaction dataset for therapeutic target analysis.",
+      "md_schema": [
+        {
+          "field_id": "interacting_protein_a",
+          "descr": "Primary protein in the recorded interaction pair or interaction statement in the final derived dataset; use a canonical identifier such as a UniProt accession or human-readable gene symbol as recorded in the curated table.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "interacting_protein_b",
+          "descr": "Secondary protein in the recorded interaction pair or interaction statement in the final derived dataset; use the companion interaction partner identifier corresponding to the same row or record.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "causal_relationship_label",
+          "descr": "Causal interpretation assigned to the interaction or signaling relationship in the final dataset, summarizing the direction or effect observed after CRISPR perturbation and proteomic analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "activates",
+            "inhibits",
+            "upregulates",
+            "downregulates",
+            "context_dependent",
+            "no_detectable_effect",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "experimental_condition",
+          "descr": "Condition under which the interaction was evaluated in the final dataset, such as treatment state, perturbation context, or culture condition; record the condition annotation used for comparison across rows.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "perturbation_name",
+          "descr": "Name of the CRISPR knockout or other perturbation associated with the final dataset record, used to link the derived interaction to the experimental manipulation that produced it.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "effect_direction",
+          "descr": "Direction of the observed interaction or signaling change relative to the reference condition in the final dataset, recorded as the summary direction used for interpretation.",
+          "type": "categorical",
+          "allowed_values": [
+            "increase",
+            "decrease",
+            "no_change",
+            "ambiguous",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "effect_size_log2fc",
+          "descr": "Quantitative effect size associated with the interaction or signaling change in the final dataset, typically reported as log2 fold-change relative to the chosen reference condition; positive values indicate increase and negative values indicate decrease.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "literature_reference",
+          "descr": "Primary literature citation supporting the interaction or causal annotation in the final dataset, recorded as a reference string such as PMID, DOI, or author-year citation for the evidence used.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "evidence_support_level",
+          "descr": "Curated support classification for the literature or experimental evidence backing the interaction label in the final dataset, indicating how strongly the record is supported.",
+          "type": "categorical",
+          "allowed_values": [
+            "strong",
+            "moderate",
+            "weak",
+            "conflicting",
+            "unknown"
+          ]
+        },
+        {
+          "field_id": "dataset_row_count",
+          "descr": "Total number of records or rows in the final derived interaction dataset produced by this node, measured at output generation and used to characterize dataset size.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dataset_quality_status",
+          "descr": "Overall quality classification of the final interaction dataset after derivation and curation, indicating whether the dataset is suitable for downstream therapeutic target analysis.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_confidence",
+            "moderate_confidence",
+            "low_confidence",
+            "failed",
+            "unknown"
+          ]
+        }
+      ]
+    }
+  }
+}

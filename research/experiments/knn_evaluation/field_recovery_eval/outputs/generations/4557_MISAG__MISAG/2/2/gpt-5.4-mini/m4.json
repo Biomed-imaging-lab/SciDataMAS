@@ -1,0 +1,713 @@
+{
+  "md_name": "marine_microbial_mags_workflow",
+  "md_description": "This DAG represents the end-to-end generation of metagenome-assembled genomes from marine microbial community samples collected across ocean depths. It includes sampling context, combined chemical and mechanical disruption to prepare sequencing material, high-throughput sequencing, and computational assembly plus genome quality assessment. The workflow yields raw metagenomic reads and derived genome bins/MAGs that support analysis of microbial genetic composition and ecological roles in marine ecosystems.",
+  "fields_per_node": {
+    "marine_microbial_community_sample": {
+      "reasoning": "This Entity node should only describe intrinsic sample identity and collection context for the marine microbial community sample. I included fields for sampling site, ocean depth, and key environmental context because those are properties of the sample itself and are upstream of processing or measurement. I excluded lysis, sequencing, read, assembly, and quality fields because those belong to downstream Process/Capture/Signal/Derivative nodes. I also avoided sample identifiers if they might already be generated elsewhere in the DAG; since no prior fields were provided here, I kept only contextual sample descriptors rather than generic experiment IDs. The fields are designed to help downstream users understand where the sample came from and what marine conditions it represents.",
+      "md_schema": [
+        {
+          "field_id": "collection_site_name",
+          "descr": "Name of the marine collection site where the sample was obtained, e.g. station name, cruise station code, or location label. Record at sampling time. Use a stable string identifier that matches field notes or cruise logs.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_site_coordinates",
+          "descr": "Geographic location of sampling site recorded at collection time, typically as latitude/longitude in decimal degrees (for example, 34.1234,-120.5678). Use a single string field if exact coordinate formatting is not standardized across samples.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "ocean_depth_meters",
+          "descr": "Depth of the water column at which the marine microbial community sample was collected, measured in meters at the sampling point. Typical range for this workflow is surface to deep-ocean depths (approximately 0 to 6000 m).",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_collection_environment",
+          "descr": "Broad marine environment context for the sample at collection time, indicating the habitat from which the community was taken. This describes the sample origin, not the processing method.",
+          "type": "categorical",
+          "allowed_values": [
+            "surface_ocean",
+            "euphotic_zone",
+            "mesopelagic",
+            "bathypelagic",
+            "abyssopelagic",
+            "hadal",
+            "coastal",
+            "open_ocean",
+            "seafloor_associated"
+          ]
+        },
+        {
+          "field_id": "seawater_temperature_celsius",
+          "descr": "In situ seawater temperature measured at the sampling depth or collection point when the sample was obtained, in degrees Celsius. Typical marine values may range from about -2 to 35 C depending on location and depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "salinity_psu",
+          "descr": "In situ salinity at the sampling point, reported in practical salinity units (PSU). Typical marine values are commonly around 30 to 40 PSU, but may vary by site and depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_mg_per_l",
+          "descr": "Dissolved oxygen concentration measured in the surrounding seawater at the time and place of sample collection, in milligrams per liter. This is an environmental context field for the sample, not a processing or instrument setting.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sample_collection_date",
+          "descr": "Date on which the marine microbial community sample was collected, recorded in YYYY-MM-DD format. Use the collection date from the cruise or field sampling record.",
+          "type": "date",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sample_lysis_preparation": {
+      "reasoning": "This Process node should describe how the marine sample was lysed and prepared for downstream sequencing input, so I included only protocol parameters and agent details relevant to the disruption step. I excluded sample origin/context fields because those belong to the upstream Entity node, and I excluded DNA/library, sequencing, or read-quality fields because those are downstream outputs or later nodes. I also avoided any fields already generated for the sample entity by keeping the schema focused on lysis method, reagent and mechanical settings, duration, and a process-level success indicator. Because the agent is a researcher, no software fields were added here.",
+      "md_schema": [
+        {
+          "field_id": "chemical_lysis_reagents",
+          "descr": "Chemical reagents used during sample lysis to disrupt marine microbial cells and release nucleic acids, recorded at the preparation step before sequencing library generation. Include reagent names and, if possible, key concentrations in a single string (for example, SDS, lysozyme, proteinase K).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mechanical_disruption_method",
+          "descr": "Mechanical disruption technique applied during lysis, recorded during the sample preparation step. Use a controlled term describing the primary method used to break cells (for example, bead beating, homogenization, sonication).",
+          "type": "categorical",
+          "allowed_values": [
+            "bead_beating",
+            "homogenization",
+            "sonication",
+            "grinding",
+            "combined_methods"
+          ]
+        },
+        {
+          "field_id": "mechanical_disruption_duration_seconds",
+          "descr": "Duration of the mechanical disruption phase, measured in seconds during sample lysis preparation. Typical values depend on method and sample type and may range from a few seconds to several minutes.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_temperature_celsius",
+          "descr": "Temperature at which the combined chemical and mechanical lysis was carried out, measured during the sample preparation step in degrees Celsius. Typical values may range from 4 to 65 C depending on reagent and protocol.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_buffer_composition",
+          "descr": "Description of the lysis buffer or suspension medium used during chemical/mechanical disruption, recorded at the preparation step. Include buffer name and notable components if applicable.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "post_lysis_material_yield_ng",
+          "descr": "Approximate nucleic-acid-containing material recovered after lysis preparation, measured immediately after disruption and before sequencing library construction, in nanograms. Typical values depend on biomass and extraction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "lysis_success_flag",
+          "descr": "Indicates whether the combined chemical and mechanical disruption produced material suitable for downstream sequencing preparation, assessed at the end of the lysis step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sequencing_ready_dna_library": {
+      "reasoning": "This Entity node should describe the prepared sequencing-ready DNA library as an intrinsic material state, not the sequencing act or downstream read files. I included fields that capture the library's identity, structural preparation state, insert characteristics, pooling/loading readiness, and basic material quality because these properties define what the library is. I excluded lysis protocol details because those belong to the upstream Process node, and I excluded instrument settings, raw reads, and computed quality metrics because those belong to Capture, Signal, or Derivative nodes. I also avoided repeating collection-site or sample-context fields from the upstream sample entity and avoided software/process agent fields because this node is not an operation.",
+      "md_schema": [
+        {
+          "field_id": "library_id",
+          "descr": "Unique identifier for the sequencing-ready DNA library derived from the marine sample, formatted as a local library label or accession-like string (for example, LIB-001 or sampleA_lib1). This identifies the prepared material instance and is distinct from the original sample identifier.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_construction_method",
+          "descr": "Library preparation strategy used to convert extracted nucleic acids into a sequencing-ready DNA library, recorded as the final prepared material type. Include the method name or kit category if relevant (for example, shotgun metagenomic DNA library).",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "insert_size_bp",
+          "descr": "Approximate average insert size of the sequencing-ready DNA library in base pairs, measured after library construction and before sequencing. Typical metagenomic libraries may range from a few hundred bp to several kb depending on platform and protocol.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_concentration_ng_per_ul",
+          "descr": "Concentration of the final sequencing-ready DNA library, measured after library preparation and before instrument loading, in nanograms per microliter. Typical values vary by platform and pooling strategy.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_fragmentation_state",
+          "descr": "Qualitative description of the DNA fragmentation state in the prepared library, assessed at the end of library construction. Use this to indicate whether the library is intact, fragmented, size-selected, or otherwise prepared for sequencing.",
+          "type": "categorical",
+          "allowed_values": [
+            "intact",
+            "fragmented",
+            "size_selected",
+            "amplified",
+            "mixed"
+          ]
+        },
+        {
+          "field_id": "sequencing_platform_compatibility",
+          "descr": "Sequencing platform class for which this library was prepared and is suitable, specified as the intended platform compatibility rather than the instrument itself. Record the platform family used downstream, for example Illumina, Oxford Nanopore, or PacBio.",
+          "type": "categorical",
+          "allowed_values": [
+            "illumina",
+            "oxford_nanopore",
+            "pacbio",
+            "other"
+          ]
+        },
+        {
+          "field_id": "library_ready_for_loading",
+          "descr": "Boolean flag indicating whether the prepared DNA library passed basic pre-sequencing checks and was deemed ready for loading onto the sequencing instrument.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "high_throughput_sequencing": {
+      "reasoning": "This Capture node should describe the sequencing session and instrument configuration used to read the prepared DNA library. I included fields for the hardware identity, configured platform type, run parameters, and run-level quality/status because these are active capture settings and instrument descriptors. I excluded sample, library, and raw file properties because those belong to upstream Entity nodes or downstream Signal nodes. I also avoided software fields here, since the instruction says software name, version, and repository belong to Process nodes, not Capture nodes. The fields are chosen to let downstream users understand exactly how the raw metagenomic reads were acquired and to compare runs across instruments and sequencing chemistries.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for the capture session, recorded for the specific high-throughput sequencing run. Examples include Illumina, Oxford Nanopore Technologies, or Pacific Biosciences.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model name of the sequencing instrument used to generate the raw metagenomic reads, recorded at the capture step. Examples include NovaSeq 6000, MinION, PromethION, or Sequel II.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Serial number of the sequencing instrument used for this capture session, recorded from the instrument label or run log. Use the manufacturer-assigned identifier as a string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or platform chemistry used during the run, recorded at the time of capture. This describes the configured sequencing mode, not the sample or output file format.",
+          "type": "categorical",
+          "allowed_values": [
+            "short_read",
+            "long_read",
+            "paired_end",
+            "single_end",
+            "other"
+          ]
+        },
+        {
+          "field_id": "read_length_bp",
+          "descr": "Configured or expected read length in base pairs for the sequencing run, measured or specified during the capture session. Typical values depend on platform, for example 150 bp paired-end or multi-kb long reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "flowcell_or_chip_id",
+          "descr": "Identifier of the flowcell, chip, or equivalent consumable used for this sequencing run, recorded during instrument setup. Use the platform-specific consumable ID as a string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_duration_hours",
+          "descr": "Duration of the sequencing capture session in hours, measured from run start to run completion. Typical values vary by platform and chemistry.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_status",
+          "descr": "Outcome of the sequencing session, assessed at the end of capture. Use this to indicate whether the run completed successfully or had a failure state relevant to raw read generation.",
+          "type": "categorical",
+          "allowed_values": [
+            "successful",
+            "partial",
+            "failed",
+            "interrupted"
+          ]
+        }
+      ]
+    },
+    "raw_metagenomic_reads": {
+      "reasoning": "This Signal node should describe the raw data artefact itself, so I included file and storage properties plus technical file-level quality metrics that characterize the read output. I excluded sequencing instrument settings because those belong to the upstream Capture node, and I excluded filtering, assembly, or biological interpretation fields because those belong to downstream Process and Derivative nodes. I also avoided duplicating sample or library identity fields already established upstream. The fields focus on what a downstream user needs to locate, validate, and reuse the raw metagenomic read files.",
+      "md_schema": [
+        {
+          "field_id": "raw_read_file_format",
+          "descr": "File format of the raw metagenomic reads produced by the sequencing run, recorded for the digital artefact itself. Common examples include FASTQ, BAM, or SRA; use the primary deposited raw-read format for this signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fasta",
+            "bam",
+            "sra",
+            "other"
+          ]
+        },
+        {
+          "field_id": "raw_read_file_size_bytes",
+          "descr": "Total size of the raw metagenomic read file or file bundle, measured in bytes at the time of storage or deposition. This is a technical file property of the signal, not a biological quantity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_file_count",
+          "descr": "Number of individual raw read files associated with the sequencing output, recorded for the raw signal artifact. For example, paired-end runs may produce two files per library, while multiplexed outputs may include more.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_total_bases_bp",
+          "descr": "Total number of base pairs represented in the raw metagenomic reads, calculated from the raw signal files after sequencing output is generated. Typical values depend on instrument yield and project scale.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_n50_bp",
+          "descr": "Read-length N50 for the raw metagenomic read set, measured from the raw sequence artefact. This summarizes the distribution of raw read lengths and is reported in base pairs.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "raw_read_quality_flag",
+          "descr": "Technical quality flag assigned to the raw metagenomic read files, indicating whether the signal is complete and usable at the file level. Use this for file integrity or run-output status, not scientific filtering.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "failed",
+            "incomplete"
+          ]
+        },
+        {
+          "field_id": "raw_read_storage_location",
+          "descr": "Storage location or accession where the raw metagenomic reads are archived, such as a repository path, object-store URI, or accession code. Use a string containing the exact location used for retrieval.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "read_quality_filtering": {
+      "reasoning": "This Process node should capture how raw reads were transformed by filtering and trimming, along with the software agent used. I included parameters that define the filtering operation and a process-level output quality indicator because these are characteristics of the transformation itself. I excluded raw file format, size, and storage fields because those belong to the Signal node, and I excluded assembled contigs or genome metrics because those are downstream Derivative outputs. I also avoided repeating library or sequencing instrument settings already described upstream. The software agent was specified in the DAG, so I included software name/version/repository style fields only for the process node per instruction.",
+      "md_schema": [
+        {
+          "field_id": "filtering_software_name",
+          "descr": "Name of the software used to quality-trim, adapter-remove, and filter the raw metagenomic reads at this process step. Record the exact tool name used in the workflow, for example fastp.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_software_version",
+          "descr": "Version of the read filtering software used in this process, recorded at execution time. Use the exact software version string, for example 0.23.4.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtering_software_repository",
+          "descr": "Source repository or package location for the read filtering software used in this process, recorded as a URL, package reference, or commit location when available. This identifies the executable implementation used for the transformation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adapter_trimming_enabled",
+          "descr": "Indicates whether adapter trimming was enabled during read quality filtering, assessed as a process parameter. Set to true when adapter sequences were removed as part of the filtering step.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_trim_threshold_phred",
+          "descr": "Phred quality threshold used to trim low-quality bases during read filtering, measured as a process parameter on the quality score scale. Typical values are commonly in the range of 15 to 30 depending on workflow stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_postfilter_read_length_bp",
+          "descr": "Minimum retained read length in base pairs after filtering and trimming, specified as a process cutoff for the output reads. Reads shorter than this threshold are discarded during the filtering step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_retention_rate_percent",
+          "descr": "Percentage of raw reads or bases retained after quality filtering, calculated at the end of the process step. This is a process-level output quality indicator and not a raw file property.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "filtered_metagenomic_reads": {
+      "reasoning": "This Signal node should describe the processed read artefact after filtering, so I included file-level properties and technical quality metrics that characterize the filtered dataset. I excluded filtering parameters and software because those belong to the upstream Process node, and I excluded assembly inputs/outputs or biological interpretation because those belong downstream. I also avoided repeating raw-read file fields where the meaning would duplicate the upstream raw signal, and I kept the schema focused on how the filtered reads are stored, sized, and technically assessed for reuse in assembly.",
+      "md_schema": [
+        {
+          "field_id": "filtered_read_file_format",
+          "descr": "File format of the filtered metagenomic reads after quality trimming and adapter removal, recorded for the processed sequence artefact. Common examples include FASTQ, BAM, or SRA; use the primary format stored for this filtered signal.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fasta",
+            "bam",
+            "sra",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filtered_read_file_size_bytes",
+          "descr": "Total size of the filtered metagenomic read file or file bundle, measured in bytes after read quality filtering. This is a technical file property of the signal, not a biological quantity.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_total_bases_bp",
+          "descr": "Total number of base pairs retained in the filtered metagenomic reads, calculated after quality filtering and trimming. This is a signal-level quantity used to summarize the usable sequencing content entering assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_count",
+          "descr": "Number of reads retained after quality filtering, counted in the processed signal artifact before assembly. Use the total number of read records remaining after adapters and low-quality bases are removed.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "filtered_read_quality_flag",
+          "descr": "Technical quality flag for the filtered metagenomic read set, indicating whether the processed reads passed file-level checks for downstream assembly use. This is not a scientific interpretation of the sample.",
+          "type": "categorical",
+          "allowed_values": [
+            "pass",
+            "suspect",
+            "failed",
+            "incomplete"
+          ]
+        },
+        {
+          "field_id": "filtered_read_storage_location",
+          "descr": "Storage location or accession where the filtered metagenomic reads are archived for reuse in assembly, such as a repository path, object-store URI, or accession code. Use the exact retrieval location as a string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenome_assembly": {
+      "reasoning": "This Process node should capture how filtered reads were assembled into contigs, including the assembly software agent and key run parameters. I included assembly software identity, version, repository, algorithmic settings, and a process-level assembly success/quality indicator because these describe the transformation itself. I excluded contig sizes, N50, and file properties because those belong to the downstream assembled_contigs Derivative node. I also avoided repeating upstream sample, library, sequencing, or filtered-read file metadata. The fields are tailored to let users reproduce the assembly step without describing the resulting contig artifact on this node.",
+      "md_schema": [
+        {
+          "field_id": "assembly_software_name",
+          "descr": "Name of the metagenomic assembly software used to assemble filtered reads into contigs and genomic fragments. Record the exact tool name used in the workflow, for example MEGAHIT or metaSPAdes.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_version",
+          "descr": "Version of the assembly software used at the time the metagenome assembly was performed. Use the exact software version string, for example 1.2.9 or 3.15.5.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_software_repository",
+          "descr": "Source repository or package location for the assembly software used in this process, recorded as a URL, package reference, or commit location when available. This identifies the implementation used for the assembly transformation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "kmer_sizes",
+          "descr": "K-mer sizes used during the metagenome assembly run, recorded as the assembler configuration parameter. Provide the set of integer k-mer values selected for the assembly workflow, for example 21,33,55,77.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_contig_length_bp",
+          "descr": "Minimum contig length threshold set during assembly, measured in base pairs. Contigs shorter than this cutoff are not retained or reported by the assembler.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_mode",
+          "descr": "High-level assembly strategy used for the filtered reads, describing how the assembler was configured for this process step. Use a controlled term that reflects the assembly approach rather than the output.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_sample",
+            "coassembly",
+            "hybrid",
+            "iterative",
+            "other"
+          ]
+        },
+        {
+          "field_id": "assembly_success_flag",
+          "descr": "Boolean flag indicating whether the metagenome assembly completed successfully and produced usable contig output for downstream binning. Assess this at the end of the process step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "assembled_contigs": {
+      "reasoning": "This Derivative node should describe the computed contig artifact itself, not the assembly software or parameters that created it. I included contig file properties, sequence-length summary metrics, and technical completeness/quality indicators because those are intrinsic to the assembled output. I excluded upstream read-filtering and assembly-process settings because those belong to the Process nodes, and I did not repeat raw-read file metadata. The fields are intended to let a downstream user inspect, store, and compare the assembled contig set before binning/refinement.",
+      "md_schema": [
+        {
+          "field_id": "contig_file_format",
+          "descr": "File format of the assembled contig sequences produced from the filtered metagenomic reads, recorded for the derivative artifact. Common examples include FASTA, FASTQ, or compressed FASTA; use the primary format stored for the contig set.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "fastq",
+            "compressed_fasta",
+            "other"
+          ]
+        },
+        {
+          "field_id": "contig_file_size_bytes",
+          "descr": "Total size of the assembled contig file or file bundle, measured in bytes for the derivative artifact. This is a technical property of the contig data set, not a biological summary.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_count",
+          "descr": "Number of contigs generated by the assembly process and retained in the assembled contig set. Count this at the point the derivative output is finalized.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_contig_length_bp",
+          "descr": "Sum of the lengths of all contigs in the assembled contig set, measured in base pairs. This is a derivative-level sequence summary calculated from the output contig sequences.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_n50_bp",
+          "descr": "Contig N50 value for the assembled contig set, measured in base pairs. Record this computed quality summary for the final assembled contig artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "max_contig_length_bp",
+          "descr": "Length of the longest contig in the assembled contig set, measured in base pairs. This describes the final derivative output after assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contig_storage_location",
+          "descr": "Storage location or accession for the assembled contig dataset, such as a repository path, object-store URI, or accession code. Use the exact retrieval location as a string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "binning_and_refinement": {
+      "reasoning": "This Process node should describe how assembled contigs were grouped and refined into MAGs, including the binning/refinement software agent and key algorithmic parameters. I included software identity, version, repository, binning strategy, threshold settings, and a process-level success indicator because these define the transformation from contigs to genome bins. I excluded contig-level file properties and MAG-level completeness/contamination metrics because those belong to the input Derivative or the output Derivative nodes. I also avoided repeating upstream assembly settings or downstream quality-assessment fields. The schema is designed to support reproducibility of the binning/refinement step without describing the resulting MAGs themselves.",
+      "md_schema": [
+        {
+          "field_id": "binning_software_name",
+          "descr": "Name of the software used to bin assembled contigs into draft genome bins during this process step. Record the exact tool name used in the workflow, for example MetaBAT2 or DAS Tool.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_version",
+          "descr": "Version of the binning or refinement software used during this process. Use the exact version string recorded at run time, for example 2.15 or 1.1.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_software_repository",
+          "descr": "Source repository or package location for the binning/refinement software used in this process, recorded as a URL, package reference, or commit location when available. This identifies the implementation used for the binning transformation.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_method",
+          "descr": "High-level binning strategy used to group assembled contigs into genome bins, recorded as the method category applied at this step. Use a controlled term that reflects the algorithmic approach rather than the output genomes.",
+          "type": "categorical",
+          "allowed_values": [
+            "composition_based",
+            "coverage_based",
+            "differential_coverage",
+            "hybrid",
+            "consensus_refinement",
+            "other"
+          ]
+        },
+        {
+          "field_id": "minimum_contig_length_for_binning_bp",
+          "descr": "Minimum contig length threshold used for binning, measured in base pairs. Contigs shorter than this cutoff are excluded from the binning/refinement step.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_refinement_threshold",
+          "descr": "Key threshold used to refine or select genome bins, such as completeness cutoff, contamination cutoff, or ensemble agreement threshold, recorded as a process parameter. If multiple thresholds were used, encode them in a single string with units or percent values.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "binning_success_flag",
+          "descr": "Boolean flag indicating whether the binning and refinement step completed successfully and produced usable genome bins for downstream quality assessment. Assess this at the end of the process step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenome_assembled_genomes": {
+      "reasoning": "This Derivative node should describe the MAG output artifact itself, not the binning/refinement process or later quality assessment. I included fields for genome-bin identity, file/storage properties, taxonomic assignment, and output-level sequence summaries because these are intrinsic characteristics of the reconstructed draft genomes. I excluded upstream assembly/binning parameters and downstream completeness/contamination metrics because those belong to Process or quality-assessment nodes. I also avoided repeating sample or read metadata already established elsewhere in the DAG. The fields are intended to let downstream users retrieve, compare, and interpret the MAG set as a computed genome resource.",
+      "md_schema": [
+        {
+          "field_id": "mag_set_id",
+          "descr": "Identifier for the metagenome-assembled genome set produced by the binning workflow, formatted as a string such as MAG-001 or project-specific bin set label. This identifies the MAG collection as a derivative artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_count",
+          "descr": "Number of draft genomes included in the metagenome-assembled genome set, counted at the point the derivative output is finalized. This summarizes how many MAG bins were retained.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_file_format",
+          "descr": "File format used to store the metagenome-assembled genomes, recorded for the derivative genome artifact. Common examples include FASTA or compressed FASTA; use the primary deposited format.",
+          "type": "categorical",
+          "allowed_values": [
+            "fasta",
+            "compressed_fasta",
+            "genbank",
+            "other"
+          ]
+        },
+        {
+          "field_id": "mag_file_size_bytes",
+          "descr": "Total size of the MAG file or file bundle, measured in bytes for the final reconstructed genome artifact. This is a technical file property, not a biological metric.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_storage_location",
+          "descr": "Storage location or accession where the metagenome-assembled genomes are archived, such as a repository path, object-store URI, or accession code. Use the exact retrieval location as a string.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dominant_taxonomic_assignment",
+          "descr": "Most specific taxonomic label assigned to the MAG set or a representative MAG, recorded as the best available classification at the time the derivative artifact is produced. Examples include genus, family, or species-level labels when supported.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "mag_total_sequence_length_bp",
+          "descr": "Total length of the reconstructed genome sequences in the MAG set, measured in base pairs. Report this as the sum of contig lengths comprising the final MAG artifact.",
+          "type": "int",
+          "allowed_values": []
+        }
+      ]
+    },
+    "genome_quality_assessment": {
+      "reasoning": "This Process node should capture the computational evaluation performed on the reconstructed MAGs, along with the software agent used. I included software identity fields, the quality metrics that were explicitly assessed, and a process-level pass/fail outcome because these describe the assessment operation rather than the genomes themselves. I excluded genome file properties and taxonomic identity because those belong to the MAG Derivative node, and I did not repeat assembly or binning settings from upstream nodes. The schema is focused on reproducible reporting of how the genome quality assessment was conducted and what thresholds were used to judge genome reliability.",
+      "md_schema": [
+        {
+          "field_id": "quality_assessment_software_name",
+          "descr": "Name of the software used to evaluate genome completeness, contamination, and assembly quality for the reconstructed genomes. Record the exact tool name used in the workflow, for example CheckM2 or QUAST.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_software_version",
+          "descr": "Version of the quality assessment software used during this process step. Use the exact version string recorded at run time, for example 1.0.2 or 5.2.0.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_software_repository",
+          "descr": "Source repository or package location for the quality assessment software, recorded as a URL, package reference, or commit location when available. This identifies the implementation used for the evaluation process.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent_threshold",
+          "descr": "Minimum completeness threshold used to judge genome quality during the assessment step, expressed as a percentage. Typical MAG workflows often use thresholds such as 50, 70, or 90 percent depending on downstream use.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent_threshold",
+          "descr": "Maximum contamination threshold used to judge genome quality during the assessment step, expressed as a percentage. Typical MAG workflows often require low contamination, for example below 5 or 10 percent.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assembly_quality_metric",
+          "descr": "Primary assembly-quality metric evaluated during genome assessment, recorded as the metric name or a compact string summarizing the chosen measure. Examples may include N50, number of contigs, or misassembly count if reported by the software.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "quality_assessment_pass_flag",
+          "descr": "Boolean flag indicating whether the reconstructed genomes passed the quality assessment criteria and were accepted for downstream interpretation. Assess this at the end of the process step.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "quality_metrics_report": {
+      "reasoning": "This Derivative node should contain the computed quality report itself, not the assessment software or threshold settings used to generate it. I included the reported completeness, contamination, assembly-quality summaries, and the final quality class because these are the output metrics that users need to judge MAG reliability. I excluded software/version/repository and threshold parameters because those belong to the upstream quality-assessment Process node. I also avoided repeating genome identity or file storage details already represented in the MAG derivative node. The fields are structured so a downstream user can interpret the report independently of the software that produced it.",
+      "md_schema": [
+        {
+          "field_id": "report_id",
+          "descr": "Unique identifier for the genome quality metrics report, formatted as a local report label or accession-like string (for example, QMR-001). This identifies the derived assessment output as a separate artifact.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "completeness_percent",
+          "descr": "Estimated genome completeness reported for the metagenome-assembled genome, expressed as a percentage. This is the computed quality metric used to judge how much of the expected genome content is present in the draft genome.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "contamination_percent",
+          "descr": "Estimated contamination reported for the metagenome-assembled genome, expressed as a percentage. This is the computed metric indicating the proportion of sequence content likely derived from other genomes.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "n50_bp",
+          "descr": "N50 value reported in the quality metrics output for the genome assembly, measured in base pairs. This is a derived summary of contiguity for the evaluated MAG or associated assembly.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "number_of_contigs",
+          "descr": "Number of contigs reported in the genome quality metrics output for the evaluated MAG. This describes the complexity of the reconstructed genome as presented in the assessment report.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "checkm2_quality_class",
+          "descr": "Overall genome quality class reported by the assessment workflow, used to summarize the reliability of the MAG. Use the class labels returned by the quality assessment software or report standard.",
+          "type": "categorical",
+          "allowed_values": [
+            "high_quality",
+            "medium_quality",
+            "low_quality",
+            "contaminated",
+            "discarded",
+            "other"
+          ]
+        },
+        {
+          "field_id": "quality_report_storage_location",
+          "descr": "Storage location or accession for the genome quality metrics report, such as a repository path, object-store URI, or accession code. Use the exact retrieval location as a string.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}

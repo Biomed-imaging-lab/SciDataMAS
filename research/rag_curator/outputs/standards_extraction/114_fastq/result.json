@@ -1,0 +1,224 @@
+{
+  "record_id": "114",
+  "record_dir": "114_fastq",
+  "standards": [
+    {
+      "standard_id": "fastq-sanger",
+      "name": "Sanger FASTQ format",
+      "abstract": "FASTQ is a concise text file format for storing sequencing reads together with per-base Phred quality scores. The specification describes the four-line record structure (header, sequence, plus-line, quality string), allowed characters and syntactic constraints for each field, and the Sanger Phred+33 quality encoding; it also notes the Solexa/Illumina variants that use a different quality scaling. The material comes from the original Sanger/Maq FASTQ specification and is also described in community publications and Open Bioinformatics Foundation resources, intended as a reference for producers and consumers of sequencing read data.",
+      "classification": {
+        "assigned_types": [
+          "table"
+        ],
+        "fairsharing_record_type_hint": null,
+        "rationale": "The source provides concrete, field-level structure and formal syntax for FASTQ records (named non-terminals <seqname>, <seq>, <qual>, and a <block> construct) including regex-like character classes and explicit encoding formulas. These are concrete data fields with defined formats rather than prose reporting guidance, so the content is best represented as a MetadataTable."
+      },
+      "principles": null,
+      "dag": null,
+      "table": {
+        "fields": {
+          "fastq.block": {
+            "name": "FASTQ block (record)",
+            "descr": "A FASTQ record consisting of four lines in the order: header line starting with '@' and sequence name, sequence line, a '+' line (optionally followed by sequence name), and the quality string line.",
+            "type": "object (header:string, sequence:string, plus_line:string, quality:string)",
+            "possible_values": null,
+            "evidence": "\"<block> := @<seqname>\\n<seq>\\n+\\n[<seqname>]\\n<qual>\\n\"",
+            "raw_full_info": {
+              "syntax_snippet": "<block> := @<seqname>\\n<seq>\\n+\\n[<seqname>]\\n<qual>\\n"
+            }
+          },
+          "seqname": {
+            "name": "seqname (header identifier)",
+            "descr": "The sequence identifier that follows '@' on the header line; constrained to a specific set of characters.",
+            "type": "string (regex)",
+            "possible_values": null,
+            "evidence": "\"<seqname> := [ A - Za - z0 - 9_.:- ]+\"",
+            "raw_full_info": {
+              "pattern_note": "<seqname> is given by a character class in the spec"
+            }
+          },
+          "seq": {
+            "name": "seq (nucleotide sequence)",
+            "descr": "The nucleotide sequence line; allowed characters are specified by the grammar.",
+            "type": "string (regex)",
+            "possible_values": null,
+            "evidence": "\"<seq> := [ A-Za-z\\n\\\\.~ ]+\"",
+            "raw_full_info": {
+              "pattern_note": "<seq> allowed characters per spec"
+            }
+          },
+          "qual": {
+            "name": "qual (quality string)",
+            "descr": "The ASCII-encoded quality string where each character represents the Phred quality of the corresponding nucleotide in <seq>.",
+            "type": "string (regex)",
+            "possible_values": null,
+            "evidence": "\"<qual> := [ ! - ~\\n ]+\"",
+            "raw_full_info": {
+              "pattern_note": "<qual> allowed ASCII range per spec"
+            }
+          },
+          "plus_line_seqname": {
+            "name": "plus_line_seqname (optional)",
+            "descr": "An optional sequence name appearing immediately after the '+' on the third line; if present it must match the header seqname.",
+            "type": "string (optional, must equal seqname if present)",
+            "possible_values": null,
+            "evidence": "\"The <seqname> following '+' is optional, but if it appears\\n\\tright after '+', it should be identical to the <seqname>\\n\\tfollowing '@'.\"",
+            "raw_full_info": {
+              "requirement_note": "Optional presence, identity constraint if present"
+            }
+          },
+          "seq_length_equals_qual_length": {
+            "name": "sequence_and_quality_length_equality (constraint)",
+            "descr": "The nucleotide sequence length must equal the quality string length; each quality character corresponds to one nucleotide position.",
+            "type": "boolean (constraint)",
+            "possible_values": [
+              "true"
+            ],
+            "evidence": "\"The length of <seq> is identical the length of\\n\\t<qual>. Each character in <qual> represents the phred\\n\\tquality of the corresponding nucleotide in <seq>.\"",
+            "raw_full_info": {
+              "constraint": "len(seq) == len(qual)"
+            }
+          },
+          "phred_encoding_offset": {
+            "name": "Phred encoding offset (Sanger)",
+            "descr": "Mapping between Phred quality integer Q and ASCII character in Sanger FASTQ uses an offset of 33 (Phred+33).",
+            "type": "integer",
+            "possible_values": null,
+            "evidence": "\"$q = chr(($Q<=93? $Q : 93) + 33);\"",
+            "raw_full_info": {
+              "perldata": "$q = chr(($Q<=93? $Q : 93) + 33);"
+            }
+          },
+          "phred_from_char_formula": {
+            "name": "Phred from ASCII character (Sanger)",
+            "descr": "Conversion from ASCII quality character to Phred integer Q for Sanger encoding.",
+            "type": "integer (computed)",
+            "possible_values": null,
+            "evidence": "\"$Q = ord($q) - 33;\"",
+            "raw_full_info": {
+              "perldata": "$Q = ord($q) - 33;"
+            }
+          },
+          "phred_Q_max": {
+            "name": "Phred maximum clamp",
+            "descr": "The specification clamps Phred values above 93 to 93 when encoding to an ASCII character.",
+            "type": "integer",
+            "possible_values": null,
+            "evidence": "\"($Q<=93? $Q : 93)\"",
+            "raw_full_info": {
+              "note": "Q values above 93 are clamped to 93 before adding 33"
+            }
+          },
+          "quality_encoding_scheme": {
+            "name": "quality_encoding_scheme (variant)",
+            "descr": "Indicates whether the quality string uses Sanger Phred+33 encoding or the Solexa/Illumina variant with different scaling; conversion formulas differ.",
+            "type": "enum",
+            "possible_values": [
+              "Sanger (Phred+33)",
+              "Solexa/Illumina (Solexa scale)"
+            ],
+            "evidence": "\"Although Solexa/Illumina read file looks pretty much like FASTQ, they are\\n\\tdifferent in that the qualities are scaled differently. In the quality\\n\\tstring, if you can see a character with its ASCII code higher than 90,\\n\\tprobably your file is in the Solexa/Illumina format.\"",
+            "raw_full_info": {
+              "solexa_formula": "Given a character $sq, the following Perl code gives the Phred quality $Q:\\n$Q = 10 * log(1 + 10 ** (ord($sq) - 64) / 10.0)) / log(10);"
+            }
+          }
+        }
+      },
+      "provenance": [
+        {
+          "source": "site",
+          "locator": "00_page.html",
+          "url": "https://maq.sourceforge.net/fastq.shtml"
+        },
+        {
+          "source": "site",
+          "locator": "01_page.html",
+          "url": "https://www.open-bio.org/2009/12/17/nar-fastq-format/"
+        }
+      ],
+      "dag_validation": null,
+      "status": "ok",
+      "notes": null
+    },
+    {
+      "standard_id": "fastq-solexa-illumina",
+      "name": "Solexa/Illumina FASTQ variant (Maq / fq_all2std.pl guidance)",
+      "abstract": "This material concerns short-read sequencing data produced by Illumina/Solexa instruments, recorded as FASTQ-like text files whose quality strings use the Solexa/Illumina quality scale rather than the Sanger/Phred scale. The Maq manual and associated fq_all2std.pl script (author: lh3) document how Maq expects Sanger-scaled FASTQ input and provide detection methods and utilities to convert Solexa/Illumina and other FASTQ-like formats into the standard/Sanger FASTQ. The content addresses practical problems (detection of Solexa-encoded qualities, conversion algorithms/tables, and recommended usage such as using calibrated qualities) and is distributed with Maq under the GNU Public License.",
+      "classification": {
+        "assigned_types": [
+          "principle"
+        ],
+        "fairsharing_record_type_hint": null,
+        "rationale": "The source material is primarily prose guidance and a conversion script describing what to report/do (instructions and recommendations), not a field-level metadata table or an explicit ordered workflow. It provides instructions and explanatory formulas rather than a table of named metadata fields or a DAG of processing stages."
+      },
+      "principles": [
+        {
+          "principle": "Solexa/Illumina quality scores are not the same as Phred (Sanger) qualities and must be converted to Phred for tools expecting Sanger FASTQ.",
+          "evidence": "Solexa quality is NOT Phred quality. The Solexa quality and Phred quality are asymptotically identical. If the error probability of a base is $e, the Solexa quality $sQ is: $sQ = -10 * log($e / (1 - $e)) / log(10); Solexa quality $sQ can be converted to Phred quality $Q with this formula: $Q = 10 * log(1 + 10 ** ($sQ / 10.0)) / log(10); Phred quality can never be negative, but Solexa quality can be negative. This is the most effective way to tell what type of quality is used."
+        },
+        {
+          "principle": "Maq requires Solexa-format reads to be converted before use; failure to convert leads to unreliable SNP calling.",
+          "evidence": "The raw reads format used by Solexa (those `s_?_sequence.txt' from the Solexa pipeline) are different from mapass' FASTQ format in that the qualties are scaled differently. To use maq, you need to first convert the format with: maq sol2sanger s_1_sequence.txt s_1_sequence.fastq where s_1_sequence.txt is the Solexa read sequence file. Missing this step will lead to unreliable SNP calling."
+        },
+        {
+          "principle": "Detection heuristic: a quality string containing characters with ASCII code > 90 likely indicates Solexa/Illumina-encoded qualities.",
+          "evidence": "In the quality string, if you can see a character with its ASCII code higher than 90, probably your file is in the Solexa/Illumina format."
+        },
+        {
+          "principle": "FASTQ lines convention: read and quality sequences must be presented in one line each for the conversion scripts/tools to work properly.",
+          "evidence": "Note:    Read/quality sequences MUST be presented in one line."
+        },
+        {
+          "principle": "Conversion utilities are provided (in Maq and in fq_all2std.pl) to convert Solexa/Illumina and other FASTQ-like formats into standard/Sanger FASTQ.",
+          "evidence": "Command: ... sol2std        Convert Solexa/Illumina FASTQ to the standard FASTQ"
+        },
+        {
+          "principle": "The fq_all2std.pl script (author 'lh3') implements a Solexa->Sanger conversion table to translate quality encodings programmatically.",
+          "evidence": "# Solexa->Sanger quality conversion table"
+        },
+        {
+          "principle": "FASTQ format and conventions: the Sanger FASTQ is taken as the standard; other formats (Solexa, SCARF, integer-encoded qualities) exist and the script documents examples and instructions for conversion.",
+          "evidence": "FASTQ format is first used in the Sanger Institute, and therefore we take the Sanger specification as the standard FASTQ. Although Solexa/Illumina reads file looks pretty much like the standard FASTQ, they are different in that the qualities are scaled differently. In the quality string, if you can see a character with its ASCII code higher than 90, probably your file is in the Solexa/Illumina format.\n\nSometimes we also use an integer, instead of a single character, to explicitly show the qualities. In that case, negative qualities indicates that Solexa/Illumina qualities are used."
+        },
+        {
+          "principle": "Prefer using calibrated quality values when possible, since calibrated qualities are more accurate than raw qualities.",
+          "evidence": "I usually recommend to use calibrated qualities if possible."
+        },
+        {
+          "principle": "The Maq/fq_all2std tools and source are distributed under GPL and available from SourceForge (i.e., freely available to users).",
+          "evidence": "Maq is distributed under GNU Public License (GPL). All its source codes are freely available to both academic and commercial users. The latest version can be downloaded at the SourceForge download page."
+        }
+      ],
+      "dag": null,
+      "table": null,
+      "provenance": [
+        {
+          "source": "site",
+          "locator": "03_page.html",
+          "url": "https://maq.sourceforge.net/maq-man.shtml"
+        },
+        {
+          "source": "site",
+          "locator": "08_page.html",
+          "url": "https://maq.sourceforge.net/qual.shtml"
+        },
+        {
+          "source": "artifact",
+          "locator": "05_fq_all2std.pl",
+          "url": "https://maq.sourceforge.net/fq_all2std.pl"
+        }
+      ],
+      "dag_validation": null,
+      "status": "ok",
+      "notes": "Extraction drawn from the Maq manual (workflow and 'sol2sanger' recommendation), the 'Understanding Qualities' documentation (formulas and recommendations), and the fq_all2std.pl Perl script (usage, conversion table, and instruction text). The original material includes example commands and example input blocks which illustrate detection and conversion in practice."
+    }
+  ],
+  "status": "ok",
+  "failure_reason": null,
+  "stage1_manifest_status": "ok",
+  "processed_at": "2026-08-08T10:32:07.091643+00:00",
+  "model_versions": {
+    "text": "gpt-5-mini",
+    "vision": "gpt-4o-mini"
+  }
+}

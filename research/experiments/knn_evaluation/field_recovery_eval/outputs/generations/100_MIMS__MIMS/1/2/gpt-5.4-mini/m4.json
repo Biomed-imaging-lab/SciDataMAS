@@ -1,0 +1,936 @@
+{
+  "md_name": "Freshwater Lake Metagenomic Workflow",
+  "md_description": "This DAG represents collection and analysis of freshwater lake water samples from multiple sites, depths, and seasons. It includes field sampling, environmental measurements, nucleic acid extraction, metagenomic sequencing, and computational generation of microbial community profiles. The resulting data supports analysis of how freshwater microbial communities vary with temperature, dissolved oxygen, nutrients, and other environmental gradients.",
+  "fields_per_node": {
+    "freshwater_lake_water_sample": {
+      "reasoning": "This is an Entity node, so I included only intrinsic identity and origin/provenance fields for the collected lake water sample itself: where, when, and under what field context it was collected, plus basic sample identity needed to track it through downstream fractionation, measurements, extraction, and sequencing. I excluded any laboratory processing parameters, capture/instrument settings, raw file properties, or derived analysis outputs because those belong to downstream Process, Capture, Signal, or Derivative nodes. I also avoided duplicating fields that will likely appear on downstream nodes, such as filter settings, instrument model/version, file formats, and metagenomic results. Because no already_generated fields were provided here, I did not need to suppress overlaps with prior schema items, but I still kept the fields limited to the sample’s own descriptive territory and omitted environmental measurements themselves, which are represented by separate Capture/Signal nodes in the DAG.",
+      "md_schema": [
+        {
+          "field_id": "sample_id",
+          "descr": "Unique identifier for the collected freshwater lake water sample; use a stable string such as 'LLS-2024-07-15-003'. This is assigned at collection and used to link all downstream fractions, measurements, and sequence data back to the same physical sample.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "collection_date",
+          "descr": "Date the water sample was collected in the field, recorded at the sampling event in YYYY-MM-DD format. Typical values span the study season(s) and are used to anchor temporal comparisons across lakes and sampling campaigns.",
+          "type": "date",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_location_name",
+          "descr": "Human-readable name of the lake or site where the water was collected, such as a lake name, station name, or site code. Record the geographic source of the sample before any laboratory processing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_latitude",
+          "descr": "Geographic latitude of the collection point in decimal degrees (WGS84), measured or recorded at the field sampling location. Typical range for freshwater lake studies depends on study region; include sufficient precision for site-level discrimination.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_longitude",
+          "descr": "Geographic longitude of the collection point in decimal degrees (WGS84), measured or recorded at the field sampling location. Typical range for freshwater lake studies depends on study region; include sufficient precision for site-level discrimination.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sampling_depth_meters",
+          "descr": "Depth below the water surface at which the sample was collected, in meters, recorded at the moment of sampling. Typical values may include surface waters near 0 m through deeper strata depending on lake depth and study design.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "season",
+          "descr": "Season or sampling period associated with the collection event, used to represent broad temporal context of the field sample. Record the season relevant to the study design at the time of collection.",
+          "type": "categorical",
+          "allowed_values": [
+            "winter",
+            "spring",
+            "summer",
+            "autumn",
+            "dry_season",
+            "wet_season",
+            "other"
+          ]
+        },
+        {
+          "field_id": "collection_method",
+          "descr": "Field collection approach used to obtain the raw lake water sample, such as grab sample, depth-integrated sampling, or bottle sampling. Record the method at the time of collection before any fractionation or filtration.",
+          "type": "categorical",
+          "allowed_values": [
+            "grab_sample",
+            "depth_integrated_sample",
+            "bottle_sample",
+            "other"
+          ]
+        },
+        {
+          "field_id": "sample_matrix",
+          "descr": "Material type of the collected specimen, indicating that the sample is freshwater lake water prior to any processing. Use this to distinguish the source matrix from downstream fractions or extracts.",
+          "type": "categorical",
+          "allowed_values": [
+            "freshwater_lake_water"
+          ]
+        },
+        {
+          "field_id": "collection_notes",
+          "descr": "Free-text notes about field conditions specific to the sample, such as visible turbidity, ice cover, accessibility constraints, or deviations from the planned sampling procedure. Use only for contextual provenance information not captured by other fields.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "sample_fractionation": {
+      "reasoning": "This is a Process node, so I included only workflow parameters that describe how the collected water was fractionated for downstream assays and nucleic acid extraction: the fractionation method, filter characteristics or aliquoting mode, and the key operating settings needed to reproduce the preparation. I also included an output-quality indicator for the process itself, because process nodes may summarize whether the fractionation succeeded or met acceptance criteria. I excluded properties of the input sample (those belong to the Entity node), downstream prepared fraction or extracted material properties (those belong to the output Entity nodes), and any capture/file details. No already_generated fields were provided, so there were no explicit duplicate constraints beyond staying within process territory.",
+      "md_schema": [
+        {
+          "field_id": "fractionation_method",
+          "descr": "Primary preparation method used to partition the collected water before downstream environmental assays and nucleic acid extraction, recorded at the time the process is performed. Use this to indicate whether the sample was filtered, aliquoted, or otherwise divided for parallel workflows.",
+          "type": "categorical",
+          "allowed_values": [
+            "filtration",
+            "aliquoting",
+            "centrifugation_based_partition",
+            "other"
+          ]
+        },
+        {
+          "field_id": "filter_pore_size_micrometers",
+          "descr": "Nominal pore size of the filter used during fractionation, in micrometers, measured from the consumable specification used during the process. Applicable when fractionation_method is filtration; common values may include 0.22, 0.45, or 1.0 micrometers depending on the workflow.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionated_volume_milliliters",
+          "descr": "Volume of lake water processed in this fractionation step, in milliliters, recorded at the time of preparation. Use the actual input volume routed into the fractionation workflow so downstream users can understand yield and assay scale.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_duration_minutes",
+          "descr": "Elapsed time required to complete the fractionation step, in minutes, measured from start of filtration or aliquoting to completion. Typical values depend on sample volume and filter loading and are used to assess process efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_temperature_celsius",
+          "descr": "Approximate temperature of the sample during fractionation, in degrees Celsius, recorded during the process if temperature control or ambient processing conditions are relevant. Typical values reflect field or laboratory conditions and can influence downstream nucleic acid recovery.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_replicate_count",
+          "descr": "Number of fractionated aliquots or parallel filtrates produced from the same collected water sample during this process step. Record the count at the end of the fractionation operation.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fractionation_success",
+          "descr": "Process-level indication of whether the water fractionation completed successfully and produced material suitable for downstream assays and extraction. Record this immediately after the process finishes.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "prepared_water_fraction": {
+      "reasoning": "This is an Entity node representing the processed water fraction produced by sample_fractionation, so I included intrinsic properties of that prepared material and its provenance from the original sample. I focused on what the fraction physically is and how it can be tracked for downstream environmental assays and extraction workflows: fraction identity, originating sample link, fraction type, storage/holding conditions, and preservation status. I excluded processing parameters such as filter size, fractionation duration, or aliquoting method because those belong to the upstream Process node, and I excluded environmental measurement values and extraction outputs because those belong to downstream Capture/Signal and Process/Entity nodes. No already_generated fields were provided in this turn, so there were no direct field-name conflicts to avoid.",
+      "md_schema": [
+        {
+          "field_id": "prepared_fraction_id",
+          "descr": "Unique identifier for the prepared water fraction retained after sample fractionation, such as 'PF-2024-07-15-003A'. Use this string to track the processed material that enters environmental assays and nucleic acid extraction workflows.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "parent_sample_id",
+          "descr": "Identifier of the original freshwater lake water sample from which this prepared fraction was produced. Use the same sample identifier assigned at collection to preserve lineage from field sample to processed fraction.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "fraction_type",
+          "descr": "Descriptor of what portion of the collected water is represented by this prepared material, for example a filtered water fraction, retained aliquot, or assay-ready subsample. Record the material class as stored after processing.",
+          "type": "categorical",
+          "allowed_values": [
+            "filtered_fraction",
+            "aliquot",
+            "assay_ready_subsample",
+            "other"
+          ]
+        },
+        {
+          "field_id": "storage_condition",
+          "descr": "Condition under which the prepared fraction was held before downstream use, such as chilled, frozen, or ambient. Record the storage state at the time the fraction is archived or transferred to the next workflow step.",
+          "type": "categorical",
+          "allowed_values": [
+            "chilled_4c",
+            "frozen_-20c",
+            "frozen_-80c",
+            "ambient",
+            "other"
+          ]
+        },
+        {
+          "field_id": "preservation_added",
+          "descr": "Indicates whether a preservative or stabilization reagent was added to the prepared water fraction after processing and before downstream measurements or extraction. Record this as part of the sample's intrinsic handling history.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "holding_time_hours",
+          "descr": "Time in hours between completion of sample fractionation and downstream use of the prepared fraction, measured from the end of preparation to the start of the next workflow step. Typical values depend on field logistics and short-term storage practice.",
+          "type": "float",
+          "allowed_values": []
+        }
+      ]
+    },
+    "water_temperature_measurement": {
+      "reasoning": "This is a Capture node, so I included only the measurement session and instrument configuration for the water temperature acquisition. That means fields for the configured sensor/instrument identity and the operational settings that directly control how temperature was measured, plus a capture-level quality/status flag. I excluded the temperature value itself because the raw readout belongs on the downstream Signal node, and I excluded sample provenance or environmental context not actively configured by the operator. I also avoided any file-format or storage details, which belong to the Signal node, and any software/version fields because this capture is instrument-based rather than a software-driven process node. No already_generated fields were provided, so there were no explicit duplicate-name constraints beyond staying in capture territory.",
+      "md_schema": [
+        {
+          "field_id": "instrument_manufacturer",
+          "descr": "Manufacturer of the temperature-measuring instrument used for this capture session, recorded from the device configuration or hardware label. Example: 'YSI', 'Thermo Fisher', or 'Hach'. Include this as part of the active instrument identity for reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_model",
+          "descr": "Model designation of the temperature sensor or multiparameter sonde used to measure water temperature, recorded for the specific capture session. Example: 'EXO2' or an equivalent device model name.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "instrument_serial_number",
+          "descr": "Unique serial number of the temperature-measuring instrument used in this capture session, transcribed from the device label or configuration record. Use a stable string such as 'SN1234567' to identify the exact hardware unit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "measurement_mode",
+          "descr": "Operational mode used to measure temperature during capture, indicating whether the reading was taken in situ in the lake or from an aliquoted sample. Record the mode active at the time of measurement.",
+          "type": "categorical",
+          "allowed_values": [
+            "in_situ",
+            "aliquoted_sample"
+          ]
+        },
+        {
+          "field_id": "temperature_probe_depth_meters",
+          "descr": "Depth in meters at which the temperature probe was deployed during the capture session, measured relative to the water surface. Typical values depend on whether the measurement was taken near-surface or at a defined sampling depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_stabilization_time_seconds",
+          "descr": "Time in seconds allowed for the temperature reading to stabilize before the instrument value was recorded, measured during the capture session. Use this to document the response time or equilibration period of the measurement.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "temperature_capture_quality_flag",
+          "descr": "Capture-level indication of whether the temperature measurement session completed successfully and produced a usable reading. Record this immediately after acquisition.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "water_temperature_signal": {
+      "reasoning": "This is a Signal node, so I included only raw data artefact properties for the temperature readout: the recorded value, its unit, file/storage representation, basic dimensions if the signal is stored in a table or time series, and technical quality indicators that describe the raw artefact itself. I excluded instrument configuration and measurement session details because those belong to the upstream Capture node, and I excluded any scientific interpretation or environmental provenance because those belong elsewhere in the DAG. No already_generated fields were provided, so there were no explicit schema collisions to avoid.",
+      "md_schema": [
+        {
+          "field_id": "signal_value",
+          "descr": "Raw temperature reading output by the field sensor for this capture event, recorded as emitted by the instrument before any downstream processing. Typical freshwater lake values may span roughly 0 to 35 degrees Celsius depending on season and depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_unit",
+          "descr": "Unit associated with the raw temperature signal value, recorded exactly as stored in the data file or sensor export. For this workflow the expected unit is degrees Celsius.",
+          "type": "categorical",
+          "allowed_values": [
+            "degrees_celsius"
+          ]
+        },
+        {
+          "field_id": "signal_file_format",
+          "descr": "File format of the raw temperature readout as stored or exported from the sensor system, such as CSV, TXT, or vendor-specific binary. Record the technical format of the artefact itself, not the capture settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "txt",
+            "json",
+            "xml",
+            "binary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "signal_file_size_bytes",
+          "descr": "Size of the raw temperature signal file in bytes, measured for the stored artefact after export from the instrument. Use this to describe the technical footprint of the raw data file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_dimensions",
+          "descr": "Number of records or samples contained in the raw temperature signal artefact, measured from the stored file. For a single-point reading this may be 1; for a logged series it may be greater than 1.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "signal_quality_flag",
+          "descr": "Technical quality indicator for the raw temperature signal file, such as whether the artefact is complete, readable, and free of obvious corruption. Record this as a file-level status for the raw signal.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dissolved_oxygen_measurement": {
+      "reasoning": "I removed the colliding field ids that were already generated in prior DAG steps and kept only oxygen-capture fields that remain specific to this node and do not duplicate earlier schema. The remaining fields describe the dissolved oxygen measurement session itself at a level that is still within Capture territory: probe deployment depth, stabilization time, and a capture-level quality flag. I continued to exclude the oxygen value, which belongs on the downstream Signal node, and any sample-origin or processing properties that belong elsewhere.",
+      "md_schema": [
+        {
+          "field_id": "oxygen_probe_depth_meters",
+          "descr": "Depth in meters at which the dissolved oxygen probe was deployed during this capture session, measured relative to the water surface. Typical values depend on whether the measurement was near-surface or at a specified water column depth.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "oxygen_stabilization_time_seconds",
+          "descr": "Time in seconds allowed for the dissolved oxygen reading to stabilize before recording the measurement, measured during the capture session. Use this to document equilibration time for the oxygen probe.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "oxygen_capture_quality_flag",
+          "descr": "Capture-level indication of whether the dissolved oxygen measurement session completed successfully and produced a usable reading. Record this immediately after acquisition.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "dissolved_oxygen_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the dissolved oxygen readout: the measured value, its unit, file/storage representation, dimensionality, and technical quality indicators. I excluded capture-side fields such as instrument identity, measurement mode, or probe settings because those belong to the upstream Capture node, and I excluded provenance/sample properties because those belong to the Entity nodes. I also avoided any duplicate field ids flagged in the correction message. No already_generated list was provided in this turn, so I could only prevent collisions by omitting the known conflicting ids and using signal-specific names.",
+      "md_schema": [
+        {
+          "field_id": "dissolved_oxygen_value",
+          "descr": "Raw dissolved oxygen reading output by the field sensor for this capture event, recorded as emitted by the instrument before any downstream processing. Typical values may be expressed as milligrams per liter or percent saturation depending on sensor configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_unit",
+          "descr": "Unit associated with the raw dissolved oxygen signal value, recorded exactly as stored in the data file or sensor export. Common values for this workflow are milligrams_per_liter or percent_saturation.",
+          "type": "categorical",
+          "allowed_values": [
+            "milligrams_per_liter",
+            "percent_saturation"
+          ]
+        },
+        {
+          "field_id": "dissolved_oxygen_signal_file_format",
+          "descr": "File format of the raw dissolved oxygen readout as stored or exported from the sensor system, such as CSV, TXT, or vendor-specific binary. Record the technical format of the artefact itself, not the capture settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "txt",
+            "json",
+            "xml",
+            "binary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "dissolved_oxygen_signal_file_size_bytes",
+          "descr": "Size of the raw dissolved oxygen signal file in bytes, measured for the stored artefact after export from the instrument. Use this to describe the technical footprint of the raw data file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_signal_dimensions",
+          "descr": "Number of records or samples contained in the raw dissolved oxygen signal artefact, measured from the stored file. For a single-point reading this may be 1; for a logged series it may be greater than 1.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "dissolved_oxygen_signal_quality_flag",
+          "descr": "Technical quality indicator for the raw dissolved oxygen signal file, such as whether the artefact is complete, readable, and free of obvious corruption. Record this as a file-level status for the raw signal.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nutrient_assay_measurement": {
+      "reasoning": "This is a Capture node, so I included only the measurement session and instrument configuration for the nutrient assay, focusing on the actively configured laboratory analyzer settings rather than sample properties or assay outputs. I avoided reusing the previously reported conflicting ids for capture nodes such as instrument_manufacturer, instrument_model, instrument_serial_number, and measurement_mode. Instead, I used assay-specific field names for the device identity and operational settings, plus a capture-level quality indicator. I excluded nutrient concentration values and raw file details because those belong to the downstream Signal node, and I excluded sample provenance because that belongs to the Entity nodes. No already_generated list was provided in this turn, so I could not check all prior ids exhaustively, but I limited the schema to capture-side metadata and avoided the known collisions.",
+      "md_schema": [
+        {
+          "field_id": "analyzer_manufacturer",
+          "descr": "Manufacturer of the laboratory analyzer used for the nutrient assay capture session, recorded from the instrument configuration or hardware label. Example manufacturers include 'SEAL Analytical', 'Hach', or equivalent autoanalyzer vendors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analyzer_model",
+          "descr": "Model designation of the nutrient analyzer or autoanalyzer used to measure nutrient concentrations in the prepared water fraction. Record the specific analyzer model active for this capture session.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analyzer_serial_number",
+          "descr": "Unique serial number of the nutrient analyzer used in this capture session, transcribed from the device label or configuration record. Use a stable string such as 'SN1234567' to identify the exact hardware unit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "assay_type",
+          "descr": "Type of nutrient assay performed during the capture session, indicating the analytical class used to generate the raw measurement. Typical values depend on the workflow and may include colorimetric, flow_injection, segmented_flow, or other assay modes.",
+          "type": "categorical",
+          "allowed_values": [
+            "colorimetric",
+            "flow_injection",
+            "segmented_flow",
+            "ion_selective",
+            "other"
+          ]
+        },
+        {
+          "field_id": "analysis_wavelength_nanometers",
+          "descr": "Instrument wavelength used for optical detection during the nutrient assay, in nanometers, recorded at the time the analyzer is configured. Typical values depend on the chemistry and detector setup used for the measurement.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "run_time_minutes",
+          "descr": "Total analyzer run time for the nutrient assay capture session, in minutes, measured from the start of sample injection to completion of the instrument cycle. Typical values depend on batch size and assay configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_assay_quality_flag",
+          "descr": "Capture-level indication of whether the nutrient assay session completed successfully and produced a usable raw reading. Record this immediately after acquisition.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nutrient_concentration_signal": {
+      "reasoning": "This is a Signal node, so I included only raw artefact properties for the nutrient assay output: the measured concentration value, unit, file/storage representation, basic record count, and technical quality indicators. I excluded analyzer identity, assay settings, and run parameters because those belong to the upstream Capture node, and I excluded sample provenance and any interpreted ecological meaning because those belong elsewhere in the DAG. I also avoided using field ids that would overlap semantically with prior signal fields for temperature and oxygen by naming the nutrient-specific raw output distinctly. No already_generated list was provided in this turn, so I limited the schema to signal-specific metadata and did not repeat capture-side ids.",
+      "md_schema": [
+        {
+          "field_id": "nutrient_concentration_value",
+          "descr": "Raw nutrient concentration reading output by the chemical assay for this capture event, recorded as emitted by the instrument before any downstream processing. Typical values depend on the target analyte and may span trace to high concentration ranges in the study lake water fraction.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_concentration_unit",
+          "descr": "Unit associated with the raw nutrient concentration value, recorded exactly as stored in the assay output file. Use the analyte-appropriate concentration unit such as micrograms_per_liter or milligrams_per_liter.",
+          "type": "categorical",
+          "allowed_values": [
+            "micrograms_per_liter",
+            "milligrams_per_liter",
+            "micromoles_per_liter",
+            "other"
+          ]
+        },
+        {
+          "field_id": "nutrient_analyte_name",
+          "descr": "Name of the nutrient analyte represented by this raw signal, recorded as the chemical species measured by the assay. Examples include nitrate, nitrite, ammonium, phosphate, or dissolved inorganic nitrogen depending on the workflow.",
+          "type": "categorical",
+          "allowed_values": [
+            "nitrate",
+            "nitrite",
+            "ammonium",
+            "phosphate",
+            "silicate",
+            "dissolved_inorganic_nitrogen",
+            "other"
+          ]
+        },
+        {
+          "field_id": "nutrient_signal_file_format",
+          "descr": "File format of the raw nutrient concentration readout as stored or exported from the analyzer, such as CSV, TXT, or vendor-specific binary. Record the technical format of the artefact itself, not the capture settings.",
+          "type": "categorical",
+          "allowed_values": [
+            "csv",
+            "txt",
+            "json",
+            "xml",
+            "binary",
+            "other"
+          ]
+        },
+        {
+          "field_id": "nutrient_signal_file_size_bytes",
+          "descr": "Size of the raw nutrient signal file in bytes, measured for the stored artefact after export from the instrument. Use this to describe the technical footprint of the raw data file.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_signal_dimensions",
+          "descr": "Number of records or samples contained in the raw nutrient signal artefact, measured from the stored file. For a single analyte readout this may be 1; for a batch export it may be greater than 1.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nutrient_signal_quality_flag",
+          "descr": "Technical quality indicator for the raw nutrient signal file, such as whether the artefact is complete, readable, and free of obvious corruption. Record this as a file-level status for the raw signal.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "nucleic_acid_extraction": {
+      "reasoning": "This is a Process node, so I included only the extraction workflow parameters that describe how nucleic acids were recovered from the prepared water fraction: extraction chemistry, lysis conditions, purification modality, elution settings, and a process-level outcome indicator. I excluded properties of the input prepared fraction, the extracted nucleic acid product itself, and any sequencing or analysis outputs because those belong to the upstream Entity and downstream Entity/Capture nodes. I also avoided capture-style instrument fields and signal/file fields. No already_generated list was provided in this turn, so I focused on process-specific metadata and used names that should not collide with previously generated capture or signal identifiers.",
+      "md_schema": [
+        {
+          "field_id": "lysis_method",
+          "descr": "Primary lysis approach used to break microbial cells during nucleic acid extraction from the prepared water fraction, recorded at the time the process is performed. Examples include chemical, mechanical, enzymatic, or combined lysis strategies.",
+          "type": "categorical",
+          "allowed_values": [
+            "chemical",
+            "mechanical",
+            "enzymatic",
+            "combined",
+            "other"
+          ]
+        },
+        {
+          "field_id": "extraction_kit_name",
+          "descr": "Commercial kit or reagent system used for nucleic acid extraction, recorded for the specific extraction workflow. Use the kit name as implemented in this experiment, such as a vendor product or in-house protocol label.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_kit_lot_number",
+          "descr": "Lot or batch number of the extraction kit or key reagent set used in this process step, recorded from the reagent packaging or inventory record. Use this to trace reagent variability across extraction batches.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "input_fraction_volume_milliliters",
+          "descr": "Volume of prepared water fraction entering the extraction workflow, in milliliters, measured at the start of the process. This describes how much processed water material was subjected to nucleic acid recovery.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "elution_volume_microliters",
+          "descr": "Final elution volume used to recover nucleic acids from the extraction matrix, in microliters, recorded at the end of the process. Typical values depend on kit and desired concentration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_duration_minutes",
+          "descr": "Elapsed time required to complete the nucleic acid extraction process, in minutes, measured from sample lysis start to purified nucleic acid recovery. Typical values vary with kit chemistry and batch size.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_yield_ng",
+          "descr": "Approximate total nucleic acid yield obtained from the extraction process, in nanograms, measured after purification and before downstream sequencing or quantification. Use this as a process-level outcome indicator for extraction efficiency.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "extraction_success",
+          "descr": "Process-level indication of whether nucleic acid extraction completed successfully and produced material suitable for downstream sequencing or library preparation. Record this immediately after the extraction workflow finishes.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "extracted_nucleic_acids": {
+      "reasoning": "This is an Entity node, so I kept only intrinsic properties of the purified nucleic acid material and its lineage from the extraction process. I removed the previously conflicting storage_condition field and retained identifiers, source linkage, nucleic acid type, concentration, purity, and integrity because those describe what the extract is. I excluded extraction protocol settings, sequencing/library-prep parameters, and downstream outputs since those belong to other node types. No already_generated list was provided here, but I adjusted the schema to avoid the known cross-DAG collision.",
+      "md_schema": [
+        {
+          "field_id": "extract_id",
+          "descr": "Unique identifier for the purified nucleic acid material, such as 'NA-2024-07-15-003'. Use this string to track the extract through library preparation or direct sequencing.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_prepared_fraction_id",
+          "descr": "Identifier of the prepared water fraction from which this nucleic acid extract was produced. Use the linked fraction identifier to preserve lineage from processed water to purified nucleic acid material.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "nucleic_acid_type",
+          "descr": "Type of nucleic acid represented by the extract, indicating whether the material is DNA, RNA, or a mixed nucleic acid preparation. Record the material class at the time of post-extraction handling.",
+          "type": "categorical",
+          "allowed_values": [
+            "DNA",
+            "RNA",
+            "mixed_DNA_RNA"
+          ]
+        },
+        {
+          "field_id": "concentration_ng_per_microliter",
+          "descr": "Measured concentration of the purified nucleic acid extract, in nanograms per microliter, recorded after extraction and before downstream library preparation or sequencing. Typical values depend on extraction yield and elution volume.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "purity_ratio_260_280",
+          "descr": "Absorbance-based purity ratio (A260/A280) for the purified extract, measured after extraction to assess protein contamination. Typical values for clean nucleic acid preparations are near 1.8 for DNA and around 2.0 for RNA.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integrity_metric",
+          "descr": "Qualitative or quantitative indicator of nucleic acid integrity for the purified extract, measured after extraction using the laboratory's standard assessment method. Use this field to capture whether the material is suitable for downstream sequencing.",
+          "type": "string",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_sequencing_capture": {
+      "reasoning": "This is a Capture node, so I included only the sequencing session and instrument configuration for generating the raw metagenomic reads: sequencer identity, run configuration, library/input settings that directly affect the capture, and a capture-level run quality flag. I excluded the raw read file properties because those belong on the downstream Signal node, and I excluded sample/extract provenance because those belong to Entity nodes. I also avoided repeating the previously flagged collision on storage_condition by not including any storage-related field here. No already_generated list was provided in this turn, so I limited the schema to capture-specific metadata and used sequencing-specific names to reduce overlap with prior capture steps.",
+      "md_schema": [
+        {
+          "field_id": "sequencer_manufacturer",
+          "descr": "Manufacturer of the sequencing instrument used for this capture session, recorded from the platform configuration or hardware label. Example manufacturers include 'Illumina', 'Oxford Nanopore', or equivalent sequencer vendors.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_model",
+          "descr": "Model designation of the sequencing instrument used to read the extracted nucleic acids, recorded for the specific capture session. Example: a platform model name such as 'NovaSeq 6000' or equivalent.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencer_serial_number",
+          "descr": "Unique serial number of the sequencing instrument used in this capture session, transcribed from the hardware label or run configuration record. Use a stable string such as 'SN1234567' to identify the exact device unit.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_chemistry",
+          "descr": "Sequencing chemistry or kit version used during the capture session, recorded at run setup because it directly controls raw signal generation on the sequencer. Use the chemistry designation specified by the platform vendor.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_length_base_pairs",
+          "descr": "Intended read length in base pairs configured for the sequencing run, measured as the expected output length for each read or read pair. Typical values depend on platform and library design, such as 150 bp paired-end sequencing.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "library_input_concentration_ng_per_microliter",
+          "descr": "Concentration of the nucleic acid library or input material loaded into the sequencer, in nanograms per microliter, recorded at run setup. Use this to document the amount of material presented to the capture instrument.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_run_time_hours",
+          "descr": "Total runtime of the sequencing capture session, in hours, measured from run start to run completion. Typical values depend on platform and read configuration.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "sequencing_capture_quality_flag",
+          "descr": "Capture-level indication of whether the sequencing run completed successfully and produced usable raw metagenomic data. Record this immediately after the run finishes.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "raw_metagenomic_reads": {
+      "reasoning": "This is a Signal node, so I included only raw data artefact properties for the metagenomic reads: the file format, file size, read count, basic read structure/dimensions, and technical quality indicators. I excluded sequencing instrument identity, chemistry, and run settings because those belong to the upstream Capture node, and I excluded any biological interpretation or profile generation because those belong to the downstream Derivative node. I also avoided repeating storage-related fields that were already flagged as colliding elsewhere and kept the field names specific to raw metagenomic read artefacts. No already_generated list was provided in this turn, so I limited the schema to signal-specific metadata.",
+      "md_schema": [
+        {
+          "field_id": "reads_file_format",
+          "descr": "File format of the raw metagenomic sequencing output as stored or exported from the sequencing platform, such as FASTQ, BCL, or vendor-specific binary. Record the technical file representation of the raw read artefact.",
+          "type": "categorical",
+          "allowed_values": [
+            "fastq",
+            "fq",
+            "bcl",
+            "bam",
+            "other"
+          ]
+        },
+        {
+          "field_id": "reads_file_size_bytes",
+          "descr": "Size of the raw metagenomic read file or file set in bytes, measured for the stored artefact after export from the sequencer. Use this to describe the technical footprint of the raw data output.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "total_read_count",
+          "descr": "Total number of raw sequencing reads contained in the metagenomic read artefact, measured from the stored file or file set. Typical values are platform- and run-dependent and may range from thousands to billions.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_structure",
+          "descr": "Structure of the raw reads contained in the sequencing artefact, indicating whether the output is single-end or paired-end. Record the representation as stored in the raw data file.",
+          "type": "categorical",
+          "allowed_values": [
+            "single_end",
+            "paired_end"
+          ]
+        },
+        {
+          "field_id": "mean_read_length_base_pairs",
+          "descr": "Average read length in base pairs for the raw metagenomic read artefact, calculated from the stored sequencing output. Typical values depend on platform and chemistry, such as 75 bp, 150 bp, or longer.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "read_quality_flag",
+          "descr": "Technical quality indicator for the raw metagenomic read file or file set, such as whether the artefact is complete, readable, and free of obvious corruption. Record this as a file-level status for the raw signal.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_profile_generation": {
+      "reasoning": "This is a Process node, so I included only the computational processing parameters that describe how raw reads were converted into metagenomic profiles: pipeline identity, software/version, reference database, key thresholds, and a process-level success indicator. I excluded raw read file properties because those belong to the upstream Signal node, and I excluded the computed abundance/function profile outputs because those belong to the downstream Derivative node. I also avoided the earlier collision-prone storage and capture fields. No already_generated list was provided in this turn, so I restricted the schema to process-specific computational metadata and used software-centric field names appropriate for a bioinformatics workflow.",
+      "md_schema": [
+        {
+          "field_id": "pipeline_name",
+          "descr": "Name of the bioinformatic pipeline used to transform raw metagenomic reads into community and functional profiles, recorded for the processing session. Example: a workflow label such as 'metagenomic profiling pipeline' or a named analysis suite.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "software_version",
+          "descr": "Version of the bioinformatic software or pipeline used during profile generation, recorded exactly as executed for the processing run. Include the release or commit version to support reproducibility.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_name",
+          "descr": "Name of the taxonomic or functional reference database used during metagenomic profile generation, recorded at the time the pipeline is run. Examples include a specific genome catalog, protein family database, or functional annotation set.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "reference_database_version",
+          "descr": "Version or release date of the reference database used for the profile generation process, recorded to enable reproducible computation. Use the database version in the form provided by the resource or pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_quality_score",
+          "descr": "Minimum per-base read quality score threshold applied during read filtering or trimming in the processing workflow, measured on the standard Phred scale. Typical values may range from 10 to 30 depending on stringency.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "minimum_read_length_base_pairs",
+          "descr": "Minimum read length in base pairs retained by the processing workflow after filtering and trimming. Typical values depend on platform and analysis strategy and are used to remove short low-quality reads.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_generation_runtime_minutes",
+          "descr": "Total runtime of the metagenomic profile generation process, in minutes, measured from pipeline start to completion. Typical values depend on dataset size and computational resources.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_generation_success",
+          "descr": "Process-level indication of whether the metagenomic profile generation completed successfully and produced usable computed profiles. Record this immediately after the workflow finishes.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "metagenomic_profile": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the metagenomic profile: the profile identifier, the algorithm/pipeline used to compute it, key output dimensions, the profiling taxonomic/functional resolution, and a result-level quality indicator. I excluded raw read properties because those belong to the upstream Signal node, and I excluded processing parameters such as software version or thresholds because those belong to the upstream Process node. I also avoided sample provenance and environmental context, which are not intrinsic to the derivative output. No already_generated list was provided in this turn, so I focused on derivative-specific fields and used names that describe the computed profile artifact itself.",
+      "md_schema": [
+        {
+          "field_id": "metagenomic_profile_id",
+          "descr": "Unique identifier for the computed metagenomic profile, such as 'MP-2024-07-15-003'. Use this string to track the derived community and functional profile through downstream analyses.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_raw_reads_id",
+          "descr": "Identifier of the raw metagenomic read set used to compute this profile. Use the linked signal identifier to preserve lineage from sequencing output to the derived profile.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "profile_method_name",
+          "descr": "Name of the computational method or pipeline used to infer the metagenomic profile from raw reads, recorded as the algorithmic approach used for derivation. Examples include taxonomic profiling, functional profiling, or a named classifier/pipeline.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "taxonomic_resolution",
+          "descr": "Lowest taxonomic level represented in the computed community profile, measured as the resolution of the output. Typical values may include species, genus, family, or broader ranks depending on the algorithm used.",
+          "type": "categorical",
+          "allowed_values": [
+            "species",
+            "genus",
+            "family",
+            "order",
+            "class",
+            "phylum",
+            "other"
+          ]
+        },
+        {
+          "field_id": "functional_annotation_level",
+          "descr": "Level of functional characterization represented in the computed profile, such as gene, protein family, pathway, or module resolution. Record the granularity of the derived functional output.",
+          "type": "categorical",
+          "allowed_values": [
+            "gene",
+            "protein_family",
+            "pathway",
+            "module",
+            "other"
+          ]
+        },
+        {
+          "field_id": "feature_count",
+          "descr": "Number of distinct features represented in the computed profile, such as taxa, genes, or pathways, measured from the derived output matrix. Use this to describe the dimensionality of the profile artifact.",
+          "type": "int",
+          "allowed_values": []
+        },
+        {
+          "field_id": "normalization_method",
+          "descr": "Method used to normalize abundances in the computed metagenomic profile, recorded as part of the derived result representation. Examples include relative abundance, counts per million, or compositional normalization.",
+          "type": "categorical",
+          "allowed_values": [
+            "relative_abundance",
+            "counts_per_million",
+            "rarefaction",
+            "clr",
+            "other"
+          ]
+        },
+        {
+          "field_id": "profile_quality_flag",
+          "descr": "Result-level indicator of whether the computed metagenomic profile is considered usable for downstream ecological or statistical analysis. Record this after the profile has been generated and quality checked.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "environmental_data_integration": {
+      "reasoning": "This is a Process node, so I included only the analysis workflow parameters that describe how environmental measurements and metagenomic profiles were jointly integrated: analysis method, model settings, covariates, and process-level success/fit indicators. I excluded raw signal properties and derived input/output artifact details because those belong to the upstream Signal/Derivative nodes, and I excluded sample provenance because it belongs to the Entity nodes. I also avoided repeating previously generated capture-side or storage-related fields. No already_generated list was provided in this turn, so I focused on process-specific statistical-analysis metadata and used names that are distinct from prior bioinformatics-processing fields.",
+      "md_schema": [
+        {
+          "field_id": "integration_analysis_method",
+          "descr": "Name of the statistical or multivariate method used to integrate environmental measurements with metagenomic profiles, recorded for the analysis workflow. Examples include redundancy analysis, canonical correspondence analysis, linear mixed modeling, or correlation-based integration.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_name",
+          "descr": "Name of the software package or statistical environment used to perform the environmental data integration, recorded for the processing session. Example: a named R package, Python library, or analysis suite.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "analysis_software_version",
+          "descr": "Version of the software package or statistical environment used during the integration analysis, recorded exactly as executed for reproducibility. Include the release number or commit identifier when available.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "environmental_variables_included",
+          "descr": "List of environmental predictors included in the integration analysis, recorded as the variables actually modeled with the metagenomic profiles. Typical examples in this workflow include temperature, dissolved oxygen, and nutrient concentrations.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "adjustment_for_multiple_testing",
+          "descr": "Indicates whether the integration analysis applied a multiple-testing correction to statistical tests or associations. Record this as part of the analysis configuration at run time.",
+          "type": "bool",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_threshold_p_value",
+          "descr": "P-value threshold used to declare statistical significance in the integration analysis, measured on the standard probability scale. Typical values are 0.05 or lower depending on the study design.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_run_time_minutes",
+          "descr": "Total runtime of the environmental data integration process, in minutes, measured from analysis start to completion. Typical values depend on dataset size and model complexity.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "integration_success",
+          "descr": "Process-level indication of whether the environmental data integration completed successfully and produced usable analysis outputs. Record this immediately after the workflow finishes.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    },
+    "lake_environment_microbiome_association": {
+      "reasoning": "This is a Derivative node, so I included only computed-result properties of the association analysis output: the result identifier, source analysis linkage, association model family, key summarized outputs such as effect size and significance, and a result-level quality/usefulness indicator. I excluded raw environmental measurements and metagenomic profile properties because those belong to upstream Signal/Derivative nodes, and I excluded analysis workflow parameters such as software version or thresholds because those belong to the upstream Process node. I also avoided any sample identity or storage fields. No already_generated list was provided in this turn, so I kept the schema focused on the derived association result itself and used names that describe the analysis output rather than its inputs.",
+      "md_schema": [
+        {
+          "field_id": "association_result_id",
+          "descr": "Unique identifier for the derived association analysis result, such as 'ASSOC-2024-07-15-003'. Use this string to track the summarized relationship output across downstream reporting and visualization.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "source_integration_analysis_id",
+          "descr": "Identifier of the environmental data integration analysis that produced this derived association result. Use the linked process identifier to preserve lineage from analysis workflow to summary output.",
+          "type": "string",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_model_type",
+          "descr": "Statistical model or association framework used to summarize relationships between microbial community structure and environmental gradients, recorded as the derived result method class. Examples include correlation, regression, mixed-effects, or ordination-based association summaries.",
+          "type": "categorical",
+          "allowed_values": [
+            "correlation",
+            "linear_regression",
+            "mixed_effects_model",
+            "ordination_based",
+            "other"
+          ]
+        },
+        {
+          "field_id": "primary_environmental_gradient",
+          "descr": "Main environmental gradient associated with the derived microbiome result, recorded as the dominant predictor or axis highlighted by the analysis. Typical values in this workflow may include temperature, dissolved oxygen, nutrient concentration, depth, or season.",
+          "type": "categorical",
+          "allowed_values": [
+            "temperature",
+            "dissolved_oxygen",
+            "nutrient_concentration",
+            "depth",
+            "season",
+            "other"
+          ]
+        },
+        {
+          "field_id": "effect_size",
+          "descr": "Magnitude of the association between microbial community structure and the environmental gradient, reported in the units of the chosen model or summary statistic. Typical values depend on model type and should be recorded as the summary effect reported by the analysis.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "significance_p_value",
+          "descr": "P-value associated with the summarized microbiome-environment relationship, measured on the standard probability scale. Use the final reported significance value from the derived analysis output.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "variance_explained_percent",
+          "descr": "Percentage of variation in microbial community structure explained by the environmental gradients in the derived association result, measured as a percent. Use the analysis-reported summary metric for interpretability.",
+          "type": "float",
+          "allowed_values": []
+        },
+        {
+          "field_id": "association_result_quality_flag",
+          "descr": "Indicates whether the derived association result passed the study's quality criteria and is considered suitable for interpretation or reporting. Record this after the association summary is generated and reviewed.",
+          "type": "bool",
+          "allowed_values": []
+        }
+      ]
+    }
+  }
+}
